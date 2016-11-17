@@ -11,7 +11,7 @@ A typical setup can consist of multiple Arduino Nano devices connected to a mast
 - HTTP client lets the master transfer settings between a database and the modules, for configuration in web pages
 - HTTP client lets the master save output values from the modules into a database, for time series trending and inspection in web pages
 - Optional persistence lets each module remember its last received settings at startup, for autonomous operation even if it has been disconnected from the master
-- Course clock synchronization of all modules (within a few seconds)
+- Coarse clock synchronization of all modules (within a few seconds)
 
 ####Detailed operation
 It is a master-slave based system where a master can relate to multiple devices (modules) using the ModuleInterface library.
