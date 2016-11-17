@@ -1,0 +1,36 @@
+#######################################
+# Syntax Coloring Map For ModuleInterface
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+PJON	KEYWORD1
+ModuleVariable	KEYWORD1
+ModuleVariableSet	KEYWORD1
+ModuleInterface  KEYWORD1
+ModuleInterfaceSet	KEYWORD1
+PJONModuleInterface	KEYWORD1
+PJONModuleInterfaceSet	KEYWORD1
+MIVariable	KEYWORD1
+Link	KEYWORD1
+PJONLink	KEYWORD1
+BinaryBuffer	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+acquire_id KEYWORD2
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+FAIL LITERAL1
