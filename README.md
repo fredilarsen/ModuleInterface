@@ -24,11 +24,11 @@ Depending on the type of master used, the settings for all modules can be config
 
 When polling for settings from the database, the time from the database server is also retrieved, and distributed to modules as a coarse clock synchronization.
 
-The optional persistence functionality lets new settings be kept and automatically updated in EEPROOM for each module. Each module can the start in its previous state immediately, before gaining contact with the master. So each module con continue working after a restart even if if the master or network is down.
+The optional persistence functionality lets new settings be kept and automatically updated in EEPROOM for each module. Each module can the start in its previous state immediately, before gaining contact with the master. So each module can continue working after a restart even if the master or network is down.
 
-The ModuleInterface library consists of a collection of classes, and some files with functions for functionality like EEPROM based persistence and master HTTP transfer. The basic classes are ModuleVariable (keeping on setting or input or output value), ModuleVariableSet (keeping a set of settings or input or output values), ModuleInterface (keeping settings, input values, output values and functionality for a module), ModuleInterfaceSet (in the master -- a collection of ModuleInterface objects that are kept synchronized with the modules).
+The ModuleInterface library consists of a collection of classes, and some files with functions for functionality like EEPROM based persistence and master HTTP transfer. The basic classes are ModuleVariable (keeping one setting or input or output value), ModuleVariableSet (keeping a set of settings or input or output values), ModuleInterface (keeping settings, input values, output values and functionality for a module), ModuleInterfaceSet (in the master -- a collection of ModuleInterface objects that are kept synchronized with the modules).
 
-The ModuleInterface code in a master typically use more storage space and RAM than within a module. It is still fine to run on an Arduino Uno or Nano, but when adding the HTTP client (and implicitly the large required Ethernet and ArduinoJson libraries), it is necessary to step up to an Arduino Mega or similar for the master.
+The ModuleInterface code in a master typically uses more storage space and RAM than within a module. It is still fine to run on an Arduino Uno or Nano, but when adding the HTTP client (and implicitly the large required Ethernet and ArduinoJson libraries), it is necessary to step up to an Arduino Mega or similar for the master.
 
 ####PJON
 The ModuleInterface class that is used by a module, and the ModuleInterfaceSet class that is used by a master, implement transport logic and serialization/deserialization and other functionality, but do not implement any communication. The communication between modules is designed to be handled by deriving a class from each of these two, and letting these classes do the talking by some protocol.
@@ -36,7 +36,7 @@ The ModuleInterface class that is used by a module, and the ModuleInterfaceSet c
 This library is not worth much without a proper communication bus for letting a master and multiple modules talk together. Luckily, we have the brilliant [PJON] (https://github.com/gioblu/PJON) communication bus library created by *Giovanni Blu Mitolo* available, and this has been used as the primary choice for this library. The PJON library can be used for single-wire multi-master bus communication directly between Arduinos with no extra hardware, a brilliant feat. It can also be used for wireless communication, so ModuleInterface modules need not be wired to the master.
 The PJON library also supports a lot of different devices, making it a great choice. The ModuleInterface library does only use PJON for single-master communication.
 
-#####Module implementation
+####Module implementation
 Each module must declare a global object of a ModuleInterface derived class like the PJONModuleInterface that is part of the library. In the declaration of this object, the contracts (names and data types) for settings, input values and output values are specified as text parameters for simplicity.
 
 The object's loop function must be called regularly. Contracts are exchanged automatically with the master, and settings will arrive shortly. Settings are retrieved from the object with getter functions using the same order as the contract specifies.
@@ -49,32 +49,33 @@ The SensorMonitor example is simply reading a motion detector:
 
 ```cpp
 #include <PJONModuleInterface.h>
-#include <PJONSoftwareBitBangLink.h>
+#include <PJONLink.h>
 
-PJONSoftwareBitBangLink bus(4, 12); // PJON device id 4, use pin 12
+PJONLink<SoftwareBitBang> link(4); // PJON device id 4
 
-PJONModuleInterface interface("SensorMonitor", // Module name
-                              bus,             // PJON bus
-                              "",              // Settings
-                              "",              // Inputs
-                              "smMotion:b1");  // Outputs (measurements)
+PJONModuleInterface interface("SensMon",      // Module name
+                              link,           // PJON bus
+                              "",             // Settings
+                              "",             // Inputs
+                              "Motion:b1");   // Outputs (measurements)
 
 // Outputs (measurements) (index/position in outputs list)
-#define smMotionIx 0
+#define s_motion_ix 0
 
 #define PIN_MOTIONSENSOR 6 // Motion sensor connected to this pin
 
-void setup() { pinMode(PIN_MOTIONSENSOR, INPUT); }
+void setup() { pinMode(PIN_MOTIONSENSOR, INPUT); link.bus.strategy.set_pin(7); }
 
 void loop() { read_sensors(); interface.update(); }
 
 void read_sensors() {
-  interface.outputs.set_value(smMotionIx, digitalRead(PIN_MOTIONSENSOR));
-  interface.outputs.set_updated(); // Flag as ready for transfer
+  interface.outputs.set_value(s_motion_ix, digitalRead(PIN_MOTIONSENSOR));
+  interface.outputs.set_updated(); // Flag as completely updated, all values are set
 }
+
 ```
 
-Adding reading of more sensors is done by adding more output parameters to the input string as a space separated list, like "smMotion:b1 smTemp:f4" for having a variable named smTemp as a 4 byte floating point value. Simple values are supported: boolean (b1), signed and unsigned byte, short and int (i1, u1, i2, u2, i4, u4), and float (f4).
+Adding reading of more sensors is done by adding more output parameters to the input string as a space separated list, like "Motion:b1 Temp:f4" for having a variable named Temp as a 4 byte floating point value. Simple values are supported: boolean (b1), signed and unsigned byte, short and int (i1, u1, i2, u2, i4, u4), and float (f4).
 
 After adding the variable, it must be set in a similar way as the motion in the example.
 

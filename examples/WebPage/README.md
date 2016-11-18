@@ -31,8 +31,12 @@ When all is mounted and configured, check this:
 3. Can you change the frequency in the web page and see the that the worker changes blink frequency? 
 
 ####Debugging
+If it does not work right away, you can try the following steps.
 1. Try to program the master with the BlinkSimple/BlinkModuleMaster (check device id match) and see if the worker blink frquency changes every 5 seconds as expected.
-  - Yes: PJON communication is configured correctly. Double-check that the ModuleMasterHttp has the same settings as BlinkModuleMaster, then proceed.
+  - Yes: PJON communication is configured correctly. Double-check that the ModuleMasterHttp has the same settings as BlinkModuleMaster, then program with the ModuleMasterHttp and proceed.
   - No: Concentrate on getting the BlinkModule - BlinkModuleMaster setup working before proceeding.
 2. Try to manually insert a value into the database by inputting the following in the address field of a browser:
-   <server address>/... <TODO: complete this> 
+  <server address>/... <TODO: complete this> 
+  Do you manage to insert values?
+  - Yes: Then supposedly the master is failing in doing this. Re-check the master device IP settings and try again.
+  - No: You should get an error message in the browser. Try to use this to find out what is wrong. Check db_config.php. Check variable_write_list.txt.
