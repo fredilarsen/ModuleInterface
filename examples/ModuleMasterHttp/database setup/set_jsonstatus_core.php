@@ -2,7 +2,7 @@
 if(isset($_SERVER["CONTENT_TYPE"]) && strpos($_SERVER["CONTENT_TYPE"], "application/json") !== false) {
     $_POST = array_merge($_POST, (array) json_decode(trim(file_get_contents('php://input')), true));
 	// Apply variable write whitelist for the timeseries table
-	foreach(file('variable_write_list.json') as $line) $variables[trim($line)] = "";
+	foreach(file('variable_write_list.txt') as $line) $variables[trim($line)] = "";
 	$_POST = array_intersect_key($_POST, $variables);
 }
 if(!empty($_POST)) {

@@ -95,7 +95,7 @@ void loop() {
     last_v = millis();
     static MILastScanTimes last_scan_times;
     // (update=true to coexist with another master temporarily)
-    send_values_to_web_server(interfaces, web_client, web_server, &last_scan_times, 80, true); 
+    send_values_to_web_server(interfaces, web_client, web_server, &last_scan_times, 80, false); 
   }
   
   // Let activity flash go to rapid if one or more modules are inactive
