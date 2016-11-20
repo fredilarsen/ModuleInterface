@@ -75,9 +75,20 @@ void read_sensors() {
 
 ```
 
-Adding reading of more sensors is done by adding more output parameters to the input string as a space separated list, like "Motion:b1 Temp:f4" for having a variable named Temp as a 4 byte floating point value. Simple values are supported: boolean (b1), signed and unsigned byte, short and int (i1, u1, i2, u2, i4, u4), and float (f4).
+Adding reading of more sensors is done by adding more output parameters to the input string as a space separated list, like "Motion:b1 Temp:f4" for having a variable named Temp as a 4 byte floating point value. Simple values are supported: boolean (b1), signed and unsigned byte, short and int (i1, u1, i2, u2, i4, u4), and float (f4). The digit in the data type specifies the number of bytes the data type uses.
 
-After adding the variable, it must be set in a similar way as the motion in the example.
+After adding the variable, the value must be set in a similar way as the motion in the example.
+
+####Variable naming convention
+Each setting, input or output is identified by a variable name. A variable name consists of two parts:
+1. A module prefix, as defined when declaring the module in the master. This is a two-character lower case prefix identifying the module, like "gh" a for GreenHouse module.
+2. A core variable name. This must start with an upper case character, to be able to separate it from the module prefix.
+
+Because of the low memory amount available on Arduinos, the variable name of a setting, input or output has a short maximum length. This is defined by the constant MVAR_MAX_NAME_LENGTH, and is currently set to 10 characters including the module prefix. This is supposed to be enough to give unique names to all variables, like "ghTempOut", "scServoPos" and so on. It can be overridden.
+
+Variable names for settings and outputs within a module can be specified without the module prefix, which will be added automatically by the master when communicating with the web server / database, and when exchanging values between modules. If the module prefix is skipped, the core variable name length must still be kept 2 characters shorter than the total limit, or it will be truncated.
+
+Variable names for inputs must contain the module prefix for the module where they are expected to come from. For example, a GreenHouse monitoring module can specify an input with name "omTemp" to subscribe to an output with the name "Temp" in an "OutsideMonitor" module with prefix "om". 
 
 ####License
 
