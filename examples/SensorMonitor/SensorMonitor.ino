@@ -20,7 +20,7 @@ PJONModuleInterface interface("SensMon",                          // Module name
                               "Motion:b1");                       // Outputs (measurements)
 
 // Outputs (measurements) (index/position in outputs list)
-#define s_motion_ix 0
+#define o_motion_ix 0
 
 #define PIN_MOTIONSENSOR 6 // Motion sensor connected to this pin
 
@@ -29,7 +29,7 @@ void setup() { pinMode(PIN_MOTIONSENSOR, INPUT); link.bus.strategy.set_pin(7); }
 void loop() { read_sensors(); interface.update(); }
 
 void read_sensors() {
-  interface.outputs.set_value(s_motion_ix, digitalRead(PIN_MOTIONSENSOR));
+  interface.outputs.set_value(o_motion_ix, digitalRead(PIN_MOTIONSENSOR));
   interface.outputs.set_updated(); // Flag as completely updated, all values are set
 }
 
