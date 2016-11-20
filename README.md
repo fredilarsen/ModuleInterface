@@ -83,7 +83,6 @@ After adding the variable, the value must be set in a similar way as the motion 
 Each setting, input or output is identified by a variable name. A variable name consists of two parts:
 
 1. A module prefix, as defined when declaring the module in the master. This is a two-character lower case prefix identifying the module, like "gh" for a GreenHouse module.
-
 2. A core variable name. This must start with an upper case character, to be able to separate it from the module prefix.
 
 Because of the low memory amount available on Arduinos, the variable name of a setting, input or output has a short maximum length. This is defined by the constant MVAR_MAX_NAME_LENGTH, and is currently set to 10 characters including the module prefix. This is supposed to be enough to give unique names to all variables, like "ghTempOut", "scServoPos" and so on. It can be overridden.
