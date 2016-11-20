@@ -99,10 +99,10 @@ public:
   }
   
   bool find_output_by_name(const char *name, uint8_t &module_ix, uint8_t &output_ix) const {
-    char prefixed_name[MVAR_MAX_NAME_LENGTH + 1];
+    char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
     for (uint8_t i=0; i<num_interfaces; i++) {
       for (uint8_t j=0; j < interfaces[i]->outputs.get_num_variables(); j++) {
-        interfaces[i]->outputs.get_module_variable(j).get_prefixed_name(interfaces[i]->get_prefix(), prefixed_name);
+        interfaces[i]->outputs.get_module_variable(j).get_prefixed_name(interfaces[i]->get_prefix(), prefixed_name, sizeof prefixed_name);
         if (strcmp(name, prefixed_name) == 0) {
           module_ix = i;
           output_ix = j;

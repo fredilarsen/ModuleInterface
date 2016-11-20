@@ -36,7 +36,8 @@ bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
   return false;
 }
 
-bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name) {
+bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) {
+  String name = name_in; // For some reason a char* will succeed but be forgotten. Probably added as a pointer in JSON enocder
   const float SYS_ZERO = -999.25; // Marker for missing value used in some proprietary systems
   switch(v.type) {
     case mvtBoolean: root[name] = v.get_bool();return true;
@@ -48,7 +49,7 @@ bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name) {
     case mvtInt32: root[name] = v.get_int32(); return true;
     case mvtFloat32:
       if (v.get_float() != SYS_ZERO && !isnan(v.get_float())) {
-        root[name] = v.get_float(); return true; 
+        root[name] = v.get_float(); return true;
       } else return false;
   }
   return false;
@@ -83,8 +84,11 @@ void decode_json_settings(ModuleInterfaceSet &interfaces, JsonObject& root) {
 
   for (int i=0; i < interfaces.num_interfaces; i++) {
     if (!interfaces[i]->settings.got_contract()) continue;
+    
+    char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
     for (int j=0; j<interfaces[i]->settings.get_num_variables(); j++) {
-      json_to_mv(interfaces[i]->settings.get_module_variable(j), root, interfaces[i]->settings.get_name(j));
+      interfaces[i]->settings.get_module_variable(j).get_prefixed_name(interfaces[i]->get_prefix(), prefixed_name, sizeof prefixed_name);
+      json_to_mv(interfaces[i]->settings.get_module_variable(j), root, prefixed_name);
     }
     interfaces[i]->settings.set_updated(); // Flag that settings are ready to be used
   }
@@ -176,15 +180,18 @@ void add_module_status(ModuleInterface *interface, JsonObject &root) {
   root[name] = interface->get_uptime_s();
 
   name = interface->get_prefix(); name += F("MemErr");
-  root[name] = interface->out_of_memory;
+  root[name] = (uint8_t) interface->out_of_memory;
 }
 
 void add_json_values(ModuleInterface *interface, JsonObject &root) {
   if (!interface->outputs.got_contract() || !interface->outputs.is_updated()) return; // Values not available yet
   
   // Add output values
-  for (int i=0; i<interface->outputs.get_num_variables(); i++)
-    mv_to_json(interface->outputs.get_module_variable(i), root, interface->outputs.get_name(i));
+  char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
+  for (int i=0; i<interface->outputs.get_num_variables(); i++) {
+    interface->outputs.get_module_variable(i).get_prefixed_name(interface->get_prefix(), prefixed_name, sizeof prefixed_name);
+    mv_to_json(interface->outputs.get_module_variable(i), root, prefixed_name);
+  }
   
   // Add status values
   add_module_status(interface, root);
@@ -227,7 +234,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &c
     JsonObject& root = jsonBuffer.createObject();
     for (int i=0; i<interfaces.num_interfaces; i++) add_json_values(interfaces[i], root);
     
-    // Set scan columns in datebase if inserting (support for plotting with different resolutions)
+    // Set scan columns in database if inserting (support for plotting with different resolutions)
     if (!update_instead_of_insert) set_scan_columns(root, last_scan_times);
     
     root.printTo(buf);
@@ -235,6 +242,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &c
 
   if (buf.length() <= 2) return true; // Empty buffer, nothing to send, so not a failure
   #ifdef DEBUG_PRINT
+  //Serial.println(buf);
   Serial.print("Writing "); Serial.print(buf.length()); Serial.println(" bytes (outputs) to web server.");
   #endif
 

@@ -68,13 +68,13 @@ struct ModuleVariable {
     return name[0] >= 'a' && name[0] <= 'z';
   }
   // Return prefixed name, either prefixed from before, or with a prefix added now
-  void get_prefixed_name(const char *prefix, char *output_name_buf) const {
-    if (has_module_prefix() || !prefix) strcpy(output_name_buf, name); // Already prefixed
+  void get_prefixed_name(const char *prefix, char *output_name_buf, uint8_t buf_size) const {
+    if (has_module_prefix() || !prefix) strncpy(output_name_buf, name, buf_size); // Already prefixed
     else { // Add the specified prefix
       uint8_t len = strlen(prefix);
-      strncpy(output_name_buf, prefix, len);
-      strncpy(&output_name_buf[len], name, MVAR_MAX_NAME_LENGTH - len);
-      output_name_buf[MVAR_MAX_NAME_LENGTH] = 0;
+      strncpy(output_name_buf, prefix, min(len, buf_size));
+      strncpy(&output_name_buf[len], name, buf_size - len);
+      output_name_buf[buf_size-1] = 0;
     }
   }
   
