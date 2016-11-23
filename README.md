@@ -3,7 +3,17 @@ ModuleInterface is an Arduino compatible library for automatic transfer of setti
 
 This is ideal for quickly creating a master-slave based collection of devices (modules) doing things like measuring temperatures and other sensors, turning things on and off, regulating heating and so on. With synchronization between the modules, and between the modules and a database if using the HTTP client that is available for the master module.
 
-A typical setup can consist of multiple Arduino Nano devices connected to a master on an Arduino Mega with an Ethernet shield. 
+A typical setup can consist of multiple Arduino Nano devices connected to a master on an Arduino Mega with an Ethernet shield.
+
+####Why?
+There is a lot of interest in IoT nowadays, and there are several alternatives that let small devices exchange data with the cloud. And some like MQTT let the user have the broker on a private computer and exchange values between modules in that way without exposing data in the cloud.
+
+This library has the following focus:
+- Full user control and privacy. No data into the cloud (unless you want it).
+- The broker / master is also implemented on a small device, making it possible to run setups not involving computers.
+- It can run a whole setup or parts of it without Ethernet. This removes vulnerabilities, which is a hot topic with Ethernet-enabled devices like ESP8266.
+- It can communicate using the PJON library with a bus on a a single wire with no hardware add-ons/shields. Cheap and uncomplicated.
+- If web page control / visualization is needed, this is easy to do with a local LAMP/WAMP setup. Usable examples are included.
 
 ####Features
 - Transport of values (measured and calculated) between modules according to their contracts
