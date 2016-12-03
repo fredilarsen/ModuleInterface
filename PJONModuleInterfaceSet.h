@@ -76,7 +76,7 @@ public:
       #ifdef DEBUG_PRINT
         if (do_sync) {Serial.print(F("Scheduled broadcast of time sync: ")); Serial.println(now()); }
       #endif  
-      // Check in any module has reported that is it missing time
+      // Check if any module has reported that is it missing time
       if (!do_sync) {
         for (uint8_t i = 0; i < num_interfaces; i++) if (interfaces[i]->status_bits & MISSING_TIME) {
           #ifdef DEBUG_PRINT
