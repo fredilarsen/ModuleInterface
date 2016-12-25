@@ -1,13 +1,12 @@
  /* This sketch demonstrates the ModuleInterface library.
  * 
- * It does a simple task that requires some configuration. That configuration is kept in a 
- * ModuleInterface object, allowing it to be set and read from another device through some protocol,
- * in this case PJON.
- * The Master device will upon connection get this device's contract, that is, the names and types of
- * the settings and inputs it requires, and the outputs it offers.
+ * This sketch demonstrates immediate (event) transfer of an output to an input.
+ * It is meant to be used in a setup with BlinkModuleFollower and BlinkModuleMasterMultiple.
  * 
- * This sketch demonstrates synchronization of a setting and an output. The output is transferred but
- * not used except in a setup with BlinkModuleMasterMultiple and BlinkModuleFollower.
+ * This sketch is identical to BlinkModule except for that is looks for a negative flank
+ * on digital pin 8, changing the output variable when the pin is connected to ground, and flagging 
+ * this as an event to request immediate transfer without waiting for the regular sampling.
+ * The result is that the BlinkFollower module will change its blink interval immediately.
  */
 
 #include <PJONModuleInterface.h>
@@ -33,11 +32,14 @@ void setup() {
     
   pinMode(13, OUTPUT);
   digitalWrite(13, LOW);
+  
+  pinMode(8, INPUT_PULLUP);
 }
 
 void loop() {
   interface.update();
   blink();
+  check_pin();
 }
 
 void blink() {
@@ -46,8 +48,12 @@ void blink() {
   if (interface.settings.is_updated()) interface.settings.get_value(s_time_interval_ix, interval);
 
   // Send the interval back as an output
-  interface.outputs.set_value(o_time_interval_ix, interval);
-  interface.outputs.set_updated();
+  static uint32_t last_interval = 0;
+  if (last_interval != interval) {
+    interface.outputs.set_value(o_time_interval_ix, interval);
+    interface.outputs.set_updated();
+  }
+  last_interval = interval;  
   
   // Turn on or off when interval elapsed
   static uint32_t last_change = millis();
@@ -58,4 +64,15 @@ void blink() {
     light_on = !light_on;
     digitalWrite(13, light_on ? HIGH : LOW);
   }
+}
+
+// Check if pin 8 has been connected to earth
+void check_pin() {
+  bool pin_low = digitalRead(8) == LOW;
+  static bool previous_pin_low = true;
+  if (pin_low && !previous_pin_low) { // Negative flank, pin was connected to earth
+    interface.outputs.set_value(o_time_interval_ix, (uint32_t) 20); // Rapid blink
+    interface.outputs.set_event(o_time_interval_ix); // Flag it for immediate transfer
+  }
+  previous_pin_low = pin_low;
 }

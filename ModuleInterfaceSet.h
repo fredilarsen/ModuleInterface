@@ -10,7 +10,7 @@
 #include <ModuleInterface.h>
 
 class ModuleInterfaceSet {
-private:
+protected:
   bool updated_intermodule_dependencies = false;  
 public:
   uint8_t num_interfaces = 0;
@@ -57,7 +57,7 @@ public:
       bool all_sources_updated = true, some_set = false;
       for (int j=0; j<interfaces[i]->inputs.get_num_variables(); j++) {
         uint8_t module_ix = interfaces[i]->input_source_module_ix[j], var_ix = interfaces[i]->input_source_output_ix[j];
-        if (module_ix != NO_MODULE && var_ix != NO_VARIABLE) {     
+        if (module_ix != NO_MODULE && var_ix != NO_VARIABLE && interfaces[module_ix]->outputs.is_updated()) {     
           uint8_t size = interfaces[i]->inputs.get_module_variable(j).get_size();
           memset(buf, 0, 4);
           interfaces[module_ix]->outputs.get_value(var_ix, buf, size);
@@ -82,9 +82,30 @@ public:
     }
   }
   
+  // If any outputs have been flagged as events, also set value and the event flag on inputs that are using them.
+  void transfer_events_from_outputs_to_inputs() {
+    uint8_t buf[4]; // Largest value possibly encountered
+    for (uint8_t i = 0; i < num_interfaces; i++) {
+      for (uint8_t j = 0; j < interfaces[i]->inputs.get_num_variables(); j++) {
+        uint8_t module_ix = interfaces[i]->input_source_module_ix[j], var_ix = interfaces[i]->input_source_output_ix[j];
+        if (module_ix != NO_MODULE && var_ix != NO_VARIABLE) {
+          if (interfaces[module_ix]->outputs.get_module_variable(var_ix).is_event()) {
+            // Copy value
+            uint8_t size = interfaces[i]->inputs.get_module_variable(j).get_size();
+            memset(buf, 0, 4);
+            interfaces[module_ix]->outputs.get_value(var_ix, buf, size);
+            interfaces[i]->inputs.set_value(j, buf, size);
+            // Set event flag
+            interfaces[i]->inputs.set_event(j);
+          }
+        }
+      }
+    }    
+  }
+  
   bool got_all_contracts() {
     for (uint8_t i = 0; i < num_interfaces; i++) {
-      if (!interfaces[i]->got_contract()) {
+      if (!interfaces[i]->got_contract() && interfaces[i]->is_active()) {
         updated_intermodule_dependencies = false; // Interconnections no longer valid, must be recomputed
         return false;
       }

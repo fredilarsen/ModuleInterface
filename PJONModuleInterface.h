@@ -15,7 +15,6 @@
 #define MI_REQUEST_TIMEOUT 5000000   // (us) How long to wait for an active module to reply to a request
 #define MI_SEND_TIMEOUT 5000000      // (us) How long to wait for an active device to ACK
 #define MI_REDUCED_SEND_TIMEOUT 5000 // (us) How long to try to contact a moduled that is marked as inactive
-#define MI_INACTIVE_THRESHOLD 5      // The number of consecutive failed transfers before module is deactivated
 
 // A status bit for the PJON extended header byte, used to quickly separate ModuleInterface related messages from others
 #define MI_PJON_BIT SESSION_BIT
@@ -62,31 +61,23 @@ public:
   PJONModuleInterface(Link &pjon) : ModuleInterface() { set_link(pjon); }
   
   static PJONModuleInterface *get_singleton() { return singleton; }
+  
+  void update() {
+    pjon->receive(1000);
+    send_output_events();
+    pjon->update();
+  }
   #endif 
   
   void init() {
     ModuleInterface::init();    
     #ifdef IS_MASTER
-      memset(remote_bus_id, 0, 4);
+    memset(remote_bus_id, 0, 4);
     #endif
   }
 
   void set_bus(Link &bus) { pjon = &bus; }
-  
-  void update() {
-    pjon->receive(1000);
-    pjon->update();
-  }
-
-  // Whether this module is active or has not been reachable for a while
-  bool is_active() const { 
-    #ifdef IS_MASTER
-      return comm_failures < MI_INACTIVE_THRESHOLD;
-    #else
-      return true;
-    #endif  
-  }
-  
+      
   #ifdef IS_MASTER  
   void set_remote_device(Link &pjon, uint8_t remote_id, uint8_t remote_bus_id[]) {
     this->pjon = &pjon; this->remote_id = remote_id; memcpy(this->remote_bus_id, remote_bus_id, 4);
@@ -121,46 +112,65 @@ public:
     delete buf;
   }
    
+   // This function will wait up to the given timeout for a packet of the given type to arrive.
+   // Other packet types may be received and handled but will not cause this function to return.
+  uint16_t receive_packet(uint32_t timeout, ModuleCommand cmd) {
+    uint32_t start = micros();
+    uint16_t status = FAIL;
+    last_incoming_cmd = mcUnknownCommand;
+    do {
+      status = pjon->receive();
+      if ((status == ACK || status == NAK) && cmd == last_incoming_cmd) break;
+    } while (timeout > (uint32_t)(micros()-start));
+    return status;
+  }    
+    
   void update_contract(const uint32_t interval_ms) {
-    if (!settings.got_contract() && (settings.contract_requested_time == 0 || (millis()-settings.contract_requested_time >= interval_ms))) {
-      if (send_setting_contract_request()) pjon->receive(MI_REQUEST_TIMEOUT);
+    if (!settings.got_contract() && (settings.contract_requested_time == 0 || ((uint32_t)(millis()-settings.contract_requested_time) >= interval_ms))) {
+      if (send_setting_contract_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetSettingContract); else pjon->receive();
     }
-    if (!inputs.got_contract() && (inputs.contract_requested_time == 0 || (millis()-inputs.contract_requested_time >= interval_ms))) {
-      if (send_input_contract_request()) pjon->receive(MI_REQUEST_TIMEOUT);
+    if (!inputs.got_contract() && (inputs.contract_requested_time == 0 || ((uint32_t)(millis()-inputs.contract_requested_time) >= interval_ms))) {
+      if (send_input_contract_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetInputContract);  else pjon->receive();
     }
-    if (!outputs.got_contract() && (outputs.contract_requested_time == 0 || (millis()-outputs.contract_requested_time >= interval_ms))) {
-      if (send_output_contract_request()) pjon->receive(MI_REQUEST_TIMEOUT);
-    }
+    if (!outputs.got_contract() && (outputs.contract_requested_time == 0 || ((uint32_t)(millis()-outputs.contract_requested_time) >= interval_ms))) {
+      if (send_output_contract_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetOutputContract);  else pjon->receive();
+    }    
   }
-
+  
   void update_values(const uint32_t interval_ms) {
-    if (outputs.got_contract() && (outputs.requested_time == 0 || (millis()-outputs.requested_time >= interval_ms))) {
-      if (send_outputs_request()) pjon->receive(MI_REQUEST_TIMEOUT);
+    if (outputs.got_contract() && outputs.get_num_variables() != 0 && 
+      (outputs.requested_time == 0 || ((uint32_t)(millis()-outputs.requested_time) >= interval_ms))) {
+      if (send_outputs_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetOutputs); else pjon->receive();
     }
   }
 
   void update_status(const uint32_t interval_ms) {
-    if (got_contract() && (status_requested_time == 0 || (millis()-status_requested_time >= interval_ms))) {
-      if (send_status_request()) pjon->receive(MI_REQUEST_TIMEOUT);
+    if (got_contract() && (status_requested_time == 0 || ((uint32_t)(millis()-status_requested_time) >= interval_ms))) {
+      if (send_status_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetStatus); else pjon->receive();
     }
   }
   
   // Sending of data from master to remote module
   void send_settings() {
     #ifdef DEBUG_PRINT
-    if (settings.got_contract() && !settings.is_updated()) Serial.println(F("Settings not sent because not updated yet."));
+    if (settings.got_contract() && !settings.is_updated() && settings.get_num_variables() != 0) {
+      dname(); Serial.println(F("Settings not sent because not updated yet."));
+    }
     #endif
-    if (!settings.got_contract() || !settings.is_updated()) return;
+    if (!settings.got_contract() || !settings.is_updated() || settings.get_num_variables() == 0) return;
     notify(ntSampleSettings, this);
     BinaryBuffer response;
     uint8_t response_length = 0;
     settings.get_values(response, response_length, mcSetSettings);    
-    send(remote_id, remote_bus_id, response.get(), response_length); 
+    send(remote_id, remote_bus_id, response.get(), response_length);
+    status_bits &= ~MISSING_SETTINGS; // Assume they were received until next status saying they were not
   }
   
   void send_inputs() { 
     #ifdef DEBUG_PRINT
-    if (inputs.got_contract() && !inputs.is_updated() && inputs.get_num_variables()>0) Serial.println(F("Inputs not sent because not updated yet."));
+    if (inputs.got_contract() && !inputs.is_updated() && inputs.get_num_variables()>0) {
+      dname(); Serial.println(F("Inputs not sent because not updated yet."));
+    }
     #endif
     if (!inputs.got_contract() || !inputs.is_updated()) return;
     notify(ntSampleInputs, this);
@@ -168,40 +178,48 @@ public:
     uint8_t response_length = 0;
     inputs.get_values(response, response_length, mcSetInputs);
     send(remote_id, remote_bus_id, response.get(), response_length); 
+    status_bits &= ~MISSING_INPUTS; // Assume they were received until next status saying they were not
   }
     
   // Sending of requests  
   bool send_cmd(const uint8_t &value) {
     #ifdef DEBUG_PRINT
-      Serial.print(F("SENT REQUEST ")); Serial.println(value);
+    dname(); Serial.print(F("SENT REQUEST ")); Serial.println(value);
     #endif 
     return send(remote_id, remote_bus_id, &value, 1);
   }
-  bool send_setting_contract_request() { settings.contract_requested_time = millis(); return send_cmd(mcSendSettingContract); }
-  bool send_input_contract_request() {inputs.contract_requested_time = millis(); return send_cmd(mcSendInputContract); }
-  bool send_output_contract_request() { outputs.contract_requested_time = millis(); return send_cmd(mcSendOutputContract); }
-  bool send_settings_request() { settings.requested_time = millis(); return send_cmd(mcSendSettings); }
-  bool send_inputs_request() { inputs.requested_time = millis(); return send_cmd(mcSendInputs); }
-  bool send_outputs_request() { outputs.requested_time = millis();  return send_cmd(mcSendOutputs); }
-  bool send_status_request() { status_requested_time = millis(); return send_cmd(mcSendStatus); }
+  bool send_request(const uint8_t &value, uint32_t &requested_time) {
+    bool acked = send_cmd(value);
+    if (acked) requested_time = millis(); // Update time only if successfully sent
+    return acked;
+  }
+  bool send_setting_contract_request() { return send_request(mcSendSettingContract, settings.contract_requested_time); }
+  bool send_input_contract_request() { return send_request(mcSendInputContract, inputs.contract_requested_time); }
+  bool send_output_contract_request() { return send_request(mcSendOutputContract, outputs.contract_requested_time); }
+  bool send_settings_request() { return send_request(mcSendSettings, settings.requested_time); }
+  bool send_inputs_request() { return send_request(mcSendInputs, inputs.requested_time); }
+  bool send_outputs_request() { return send_request(mcSendOutputs, outputs.requested_time); }
+  bool send_status_request() { return send_request(mcSendStatus, status_requested_time); }
   #endif // IS_MASTER
   
   bool send(uint8_t remote_id, const uint8_t *remote_bus, const uint8_t *message, uint16_t length) {
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-      Serial.print("Sending len "); Serial.print(length); Serial.print(" cmd "); Serial.println(message[0]);
+    dname(); Serial.print("Sending len "); Serial.print(length); Serial.print(" cmd "); Serial.print(message[0]);
+    Serial.print(" active "); Serial.println(is_active());
     #endif  
 
     uint16_t status = pjon->send_packet(remote_id, remote_bus, (const char*)message, length, 
-      is_active() ? MI_SEND_TIMEOUT : MI_REDUCED_SEND_TIMEOUT, pjon->get_header() | MI_PJON_BIT | EXTEND_HEADER_BIT);
+      is_active() ? MI_SEND_TIMEOUT : MI_REDUCED_SEND_TIMEOUT, 
+      pjon->get_header() | MI_PJON_BIT | EXTEND_HEADER_BIT);
       
     #ifdef DEBUG_PRINT
-       if (status != ACK) Serial.println(F("----> Failed sending."));
+    if (status != ACK) { dname(); Serial.println(F("----> Failed sending.")); }
     #endif    
     #ifdef IS_MASTER
-      if (status == ACK) {
-        last_alive = millis();
-        comm_failures = 0; 
-      } else if (comm_failures < 255) comm_failures++;
+    if (status == ACK) {
+      last_alive = millis();
+      comm_failures = 0; 
+    } else if (comm_failures < 255) comm_failures++;
     #endif
     return status == ACK;
   }
@@ -212,7 +230,7 @@ public:
     if (ModuleInterface::handle_request_message(payload, length, response, response_length)) {
       if (response.is_empty()) {
         #ifdef DEBUG_PRINT
-        Serial.print(F("Out of memory replying to cmd ")); Serial.println(payload[0]);
+        dname(); Serial.print(F("Out of memory replying to cmd ")); Serial.println(payload[0]);
         #endif            
         return false;
       }
@@ -227,12 +245,13 @@ public:
     if (!((packet_info.header & EXTEND_HEADER_BIT) && (packet_info.header & MI_PJON_BIT))) return false; // Message not meant for ModuleInterface use
     
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-      Serial.print(F("Received len ")); Serial.print(length); Serial.print(F(" cmd ")); Serial.println(payload[0]);   
+    dname(); Serial.print(F("Received len ")); Serial.print(length); Serial.print(F(" cmd ")); Serial.println(payload[0]);   
     #endif  
     if (handle_input_message(payload, (uint8_t) length)) {
       #ifdef IS_MASTER
       last_alive = millis();
       comm_failures = 0;
+      if (length > 0) last_incoming_cmd = (ModuleCommand) payload[0];
       #endif
       return true;
     }
@@ -240,13 +259,46 @@ public:
       #ifdef IS_MASTER
       last_alive = millis(); 
       comm_failures = 0;
+      if (length > 0) last_incoming_cmd = (ModuleCommand) payload[0];
       #endif
       return true;
     }   
     return false;
   }  
 
+  #ifdef IS_MASTER  
+  // If any input is flagged as an event, send it immediately to the module from master
+  void send_input_events() {
+    BinaryBuffer response;
+    uint8_t response_length;
+    inputs.get_values(response, response_length, mcSetInputs, true);
+    if (response_length > 0) {
+      #ifdef DEBUG_PRINT
+      dname(); Serial.print("send_input_events, length "); Serial.print(response_length); Serial.print(", module id "); 
+      Serial.println(remote_id);
+      #endif
+      if (send(remote_id, remote_bus_id, response.get(), response_length)) inputs.clear_events();
+    }
+  }
+  #endif
+  
   #ifndef IS_MASTER  
+  // If any output is flagged as an event, send it immediately to the master (breaking the master-slave pattern)
+  void send_output_events() {
+    BinaryBuffer response;
+    uint8_t response_length;
+    outputs.get_values(response, response_length, mcSetOutputs, true);
+    // TODO: Do not assume that the latest packet is from master!
+    if (response_length > 0 && pjon->get_last_packet_info().sender_id != NOT_ASSIGNED && pjon->get_last_packet_info().sender_id != 0) {
+      #ifdef DEBUG_PRINT
+      dname(); Serial.print("send_output_events, length "); Serial.print(response_length); Serial.print(", master id "); 
+      Serial.println(pjon->get_last_packet_info().sender_id);
+      #endif
+      if (send(pjon->get_last_packet_info().sender_id, pjon->get_last_packet_info().sender_bus_id, response.get(), response_length))
+        outputs.clear_events();
+    }
+  }
+  
   // Make sure that the user does not have to register a receiver callback function for things to work
   static void default_receiver_function(uint8_t *payload, uint16_t length, const PacketInfo &packet_info) {
     get_singleton()->handle_message(payload, length, packet_info);

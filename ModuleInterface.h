@@ -6,28 +6,29 @@
 enum ModuleCommand {
   mcUnknownCommand,
   
-  mcSendSettingContract,
+  mcSendSettingContract,  // 1
   mcSendInputContract,
   mcSendOutputContract,
 
-  mcSetSettingContract,
+  mcSetSettingContract,   // 4
   mcSetInputContract,
   mcSetOutputContract,
 
-  mcSendSettings,
+  mcSendSettings,         // 7
   mcSendInputs,
   mcSendOutputs,  
   mcSendStatus, // Master is asking regularly if the module has anything to report that is not available in the variable sets
   
-  mcSetSettings,
+  mcSetSettings,          // 11
   mcSetInputs,
   mcSetOutputs,
   mcSetStatus,
   
-  mcSetTime
+  mcSetTime               // 15
 };
 
 #define MAX_MODULE_NAME_LENGTH 8
+#define MI_INACTIVE_THRESHOLD  5      // The number of consecutive failed transfers before module is deactivated
 
 // Status bits
 #define CONTRACT_MISMATCH_SETTINGS 1 // We received settings for another version, ask Master to update contract
@@ -80,6 +81,7 @@ public:
   uint8_t comm_failures = 0;   // If a module is unreachable it can be temporarily deactivated
   bool out_of_memory = false;  // If a module has reached an out-of-memory exception (but still can report back)
   ModuleVariableSet *confirmed_settings = NULL; // Configuration parameters received from the module
+  ModuleCommand last_incoming_cmd = mcUnknownCommand;  // Cmd in last received packet
   #endif
     
   // Time sync support
@@ -150,9 +152,18 @@ public:
     module_name[len] = 0; // Null-terminate
   }
   
-  // Return the time passed since the last life sign was received from module, or -1 if no life sign received after startup
-  int32_t get_last_alive_age() { return last_alive ? (uint32_t) ((millis() - last_alive))/1000 : -1; }  
+  #ifdef DEBUG_PRINT
+  // To ease prefixing all debug messages with module name
+  void dname() {
+    #ifdef IS_MASTER
+    Serial.print(module_name); Serial.print(": ");
+    #endif
+  }
+  #endif
   
+  // Return the time passed since the last life sign was received from module, or -1 if no life sign received after startup
+  int32_t get_last_alive_age() const { return last_alive ? (uint32_t) ((millis() - last_alive))/1000ul : -1; }  
+    
   #ifdef IS_MASTER
   void set_prefix(const char *prefix) {
     uint8_t len = prefix ? min(strlen(prefix), MVAR_PREFIX_LENGTH) : 0;
@@ -168,12 +179,12 @@ public:
   bool handle_input_message(const uint8_t *message, const uint8_t length) {  
     if (length < 1) return false;
     #ifdef DEBUG_PRINT
-      Serial.print(F("INPUT TYPE ")); Serial.print(message[0]); Serial.print(F(", len ")); Serial.println(length);
+      dname(); Serial.print(F("INPUT TYPE ")); Serial.print(message[0]); Serial.print(F(", len ")); Serial.println(length);
     #endif 
     #ifdef IS_MASTER
       comm_failures = 0;
     #endif
-    last_alive = millis();
+    last_alive = millis(); if (last_alive == 0) last_alive = 1;
     switch(message[0]) {
       #ifdef IS_MASTER
       case mcSetSettingContract: 
@@ -225,31 +236,31 @@ public:
     }
     #ifdef DEBUG_PRINT
       if (message[0] == mcSetSettingContract) {
-        Serial.print(F("Settings contract: "));
+        dname(); Serial.print(F("Settings contract: "));
         settings.debug_print_contract();
       }
       else if (message[0] == mcSetInputContract) {
-        Serial.print(F("Inputs contract: "));
+        dname(); Serial.print(F("Inputs contract: "));
         inputs.debug_print_contract();
       }
       else if (message[0] == mcSetOutputContract) {
-        Serial.print(F("Outputs contract: "));
+        dname(); Serial.print(F("Outputs contract: "));
         outputs.debug_print_contract();
       }
       else if (message[0] == mcSetSettings) {
-        Serial.print(F("Settings: "));
+        dname(); Serial.print(F("Settings: "));
         settings.debug_print_values();
       }
       else if (message[0] == mcSetInputs) {
-        Serial.print(F("Inputs: "));
+        dname(); Serial.print(F("Inputs: "));
         inputs.debug_print_values();
       }
       else if (message[0] == mcSetOutputs) {
-        Serial.print(F("Outputs: "));
+        dname(); Serial.print(F("Outputs: "));
         outputs.debug_print_values();
       }
       else if (message[0] == mcSetStatus) {
-        Serial.print(F("Status: ")); Serial.println(message[1]);
+        dname(); Serial.print(F("Status: ")); Serial.println(message[1]);
       }
     #endif      
     return true;
@@ -260,12 +271,12 @@ public:
     response_length = 0;
     if (length < 1) return false;
     #ifdef DEBUG_PRINT
-      Serial.print("REQUEST TYPE "); Serial.print(message[0]); Serial.print(", len "); Serial.println(length);
+      dname(); Serial.print("REQUEST TYPE "); Serial.print(message[0]); Serial.print(", len "); Serial.println(length);
     #endif
     #ifdef IS_MASTER
       comm_failures = 0;
     #endif
-    last_alive = millis();
+    last_alive = millis(); if (last_alive == 0) last_alive = 1;
     switch(message[0]) {
       #ifndef IS_MASTER
       case mcSendSettingContract: 
@@ -282,6 +293,8 @@ public:
       case mcSendOutputs:
         notify(ntSampleOutputs, this); 
         outputs.get_values(response, response_length, mcSetOutputs); 
+        outputs.clear_events();  // Will be transferred normally, so clear event flag
+        outputs.clear_changed(); // Changes are detected between each transfer
         break;
       case mcSendStatus:
         notify(ntSampleStatus, this);      
@@ -309,6 +322,15 @@ public:
   // Register notification callback function
   void set_notification_callback(notify_function n) { notify = n; }
 
+  // Whether this module is active or has not been reachable for a while
+  bool is_active() const { 
+    #ifdef IS_MASTER
+    return comm_failures < MI_INACTIVE_THRESHOLD;
+    #else
+    return true;
+    #endif  
+  }
+  
   #ifndef IS_MASTER
   #ifndef NO_TIME_SYNC
   // Has time been set in the not too far past?
@@ -366,7 +388,7 @@ friend class ModuleInterfaceSet;
       length = 7;
     } else { length = 0; ModuleVariableSet::out_of_memory = true; }
   }
-  
+    
   // This must be called regularly to keep the time updated (at least once for each each millis() rollover)
   #ifndef NO_TIME_SYNC
   void update_time() {
@@ -396,7 +418,7 @@ friend class ModuleInterfaceSet;
         setTime(time_utc_s);  // Adjust "system clock" in UTC as well if the Time library is used
       #endif
       #ifdef DEBUG_PRINT
-        Serial.print(F("Time adjusted by ")); Serial.print((uint32_t) (time_utc_s - initial_time));
+        dname(); Serial.print(F("Time adjusted by ")); Serial.print((uint32_t) (time_utc_s - initial_time));
         Serial.print(F("s to UTC ")); Serial.println(time_utc_s);
       #endif
     }
@@ -407,7 +429,7 @@ friend class ModuleInterfaceSet;
   #ifdef IS_MASTER  
   void set_status(const uint8_t *message, const uint8_t length) {
     if (length == 6) {
-      last_alive = millis();
+      last_alive = millis(); if (last_alive == 0) last_alive = 1;
       comm_failures = 0;
       status_bits = message[0];
       out_of_memory = message[1];
@@ -415,7 +437,7 @@ friend class ModuleInterfaceSet;
       if (got_contract() && settings.is_master() && (status_bits & (CONTRACT_MISMATCH_SETTINGS | CONTRACT_MISMATCH_INPUTS))) {
         // Module flags that it does not have the same contract, usually for settings or inputs. Invalidate relevant part.
         #ifdef DEBUG_PRINT
-          Serial.print(F("Module changed contract. Invalidating ")); Serial.println(status_bits);           
+          dname(); Serial.print(F("Module changed contract. Invalidating ")); Serial.println(status_bits);           
         #endif  
         if (status_bits & CONTRACT_MISMATCH_SETTINGS) settings.invalidate_contract();
         if (status_bits & CONTRACT_MISMATCH_INPUTS) inputs.invalidate_contract();

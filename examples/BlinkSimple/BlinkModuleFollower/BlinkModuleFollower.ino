@@ -11,7 +11,7 @@
 #include <PJONLink.h>
 
 // Settings
-#define bmTimeIntervalIx 0
+#define iTimeIntervalIx 0
 
 // PJON related
 PJONLink<SoftwareBitBang> bus(5); // PJON device id 5
@@ -37,7 +37,7 @@ void loop() {
 void blink() {
   // Get the configured interval when received from Master
   uint32_t interval = 30; // Blink rapidly until a valid interval received from master
-  if (interface.inputs.is_updated()) interface.inputs.get_value(bmTimeIntervalIx, interval);
+  if (interface.inputs.is_updated()) interface.inputs.get_value(iTimeIntervalIx, interval);
   
   // Turn on or off when interval elapsed
   static uint32_t last_change = millis();
@@ -49,4 +49,5 @@ void blink() {
     digitalWrite(13, light_on ? HIGH : LOW);
   }
 }
+
 

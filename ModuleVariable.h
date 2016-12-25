@@ -31,9 +31,11 @@ enum ModuleVariableType {
 extern const char *ModuleVariableTypeNames[];
 
 struct ModuleVariable {
-  char name[MVAR_MAX_NAME_LENGTH + 1];
+private:
+  ModuleVariableType type = mvtUnknown; // To save memory we use the uppermost bits for change detection, therefore do not allow direct access
+public:  
   uint8_t value[4];  // A 4 byte buffer covers all supported value types, better than using a pointer and allocating memory
-  ModuleVariableType type = mvtUnknown;
+  char name[MVAR_MAX_NAME_LENGTH + 1];
 
   ModuleVariable() { name[0] = 0; memset(value, 0, 4); }
   
@@ -77,9 +79,30 @@ struct ModuleVariable {
       output_name_buf[buf_size-1] = 0;
     }
   }
+
+  ModuleVariableType get_type() const { return (ModuleVariableType) (type & 0b00111111); }
+  
+  // Change detection
+  void set_changed(bool changed = true) {
+    if (changed) type = (ModuleVariableType)(type | 0b10000000);
+    else type = (ModuleVariableType)(type & 0b01111111);
+  }
+  bool is_changed() const { return (type & 0b10000000) != 0; }
+  
+  // Event flag
+  void set_event(bool event = true) {
+    if (event) type = (ModuleVariableType)(type | 0b01000000);
+    else type = (ModuleVariableType)(type & 0b10111111);
+  }
+  bool is_event() const { return (type & 0b01000000) != 0; }  
   
   // Value setters and getters
-  void set_value(const void *v, const uint8_t size) { if (get_size() == size) memcpy(value, v, size); }
+  void set_value(const void *v, const uint8_t size) { 
+    if (get_size() == size) {
+      if (memcmp(value, v, size) != 0) set_changed(true); // Detect changes
+      memcpy(value, v, size);
+    }
+  }
   void get_value(void *v, const uint8_t size) const { if (get_size() == size) memcpy(v, value, size); }
 
   // Specialized convenience setters (these do not cost memory because of inlining)
@@ -114,7 +137,7 @@ struct ModuleVariable {
   
   // Memory management 
   uint8_t get_size() const {
-    switch(type) {
+    switch(get_type()) {
     case mvtBoolean:
     case mvtUint8:
     case mvtInt8: return 1;

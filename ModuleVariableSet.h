@@ -34,9 +34,9 @@ struct ModuleVariableSet {
 private:  
   uint8_t num_variables = 0;
   ModuleVariable *variables = NULL;
-  uint8_t total_value_length = 0; // Length of all values serialized after another
-  uint32_t contract_id = 0;       // Number used for detecting changes in contract
-  uint32_t received_time = 0;     // Set by set_values when setting values
+  uint8_t total_value_length = 0;    // Length of all values serialized after another
+  uint32_t contract_id = 0;          // Number used for detecting changes in contract
+  uint32_t values_received_time = 0; // Set by set_values when setting values
   bool master = false;
 
   void deallocate() { if (variables) { delete[] variables; variables = NULL; num_variables = 0; } }
@@ -52,7 +52,7 @@ private:
       uint8_t len = strlen(variables[i].name);
       ((uint8_t*) &id)[0] += variables[i].get_size();
       ((uint8_t*) &id)[1] += len;
-      ((uint8_t*) &id)[2] += (uint8_t) variables[i].type; 
+      ((uint8_t*) &id)[2] += (uint8_t) variables[i].get_type(); 
       for (uint8_t j=0; j<len; j++) ((uint8_t*) &id)[3] ^= variables[i].name[j]; // XOR of chars in names
     }
     // TODO: Use 32 bit CRC of all above instead of sums and XOR?
@@ -133,7 +133,7 @@ public:
       memcpy(p, &contract_id, 4); p += 4; // Add contract id
       *p = num_variables; p++; // Add number of variables
       for (uint8_t i = 0; i < num_variables; i++) { // Add each variable type and name
-        *p = (uint8_t) variables[i].type; p++;      
+        *p = (uint8_t) variables[i].get_type(); p++;      
         uint8_t len = strlen(variables[i].name);
         *p = len; p++;
         memcpy(p, variables[i].name, len);
@@ -148,7 +148,7 @@ public:
     #endif
     #ifdef IS_MASTER
       contract_id = 0;
-      received_time = 0;
+      values_received_time = 0;
     #endif
   }
   bool got_contract() const { return (contract_id != 0); }
@@ -159,52 +159,97 @@ public:
     // Get number of variables and contract id
     if (length < 5) return false; // Invalid message
     const uint8_t *p = values;
-    if ((*(uint32_t*)p) != contract_id || (*(p+4) != num_variables && *(p+4) != 0)) { 
+    uint8_t numvar = *(p+4);
+    bool event = (numvar & 0b10000000) != 0;
+    if (event) numvar = (uint8_t) (numvar & 0b01111111); // Remove event bit
+    if ((*(uint32_t*)p) != contract_id || (numvar > num_variables)) { 
       invalidate_contract(); 
       #ifdef DEBUG_PRINT
         Serial.print(F("Values received with mismatched contract id ")); Serial.println(*(uint32_t*)p);
       #endif
       return false;
     }
-    if (*(p+4) == 0) {
+    if (numvar == 0) {
       #ifdef DEBUG_PRINT
         Serial.print(F("--> set_values got no values, not updated on sender side yet. Length = ")); Serial.println(length);
       #endif      
       return true; // Conforms to contract, but values not available yet
     }
-    
+    #ifdef DEBUG_PRINT
+    if (numvar < num_variables) {
+      Serial.print("--> set_values got "); Serial.print(numvar); Serial.print(" of "); Serial.print(num_variables); Serial.println(" values.");
+    }
+    #endif
+
     // Data corresponds to current contract, so parse values
     p += 5; // Skip over contract id and variable count
-    for (uint8_t i = 0; i < num_variables && p - values < length; i++) {
-      uint8_t len = variables[i].get_size();
-      variables[i].set_value(p, len); p += len;    
+    for (uint8_t i = 0; i < numvar && p - values < length; i++) {
+      uint8_t varpos = numvar == i;
+      if (numvar != num_variables) { varpos = *p; p++; } // Variable number included
+      if (varpos >= num_variables) return false; // Corrupted message
+      uint8_t len = variables[varpos].get_size();
+      variables[varpos].set_value(p, len); 
+      p += len;
+      if (event) variables[varpos].set_event(); // Set event flag on receiving side
     }
-    set_updated();
+    // Flag as updated / ready for use only after we have got a full set
+    if (numvar == num_variables) set_updated();
     return true;
   }
-  
-  void get_values(BinaryBuffer &values, uint8_t &length, uint8_t header_byte) const {
+    
+  // Get serialized values, usually all, but can be limted to values marked as events
+  // and/or values marked as changed. If setting both events_only and changes_only,
+  // both will be included.
+  void get_values(BinaryBuffer &values, uint8_t &length, uint8_t header_byte,
+                  bool events_only = false, bool changes_only = false) const {
     length = 0;
-    if (values.allocate(6 + total_value_length)) {
-      length = 6 + total_value_length;
+    
+    // Determine the number of variables to be serialized, all or a subset
+    uint8_t numvar = num_variables, total_len = total_value_length;
+    if (events_only || changes_only) {
+      numvar = 0; total_len = 0;
+      for (uint8_t i = 0; i < num_variables; i++) {
+        if ((events_only && variables[i].is_event()) || (changes_only && variables[i].is_changed())) {
+          numvar++;
+          total_len +=  variables[i].get_size();
+        }
+      }
+      if (numvar != num_variables) total_len += numvar; // One byte with variable number before each value
+      if (numvar == 0) return; // No events or changes to send
+    }
+    
+    // Serialize
+    if (values.allocate(6 + total_len)) {
+      // Header
+      length = 6 + total_len;
       uint8_t *p = values.get();
       *p = header_byte; p++;
       memcpy(p, &contract_id, 4); p += 4;
-      *p = is_updated() ? num_variables : 0; // If values not set yet, then report "no values"
+      *p = is_updated() || events_only ? numvar : 0; // If values not set yet, then report "no values"
+      if (events_only) *p = (uint8_t) (*p | 0b10000000); // Using upper bit for event flag, limiting number of vars to 127
       #ifdef DEBUG_PRINT
-        if (!is_updated()) {
-          Serial.print(F("Values not updated. Sending empty output values. Value length = "));
-          Serial.println(total_value_length);
+        if (!(is_updated() || events_only)) {
+          Serial.print(F("Values not updated or event. Sending empty output values. Value length = "));
+          Serial.println(total_len);
         }
       #endif
       p++;
-      for (uint8_t i = 0; i < num_variables; i++) { 
-        uint8_t len = variables[i].get_size();   
-        variables[i].get_value(p, len); p += len;
+      // Values
+      if (numvar != 0) {
+        for (uint8_t i = 0; i < num_variables; i++) {
+          if (numvar == num_variables ||
+            (events_only && variables[i].is_event()) || 
+            (is_updated() && changes_only && variables[i].is_changed())) {
+            if (numvar != num_variables) *p = i; // Variable number if not serializing all
+            uint8_t len = variables[i].get_size();
+            variables[i].get_value(p, len); 
+            p += len;
+          }
+        }
       }
     } else out_of_memory = true;
   }
-
+  
   uint8_t get_num_variables() const { return num_variables; }
   
   uint8_t get_variable_ix(const char *variable_name) const {
@@ -218,7 +263,7 @@ public:
   ModuleVariable &get_module_variable(const uint8_t ix) { return variables[ix]; }
   
   const char *get_name(const uint8_t ix) const { return variables[ix].name; }
-  ModuleVariableType get_type(const uint8_t ix) const { return variables[ix].type; }
+  ModuleVariableType get_type(const uint8_t ix) const { return variables[ix].get_type(); }
   
   // Low-level setter and getter. Use these on module size where ix is constant.
   void set_value(const uint8_t ix, const void *value, const uint8_t size) {
@@ -270,24 +315,42 @@ public:
   void set_value(MIVariable &var, const float &v) { set_value(var, &v, 4); }
     
     // Specialized convenience getters
-  void get_value(MIVariable &var, bool &v) { get_value(var, &v, 1); }
-  void get_value(MIVariable &var, uint8_t &v) { get_value(var, &v, 1); }
-  void get_value(MIVariable &var, uint16_t &v) { get_value(var, &v, 2); }
-  void get_value(MIVariable &var, uint32_t &v) { get_value(var, &v, 4); }
-  void get_value(MIVariable &var, int8_t &v) { get_value(var, &v, 1); }
-  void get_value(MIVariable &var, int16_t &v) { get_value(var, &v, 2); }
-  void get_value(MIVariable &var, int32_t &v) { get_value(var, &v, 4); }
-  void get_value(MIVariable &var, float &v) { get_value(var, &v, 4); }  
+  void get_value(MIVariable &var, bool &v) const { get_value(var, &v, 1); }
+  void get_value(MIVariable &var, uint8_t &v) const { get_value(var, &v, 1); }
+  void get_value(MIVariable &var, uint16_t &v) const { get_value(var, &v, 2); }
+  void get_value(MIVariable &var, uint32_t &v) const { get_value(var, &v, 4); }
+  void get_value(MIVariable &var, int8_t &v) const { get_value(var, &v, 1); }
+  void get_value(MIVariable &var, int16_t &v) const { get_value(var, &v, 2); }
+  void get_value(MIVariable &var, int32_t &v) const { get_value(var, &v, 4); }
+  void get_value(MIVariable &var, float &v) const { get_value(var, &v, 4); }  
   
   // More specialized convenience getters
-  bool     get_bool(MIVariable &var) { return *(bool*)get_value_pointer(var); }
-  uint8_t  get_uint8(MIVariable &var) { return *(uint8_t*)get_value_pointer(var); }
-  uint16_t get_uint16(MIVariable &var) { return *(uint16_t*)get_value_pointer(var); }
-  uint32_t get_uint32(MIVariable &var) { return *(uint32_t*)get_value_pointer(var); }
-  int8_t   get_int8(MIVariable &var) { return *(int8_t*)get_value_pointer(var); }
-  int16_t  get_int16(MIVariable &var) { return *(int16_t*)get_value_pointer(var); }
-  int32_t  get_int32(MIVariable &var) { return *(int32_t*)get_value_pointer(var); }
-  float    get_float(MIVariable &var) { return *(float*)get_value_pointer(var); }
+  bool     get_bool(MIVariable &var) const { return *(bool*)get_value_pointer(var); }
+  uint8_t  get_uint8(MIVariable &var) const { return *(uint8_t*)get_value_pointer(var); }
+  uint16_t get_uint16(MIVariable &var) const { return *(uint16_t*)get_value_pointer(var); }
+  uint32_t get_uint32(MIVariable &var) const { return *(uint32_t*)get_value_pointer(var); }
+  int8_t   get_int8(MIVariable &var) const { return *(int8_t*)get_value_pointer(var); }
+  int16_t  get_int16(MIVariable &var) const { return *(int16_t*)get_value_pointer(var); }
+  int32_t  get_int32(MIVariable &var) const { return *(int32_t*)get_value_pointer(var); }
+  float    get_float(MIVariable &var) const { return *(float*)get_value_pointer(var); }
+  
+  // Change detection
+  bool is_changed(MIVariable &var) const { 
+    verify_mivariable(var);
+    if (var.ix < num_variables) return variables[var.ix].is_changed();
+    return false;
+  }
+  
+  // Event support
+  bool is_event(MIVariable &var) const { 
+    verify_mivariable(var);
+    if (var.ix < num_variables) return variables[var.ix].is_event();
+    return false;
+  }
+  bool set_event(MIVariable &var, const bool event = true) const { 
+    verify_mivariable(var);
+    if (var.ix < num_variables) variables[var.ix].set_event(event);
+  }
   #endif
   
   // Specialized convenience setters
@@ -301,14 +364,14 @@ public:
   void set_value(const uint8_t ix, const float &v) { set_value(ix, &v, 4); }
   
   // Specialized convenience getters
-  void get_value(const uint8_t ix, bool &v) { get_value(ix, &v, 1); }
-  void get_value(const uint8_t ix, uint8_t &v) { get_value(ix, &v, 1); }
-  void get_value(const uint8_t ix, uint16_t &v) { get_value(ix, &v, 2); }
-  void get_value(const uint8_t ix, uint32_t &v) { get_value(ix, &v, 4); }
-  void get_value(const uint8_t ix, int8_t &v) { get_value(ix, &v, 1); }
-  void get_value(const uint8_t ix, int16_t &v) { get_value(ix, &v, 2); }
-  void get_value(const uint8_t ix, int32_t &v) { get_value(ix, &v, 4); }
-  void get_value(const uint8_t ix, float &v) { get_value(ix, &v, 1); }
+  void get_value(const uint8_t ix, bool &v) const { get_value(ix, &v, 1); }
+  void get_value(const uint8_t ix, uint8_t &v) const { get_value(ix, &v, 1); }
+  void get_value(const uint8_t ix, uint16_t &v) const { get_value(ix, &v, 2); }
+  void get_value(const uint8_t ix, uint32_t &v) const { get_value(ix, &v, 4); }
+  void get_value(const uint8_t ix, int8_t &v) const { get_value(ix, &v, 1); }
+  void get_value(const uint8_t ix, int16_t &v) const { get_value(ix, &v, 2); }
+  void get_value(const uint8_t ix, int32_t &v) const { get_value(ix, &v, 4); }
+  void get_value(const uint8_t ix, float &v) const { get_value(ix, &v, 1); }
 
   // More specialized convenience getters
   bool     get_bool(const uint8_t ix) const { return *(bool*)get_value_pointer(ix); }
@@ -322,11 +385,35 @@ public:
   
   bool is_master() const { return master; }  // Whether this VariableSet is on the module or master side of a connection
 
+  
+  // Change detection
+  bool is_changed() const {
+    for (uint8_t i=0; i<num_variables; i++) if (variables[i].is_changed()) return true;
+    return false;
+  }
+  void clear_changed() { for (uint8_t i=0; i<num_variables; i++) variables[i].set_changed(false); }
+  bool is_changed(const uint8_t ix) const { if (ix < num_variables) return variables[ix].is_changed(); return false; } 
+  
+  
+  // Event support
+  bool has_events() const {
+    for (uint8_t i=0; i<num_variables; i++) if (variables[i].is_event()) return true;
+    return false;
+  }
+  void clear_events() { for (uint8_t i=0; i<num_variables; i++) variables[i].set_event(false); } 
+  bool is_event(const uint8_t ix) const { if (ix < num_variables) return variables[ix].is_event(); return false; }
+  void set_event(const uint8_t ix, const bool event = true) { if (ix < num_variables) variables[ix].set_event(event); } 
+
+  
   // These are used for determining when values are ready to be used. If setting values manually, call the set_updated
   // function when all values have been set so that they can be distributed to module or master.
-  bool is_updated() const { return received_time != 0; }
-  void set_updated() { received_time = millis(); if (received_time==0) received_time = 1; }
-  uint32_t get_updated_time_ms() { return received_time; }
+  bool is_updated() const { return values_received_time != 0; }
+  void set_updated() {
+    if (!got_contract()) return; 
+    values_received_time = millis(); 
+    if (values_received_time==0) values_received_time = 1;
+  }
+  uint32_t get_updated_time_ms() const { return values_received_time; }
         
   // Helper variables not used internally, available for use by a communication protocol
   #ifdef IS_MASTER
@@ -339,7 +426,7 @@ public:
       if (num_variables == 0) Serial.print(F("Empty contract."));
       else for (uint8_t i = 0; i < num_variables; i++) {
         if (i > 0) Serial.print(" "); 
-        Serial.print(variables[i].name); Serial.print(":"); Serial.print(ModuleVariableTypeNames[(uint8_t)variables[i].type]);
+        Serial.print(variables[i].name); Serial.print(":"); Serial.print(ModuleVariableTypeNames[(uint8_t)variables[i].get_type()]);
       }
       Serial.println("");
     }
@@ -349,7 +436,7 @@ public:
       else for (uint8_t i = 0; i < num_variables; i++) {
         if (i > 0) Serial.print(" "); 
         Serial.print(variables[i].name); Serial.print("=");
-        switch(variables[i].type) {
+        switch(variables[i].get_type()) {
         case mvtBoolean: Serial.print(*((bool*)variables[i].value)); break;
         case mvtUint8: Serial.print(*((uint8_t*)variables[i].value)); break;
         case mvtInt8: Serial.print(*((int8_t*)variables[i].value)); break;
@@ -358,7 +445,7 @@ public:
         case mvtUint32: Serial.print(*((uint32_t*)variables[i].value)); break;
         case mvtInt32: Serial.print(*((int32_t*)variables[i].value)); break;
         case mvtFloat32: Serial.print(*((float*)variables[i].value)); break;
-        default: Serial.print("Unrecognized type "); Serial.print(variables[i].type); break;
+        default: Serial.print("Unrecognized type "); Serial.print(variables[i].get_type()); break;
         }
       }
       Serial.println("");

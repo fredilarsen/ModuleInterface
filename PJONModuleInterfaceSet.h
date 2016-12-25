@@ -62,11 +62,23 @@ public:
     return cnt;
   }
   
-  void update_contracts() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_contract(sampling_time_settings); }
+  void update_contracts() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_contract(sampling_time_outputs); }
   void update_values() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_values(sampling_time_outputs); }
   void update_statuses() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_status(sampling_time_outputs); }
   void send_settings() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_settings(); }
   void send_inputs() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_inputs(); }
+  void send_input_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_input_events(); }
+
+  void clear_output_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->outputs.clear_events(); }
+  void clear_input_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->inputs.clear_events(); }
+
+  void handle_events() {
+    if (!updated_intermodule_dependencies || !got_all_contracts()) return;
+    transfer_events_from_outputs_to_inputs();
+    send_input_events();
+    clear_output_events();
+    clear_input_events();
+  }
   
   // If Time.h is included before this, time can be broadcast to all modules
   #ifdef _Time_h
@@ -95,7 +107,7 @@ public:
         memcpy(&buf[1], &t, 4);
         uint16_t dummy_bus_id = 0;
         uint16_t packet = pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, 0, 
-          pjon->get_header() | EXTEND_HEADER_BIT | MI_PJON_BIT);      
+          pjon->get_header() | EXTEND_HEADER_BIT | MI_PJON_BIT, 0);
         
         // Clear time-missing bit to avoid this triggering continuous broadcasts.
         // If a module did not pick up the broadcast, we will get this information in the next status reply.
@@ -108,7 +120,10 @@ public:
   void update() {
     // Do PJON send and receive
     pjon->update();
-    pjon->receive();
+    pjon->receive(100);
+    
+    // Handle incoming events
+    handle_events();
     
     // Broadcast time to all modules with a few minutes interval
     #ifdef _Time_h
@@ -180,7 +195,7 @@ void mis_global_receive_function(uint8_t *payload, uint16_t length, const Packet
       interface = (PJONModuleInterface*) singleton->interfaces[ix];
       
       // Let interface handle ModuleInterface related message
-      if (interface->handle_message(payload, length, packet_info)) return;  
+      if (interface->handle_message(payload, length, packet_info)) return;
     }
     // If we get here, the message was not a recognized ModuleInterface related message. Pass it to the user-defined callback.
     if (singleton->custom_receive_function) singleton->custom_receive_function(payload, length, packet_info, interface);    
