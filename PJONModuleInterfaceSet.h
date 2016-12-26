@@ -107,7 +107,7 @@ public:
         memcpy(&buf[1], &t, 4);
         uint16_t dummy_bus_id = 0;
         uint16_t packet = pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, 0, 
-          pjon->get_header() | EXTEND_HEADER_BIT | MI_PJON_BIT, 0);
+          pjon->get_header() | EXTEND_HEADER_BIT | MI_PJON_BIT);
         
         // Clear time-missing bit to avoid this triggering continuous broadcasts.
         // If a module did not pick up the broadcast, we will get this information in the next status reply.

@@ -23,7 +23,7 @@ void write_http_settings_request(EthernetClient &client) {
 }
 
 bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
-  switch(v.type) {
+  switch(v.get_type()) {
     case mvtBoolean: v.set_value((bool) root[name]); return true;
     case mvtUint8: v.set_value((uint8_t) root[name]); return true;
     case mvtInt8: v.set_value((int8_t) root[name]); return true;
@@ -39,7 +39,7 @@ bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
 bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) {
   String name = name_in; // For some reason a char* will succeed but be forgotten. Probably added as a pointer in JSON enocder
   const float SYS_ZERO = -999.25; // Marker for missing value used in some proprietary systems
-  switch(v.type) {
+  switch(v.get_type()) {
     case mvtBoolean: root[name] = v.get_bool();return true;
     case mvtUint8: root[name] = v.get_uint8(); return true;
     case mvtInt8: root[name] = v.get_int8(); return true;
