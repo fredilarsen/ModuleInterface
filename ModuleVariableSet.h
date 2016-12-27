@@ -179,14 +179,19 @@ public:
     if (numvar < num_variables) {
       Serial.print("--> set_values got "); Serial.print(numvar); Serial.print(" of "); Serial.print(num_variables); Serial.println(" values.");
     }
-    #endif
+    #endif  
 
     // Data corresponds to current contract, so parse values
     p += 5; // Skip over contract id and variable count
     for (uint8_t i = 0; i < numvar && p - values < length; i++) {
-      uint8_t varpos = numvar == i;
+      uint8_t varpos = i;
       if (numvar != num_variables) { varpos = *p; p++; } // Variable number included
-      if (varpos >= num_variables) return false; // Corrupted message
+      if (varpos >= num_variables) {
+        #ifdef DEBUG_PRINT
+        Serial.println(F("--> set_values got corrupted packet"));
+        #endif      
+        return false; // Corrupted message
+      }
       uint8_t len = variables[varpos].get_size();
       variables[varpos].set_value(p, len); 
       p += len;
@@ -237,10 +242,11 @@ public:
       // Values
       if (numvar != 0) {
         for (uint8_t i = 0; i < num_variables; i++) {
-          if (numvar == num_variables ||
-            (events_only && variables[i].is_event()) || 
-            (is_updated() && changes_only && variables[i].is_changed())) {
-            if (numvar != num_variables) *p = i; // Variable number if not serializing all
+          if (numvar == num_variables || // include all
+            (events_only && variables[i].is_event()) || // event 
+            (is_updated() && changes_only && variables[i].is_changed())) // changed
+          {
+            if (numvar != num_variables) { *p = i; p++; } // Variable number if not serializing all
             uint8_t len = variables[i].get_size();
             variables[i].get_value(p, len); 
             p += len;
