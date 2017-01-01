@@ -51,18 +51,18 @@ public:
   // Setting from text
   void set_variable(const char *s) { // Format like "lightOn:b1"   
     // Read name length byte
-    const char *pos = strstr(s, ":");
-    if (pos != NULL) {
-      uint8_t len = min(pos - s, MVAR_MAX_NAME_LENGTH);
-      memcpy(name, s, len);
-      name[len] = 0; // Null-terminate
-      type = get_type(&pos[1]);
-    } else { // Type not specified, use float as default type
-      uint8_t len = min(strlen(s), MVAR_MAX_NAME_LENGTH);
+    const char *pos1 = strchr(s, ':'), *pos2 = strchr(s, ' ');
+    if (pos1 == NULL || (pos2 != NULL && pos2 < pos1)) { // No colon in this variable declaration, use float as default
+      uint8_t len = min(pos2 == NULL ? strlen(s) : pos2-s, MVAR_MAX_NAME_LENGTH);
       memcpy(name, s, len);
       name[len] = 0; // Null-terminator
       type = mvtFloat32; // Default data type
-    }        
+    } else { // There is a colon in the declaration
+      uint8_t len = min(pos1 - s, MVAR_MAX_NAME_LENGTH);
+      memcpy(name, s, len);
+      name[len] = 0; // Null-terminate
+      type = get_type(&pos1[1]);
+    }
   }
   
   // Return whether this variable name has a module prefix (lower case) or is a local name

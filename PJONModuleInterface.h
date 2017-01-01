@@ -85,22 +85,22 @@ public:
 
   void set_name_prefix_and_address(const char *name_and_address) { // Format like "device1:d1:44" or "device1:d1:44:0.0.0.1"
     // Split input string into name, device id and bus id
-    const char *end = strstr(name_and_address, " ");
+    const char *end = strchr(name_and_address, ' ');
     if (!end) end = name_and_address + strlen(name_and_address);           
     uint8_t len = end - name_and_address;
     char *buf = new char[len + 1];
     if (buf == NULL) { ModuleVariableSet::out_of_memory = true; return; }
     memcpy(buf, name_and_address, len); buf[len] = 0;
-    char *p1 = strstr(buf + 1, ":");
+    char *p1 = strchr(buf + 1, ':');
     if (p1) { *p1 = 0; p1++; } // p1 now pointing to prefix
-    char *p2 = p1 != NULL ? strstr(p1 + 1, ":") : NULL;
+    char *p2 = p1 != NULL ? strchr(p1 + 1, ':') : NULL;
     if (p2) { *p2 = 0; p2++; } // p2 now pointing to device id
-    char *p3 = p2 != NULL ? strstr(p2 + 1, ":") : NULL;
+    char *p3 = p2 != NULL ? strchr(p2 + 1, ':') : NULL;
     if (p3) { *p3 = 0; p3++; } // p3 now pointing to bus id        
     // Set the values
     set_name(buf);
     if (p1) set_prefix(p1);
-    if (p2) remote_id = atoi(p2);
+    if (p2) remote_id = atoi(p2); 
     if (p3) {
       for (int i=0; i<4; i++) {
         remote_bus_id[i] = atoi(p3);
