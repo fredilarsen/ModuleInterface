@@ -2,22 +2,22 @@
 
 #include <ModuleInterface.h>
 
-#ifndef MAX_PACKETS
-  #define MAX_PACKETS 1
+#ifndef PJON_MAX_PACKETS
+  #define PJON_MAX_PACKETS 1
 #endif
-#ifndef PACKET_MAX_LENGTH
-  #define PACKET_MAX_LENGTH 250
+#ifndef PJON_PACKET_MAX_LENGTH
+  #define PJON_PACKET_MAX_LENGTH 250
 #endif
 
 #include <Link.h>
 
 // A timeout to make sure a lost request or reply does not stop everything permanently
 #define MI_REQUEST_TIMEOUT 5000000   // (us) How long to wait for an active module to reply to a request
-#define MI_SEND_TIMEOUT 5000000      // (us) How long to wait for an active device to ACK
+#define MI_SEND_TIMEOUT 5000000      // (us) How long to wait for an active device to PJON_ACK
 #define MI_REDUCED_SEND_TIMEOUT 5000 // (us) How long to try to contact a moduled that is marked as inactive
 
 // A status bit for the PJON extended header byte, used to quickly separate ModuleInterface related messages from others
-#define MI_PJON_BIT SESSION_BIT
+#define MI_PJON_BIT PJON_SESSION_BIT
 
 class PJONModuleInterface : public ModuleInterface {
 friend class PJONModuleInterfaceSet;  
@@ -116,11 +116,11 @@ public:
    // Other packet types may be received and handled but will not cause this function to return.
   uint16_t receive_packet(uint32_t timeout, ModuleCommand cmd) {
     uint32_t start = micros();
-    uint16_t status = FAIL;
+    uint16_t status = PJON_FAIL;
     last_incoming_cmd = mcUnknownCommand;
     do {
       status = pjon->receive();
-      if ((status == ACK || status == NAK) && cmd == last_incoming_cmd) break;
+      if ((status == PJON_ACK || status == PJON_NAK) && cmd == last_incoming_cmd) break;
     } while (timeout > (uint32_t)(micros()-start));
     return status;
   }    
@@ -210,18 +210,18 @@ public:
 
     uint16_t status = pjon->send_packet(remote_id, remote_bus, (const char*)message, length, 
       is_active() ? MI_SEND_TIMEOUT : MI_REDUCED_SEND_TIMEOUT, 
-      pjon->get_header() | MI_PJON_BIT | EXTEND_HEADER_BIT);
+      pjon->get_header() | MI_PJON_BIT | PJON_EXT_HEAD_BIT);
       
     #ifdef DEBUG_PRINT
-    if (status != ACK) { dname(); Serial.println(F("----> Failed sending.")); }
+    if (status != PJON_ACK) { dname(); Serial.println(F("----> Failed sending.")); }
     #endif    
     #ifdef IS_MASTER
-    if (status == ACK) {
+    if (status == PJON_ACK) {
       last_alive = millis();
       comm_failures = 0; 
     } else if (comm_failures < 255) comm_failures++;
     #endif
-    return status == ACK;
+    return status == PJON_ACK;
   }
 
   bool handle_request_message(const uint8_t *payload, const uint8_t length) {
@@ -240,9 +240,9 @@ public:
     return false;
   }
   
-  bool handle_message(const uint8_t *payload, const uint16_t length, const PacketInfo &packet_info) {
+  bool handle_message(const uint8_t *payload, const uint16_t length, const PJON_Packet_Info &packet_info) {
     // Handle only packets marked with the MI bit
-    if (!((packet_info.header & EXTEND_HEADER_BIT) && (packet_info.header & MI_PJON_BIT))) return false; // Message not meant for ModuleInterface use
+    if (!((packet_info.header & PJON_EXT_HEAD_BIT) && (packet_info.header & MI_PJON_BIT))) return false; // Message not meant for ModuleInterface use
     
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
     dname(); Serial.print(F("Received len ")); Serial.print(length); Serial.print(F(" cmd ")); Serial.println(payload[0]);   
@@ -289,7 +289,7 @@ public:
     uint8_t response_length;
     outputs.get_values(response, response_length, mcSetOutputs, true);
     // TODO: Do not assume that the latest packet is from master!
-    if (response_length > 0 && pjon->get_last_packet_info().sender_id != NOT_ASSIGNED && pjon->get_last_packet_info().sender_id != 0) {
+    if (response_length > 0 && pjon->get_last_packet_info().sender_id != PJON_NOT_ASSIGNED && pjon->get_last_packet_info().sender_id != 0) {
       #ifdef DEBUG_PRINT
       dname(); Serial.print("send_output_events, length "); Serial.print(response_length); Serial.print(", master id "); 
       Serial.println(pjon->get_last_packet_info().sender_id);
@@ -300,7 +300,7 @@ public:
   }
   
   // Make sure that the user does not have to register a receiver callback function for things to work
-  static void default_receiver_function(uint8_t *payload, uint16_t length, const PacketInfo &packet_info) {
+  static void default_receiver_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info) {
     get_singleton()->handle_message(payload, length, packet_info);
   }
   #endif  

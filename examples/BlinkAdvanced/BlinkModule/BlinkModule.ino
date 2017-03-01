@@ -88,7 +88,7 @@ void notification_function(NotificationType notification_type, const ModuleInter
   }
 }
 
-void receive_function(uint8_t *payload, uint16_t length, const PacketInfo &packet_info) {
+void receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info) {
   // Let interface handle incoming messages and reply if needed
   if (interface.handle_message(payload, length, packet_info)) return;
 

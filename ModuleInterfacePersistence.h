@@ -64,7 +64,7 @@ bool write_settings_to_eeprom(const ModuleInterface &mi, uint16_t eeprom_start_p
 
 bool write_to_eeprom_when_needed(ModuleInterface &mi, uint32_t &last_save, uint32_t save_interval_ms = 600000, uint16_t eeprom_start_pos = 0) {
   // Only save settings when actually changed and not too often (do not wear out EEPROM memory)
-  if (millis() - last_save >= save_interval_ms) {
+  if ((uint32_t)(millis() - last_save) >= save_interval_ms) {
     last_save = millis();
     return write_settings_to_eeprom(mi, eeprom_start_pos);
   }

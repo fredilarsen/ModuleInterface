@@ -22,11 +22,11 @@ struct PJONLink : public Link {
       : send_packet_blocking(id, b_id, (char *)string, length, header, timeout, false);  
   }
   
-  const PacketInfo &get_last_packet_info() const { return bus.last_packet_info; } 
-  uint16_t get_header() const { return bus.get_header(); }
+  const PJON_Packet_Info &get_last_packet_info() const { return bus.last_packet_info; } 
+  uint16_t get_header() const { return bus.config; }
   uint8_t get_id() const { return bus.device_id(); }
   const uint8_t *get_bus_id() const { return bus.bus_id; }
-  void set_receiver(receiver r) { bus.set_receiver(r); }
+  void set_receiver(PJON_Receiver r) { bus.set_receiver(r); }
   
 protected:
   // This function will block until packet has been delivered or timeout occurs.
@@ -36,7 +36,7 @@ protected:
     const uint8_t *b_id,
     const char *string,
     uint16_t length,
-    uint16_t header = NOT_ASSIGNED,
+    uint16_t header = PJON_NOT_ASSIGNED,
     uint32_t timeout = 3000000,
     bool do_receive = false
   ) {
@@ -47,21 +47,21 @@ protected:
       string,
       length,
       header
-    ))) return FAIL;
-    uint16_t state = FAIL;
+    ))) return PJON_FAIL;
+    uint16_t state = PJON_FAIL;
     uint32_t attempts = 0;
     uint32_t time = micros(), start = time;
-    while(state != ACK && attempts <= MAX_ATTEMPTS && (uint32_t)(micros() - start) <= timeout) {
+    while(state != PJON_ACK && attempts <= bus.strategy.get_max_attempts() && (uint32_t)(micros() - start) <= timeout) {
       state = bus.send_packet((char*)bus.data, length);
-      if(state == ACK) return state;
+      if(state == PJON_ACK) return state;
       attempts++;
       if (do_receive) {
-        uint32_t delay = (attempts * attempts * attempts);
-        if (state != FAIL) delay += (uint32_t) (random(0, COLLISION_DELAY));
+        uint32_t delay = bus.strategy.back_off(attempts);
+        if (state != PJON_FAIL) bus.strategy.handle_collision();
         while((uint32_t)(micros() - time) < delay) bus.receive();
       } else {
-        if(state != FAIL) delayMicroseconds(random(0, COLLISION_DELAY));
-        while((uint32_t)(micros() - time) < (attempts * attempts * attempts));
+        if(state != PJON_FAIL) bus.strategy.handle_collision();
+        while((uint32_t)(micros() - time) < bus.strategy.back_off(attempts));
       }
       time = micros();
     }

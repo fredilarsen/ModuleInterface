@@ -1,4 +1,4 @@
-##ModuleInterface
+##ModuleInterface v0.7
 ModuleInterface is an Arduino compatible library for automatic transfer of settings and values between devices, with very little programming needed for each device.
 
 This is ideal for quickly creating a master-slave based collection of devices (modules) doing things like measuring temperatures and other sensors, turning things on and off, regulating heating and so on. With synchronization between the modules, and between the modules and a database if using the HTTP client that is available for the master module.
@@ -103,7 +103,7 @@ Variable names for inputs must contain the module prefix for the module where th
 
 ####Web pages
 
-The included HTTP client retrieves settings from a a database behind a web server and synchronizes them to all modules that have any settings. It also logs all outputs (measurements and states) from all modules to a database behind the web server.
+The included HTTP client retrieves settings from a database behind a web server and synchronizes them to all modules that have any settings. It also logs all outputs (measurements and states) from all modules to a database behind the web server.
 
 PHP scripts and a database scheme plus instructions are included, making it easy to get the transfer of settings and values up and running in a standard, free LAMP or WAMP setup (Linux/Windows + Apache + MySQL/MariaDb + PHP) on your computer.
 

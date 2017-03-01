@@ -3,9 +3,9 @@
 #include <ModuleInterfaceSet.h>
 #include <PJONModuleInterface.h>
 
-typedef void (*mis_receive_function)(const uint8_t *payload, uint16_t length, const PacketInfo &packet_info, const ModuleInterface *module_interface);
+typedef void (*mis_receive_function)(const uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info, const ModuleInterface *module_interface);
 
-void mis_global_receive_function(uint8_t *payload, uint16_t length, const PacketInfo &packet_info);
+void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info);
 
 class PJONModuleInterfaceSet : public ModuleInterfaceSet {
 protected:  
@@ -13,7 +13,7 @@ protected:
   Link *pjon = NULL;
   static PJONModuleInterfaceSet *singleton;
   mis_receive_function custom_receive_function = NULL;
-  friend void mis_global_receive_function(uint8_t *payload, uint16_t length, const PacketInfo &packet_info);  
+  friend void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info);  
 public:  
   PJONModuleInterfaceSet() { init(); }
   PJONModuleInterfaceSet(Link &bus, const uint8_t num_interfaces) {
@@ -107,7 +107,7 @@ public:
         memcpy(&buf[1], &t, 4);
         uint16_t dummy_bus_id = 0;
         uint16_t packet = pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, 0, 
-          pjon->get_header() | EXTEND_HEADER_BIT | MI_PJON_BIT);
+          pjon->get_header() | PJON_EXT_HEAD_BIT | MI_PJON_BIT);
         
         // Clear time-missing bit to avoid this triggering continuous broadcasts.
         // If a module did not pick up the broadcast, we will get this information in the next status reply.
@@ -159,14 +159,14 @@ public:
     int8_t ix = NO_MODULE;
     for (uint8_t i=0; i<num_interfaces; i++) {
       if (((PJONModuleInterface*) interfaces[i])->remote_id == device_id && 
-          bus_id_equality(((PJONModuleInterface*) interfaces[i])->remote_bus_id, bus_id)) {
+          (memcmp(((PJONModuleInterface*) interfaces[i])->remote_bus_id, bus_id, 4) == 0)) {
         ix = i; break;
       }
     }
     return ix;  
   }
   
-  bool handle_message(const uint8_t *payload, const uint16_t length, const PacketInfo &packet_info) {
+  bool handle_message(const uint8_t *payload, const uint16_t length, const PJON_Packet_Info &packet_info) {
     // Locate the relevant module based on packet info (device id and bus id)
     int8_t ix = locate_module(packet_info.sender_id, packet_info.sender_bus_id);
     if (ix == NO_MODULE) return false;
@@ -185,7 +185,7 @@ public:
 PJONModuleInterfaceSet *PJONModuleInterfaceSet::singleton = NULL;
 
 // PJON receive callback function
-void mis_global_receive_function(uint8_t *payload, uint16_t length, const PacketInfo &packet_info) {
+void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info) {
   PJONModuleInterfaceSet *singleton = PJONModuleInterfaceSet::get_singleton();
   if (singleton) {
     // Find out which module is sending

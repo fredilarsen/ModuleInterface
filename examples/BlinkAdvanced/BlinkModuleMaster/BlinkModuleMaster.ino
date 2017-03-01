@@ -94,7 +94,7 @@ void notification_function(NotificationType notification_type, const ModuleInter
   }
 }
 
-void receive_function(const uint8_t *payload, uint16_t length, const PacketInfo &packet_info, const ModuleInterface *module_interface){
+void receive_function(const uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info, const ModuleInterface *module_interface){
   // Handle specialized messages to this module
   Serial.print("!!!!!!!!!!!!!!!!! CUSTOM MESSAGE from ");
   Serial.print(module_interface ? module_interface->module_name : "unregistered device");

@@ -313,6 +313,38 @@ public:
       #endif  
       default: return false; // Unrecognized message
     }
+    #ifdef DEBUG_PRINT
+    if (message[0] == mcSendSettings) { // Can be called for master, and for module if it has own GUI
+      dname(); Serial.print(F("Send Settings: "));
+      settings.debug_print_values();
+    } else
+    #ifdef IS_MASTER
+    if (message[0] == mcSendInputs) {
+      dname(); Serial.print(F("Send Inputs: "));
+      inputs.debug_print_values();
+    }
+    #else  
+    if (message[0] == mcSendSettingContract) {
+      dname(); Serial.print(F("Send Settings contract: "));
+      settings.debug_print_contract();
+    } else 
+    if (message[0] == mcSendInputContract) {
+      dname(); Serial.print(F("Send Inputs contract: "));
+      inputs.debug_print_contract();
+    } else 
+    if (message[0] == mcSendOutputContract) {
+      dname(); Serial.print(F("Send Outputs contract: "));
+      outputs.debug_print_contract();
+    } else
+    if (message[0] == mcSendOutputs) {
+      dname(); Serial.print(F("Send Outputs: "));
+      outputs.debug_print_values();
+    } else  
+    if (message[0] == mcSendStatus) {
+      dname(); Serial.print(F("Send Status: ")); Serial.println(message[1]);
+    }
+    #endif  
+    #endif          
     return true;
   }
   

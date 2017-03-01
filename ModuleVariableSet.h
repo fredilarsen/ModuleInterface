@@ -70,14 +70,14 @@ public:
   bool preallocate_variables(const uint8_t variable_count) {
     num_variables = variable_count;
     if (variables) { delete[] variables; variables = NULL; }
-    if (num_variables == 0) return true;
+    if (num_variables == 0) { contract_id = calculate_contract_id(); return true; }
     variables = new ModuleVariable[num_variables];
     if (!variables) { out_of_memory = true; return false; }
     return true;
   }                               
   
   void set_variables(const char *names_and_types) { // Textual format like "var1:u1 var2:f" specified in worker
-    // Parse string, count number of variables
+    // Parse string, count number of variables  
     if (names_and_types) {
       const char *p = names_and_types;
       uint8_t nvar = 0;
@@ -427,7 +427,6 @@ public:
            requested_time = 0;
   #endif
  
-  #ifdef DEBUG_PRINT
     void debug_print_contract() const {
       if (num_variables == 0) Serial.print(F("Empty contract."));
       else for (uint8_t i = 0; i < num_variables; i++) {
@@ -436,7 +435,7 @@ public:
       }
       Serial.println("");
     }
-    
+
     void debug_print_values() const {
       if (num_variables == 0) Serial.print(F("Empty contract."));
       else for (uint8_t i = 0; i < num_variables; i++) {
@@ -456,6 +455,5 @@ public:
       }
       Serial.println("");
     }      
-  #endif  
 };
 
