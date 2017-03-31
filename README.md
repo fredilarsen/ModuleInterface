@@ -1,11 +1,11 @@
-##ModuleInterface v0.7
+## ModuleInterface v0.7
 ModuleInterface is an Arduino compatible library for automatic transfer of settings and values between devices, with very little programming needed for each device.
 
 This is ideal for quickly creating a master-slave based collection of devices (modules) doing things like measuring temperatures and other sensors, turning things on and off, regulating heating and so on. With synchronization between the modules, and between the modules and a database if using the HTTP client that is available for the master module.
 
 A typical setup can consist of multiple Arduino Nano devices connected to a master on an Arduino Mega with an Ethernet shield.
 
-####Why?
+#### Why?
 There is a lot of interest in IoT nowadays, and there are several alternatives that let small devices exchange data with the cloud. And some like MQTT let the user have the broker on a private computer and exchange values between modules in that way without exposing data in the cloud.
 
 This library has the following focus:
@@ -15,7 +15,7 @@ This library has the following focus:
 - It can communicate using the PJON library with a bus on a a single wire with no hardware add-ons/shields. Cheap and uncomplicated.
 - If web page control / visualization is needed, this is easy to do with a local LAMP/WAMP setup. Usable examples are included.
 
-####Features
+#### Features
 - Transport of values (measured and calculated) between modules according to their contracts
 - Transport of settings to modules from master
 - HTTP client lets the master transfer settings between a database and the modules, for configuration in web pages
@@ -23,7 +23,7 @@ This library has the following focus:
 - Optional persistence lets each module remember its last received settings at startup, for autonomous operation even if it has been disconnected from the master
 - Coarse clock synchronization of all modules (within a few seconds)
 
-####Detailed operation
+#### Detailed operation
 It is a master-slave based system where a master can relate to multiple devices (modules) using the ModuleInterface library.
 
 Each module does not know about any other device. The master contacts each module and retrieves its service contracts for settings, input values and output values. The master will then read and write the values in the contracts regularly at a configurable time interval.
@@ -40,13 +40,13 @@ The ModuleInterface library consists of a collection of classes, and some files 
 
 The ModuleInterface code in a master typically uses more storage space and RAM than within a module. It is still fine to run on an Arduino Uno or Nano, but when adding the HTTP client (and implicitly the large required Ethernet and ArduinoJson libraries), it is necessary to step up to an Arduino Mega or similar for the master.
 
-####PJON
+#### PJON
 The ModuleInterface class that is used by a module, and the ModuleInterfaceSet class that is used by a master, implement transport logic and serialization/deserialization and other functionality, but do not implement any communication. The communication between modules is designed to be handled by deriving a class from each of these two, and letting these classes do the talking by some protocol.
 
 This library is not worth much without a proper communication bus for letting a master and multiple modules talk together. Luckily, we have the brilliant [PJON] (https://github.com/gioblu/PJON) communication bus library created by *Giovanni Blu Mitolo* available, and this has been used as the primary choice for this library. The PJON library can be used for single-wire multi-master bus communication directly between Arduinos with no extra hardware, a brilliant feat. It can also be used for wireless communication, so ModuleInterface modules need not be wired to the master.
 The PJON library also supports a lot of different devices, making it a great choice. The ModuleInterface library does only use PJON for single-master communication.
 
-####Module implementation
+#### Module implementation
 Each module must declare a global object of a ModuleInterface derived class like the PJONModuleInterface that is part of the library. In the declaration of this object, the contracts (names and data types) for settings, input values and output values are specified as text parameters for simplicity.
 
 The object's loop function must be called regularly. Contracts are exchanged automatically with the master, and settings will arrive shortly. Settings are retrieved from the object with getter functions using the same order as the contract specifies.
@@ -89,7 +89,7 @@ Adding reading of more sensors is done by adding more output parameters to the i
 
 After adding the variable, the value must be set in a similar way as the motion in the example.
 
-####Variable naming convention
+#### Variable naming convention
 Each setting, input or output is identified by a variable name. A variable name consists of two parts:
 
 1. A module prefix, as defined when declaring the module in the master. This is a two-character lower case prefix identifying the module, like "gh" for a GreenHouse module.
@@ -101,7 +101,7 @@ Variable names for settings and outputs within a module can be specified without
 
 Variable names for inputs must contain the module prefix for the module where they are expected to come from. For example, a GreenHouse monitoring module can specify an input with name "omTemp" to subscribe to an output with the name "Temp" in an "OutsideMonitor" module with prefix "om". 
 
-####Web pages
+#### Web pages
 
 The included HTTP client retrieves settings from a database behind a web server and synchronizes them to all modules that have any settings. It also logs all outputs (measurements and states) from all modules to a database behind the web server.
 
@@ -114,7 +114,7 @@ Here is a snapshot of my own responsive home automation web page, running on a s
 
 ![Web Page Example](/images/WebPageExample.png)
 
-####License
+#### License
 
 ```cpp
 /* Copyright 2016 Fred Larsen
