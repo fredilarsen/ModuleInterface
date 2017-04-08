@@ -368,7 +368,8 @@ public:
   // Has time been set in the not too far past?
   bool is_time_set() {
     update_time();
-    return (time_utc_received_s != 0 && time_utc_s != 0 && ((uint32_t)(time_utc_s - time_utc_received_s) < 48ul*3600ul));
+    return (time_utc_received_s != 0 && time_utc_s != 0 && time_utc_s > 1450656000ul // After 2017-01-01
+           && ((uint32_t)(time_utc_s - time_utc_received_s) < 48ul*3600ul)); // Synced not more than 2 days ago
   }
 
   // Get UTC time
@@ -376,8 +377,8 @@ public:
     update_time();
     return time_utc_received_s ? time_utc_s : 0;
   }
-  #endif !NO_TIME_SYNC
-  #endif !IS_MASTER  
+  #endif // !NO_TIME_SYNC
+  #endif // !IS_MASTER  
 
   // Return the uptime in seconds of this module
   uint32_t get_uptime_s() {

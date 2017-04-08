@@ -105,7 +105,7 @@ public:
         buf[0] = (char) mcSetTime;
         time_t t = now();      
         memcpy(&buf[1], &t, 4);
-        uint16_t dummy_bus_id = 0;
+        uint32_t dummy_bus_id = 0;
         uint16_t packet = pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, 0, 
           pjon->get_header() | PJON_EXT_HEAD_BIT | MI_PJON_BIT);
         

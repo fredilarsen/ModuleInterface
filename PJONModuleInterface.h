@@ -23,6 +23,8 @@ class PJONModuleInterface : public ModuleInterface {
 friend class PJONModuleInterfaceSet;  
 protected:
   Link *pjon = NULL;
+  // Counters for supplying communication quality calculation
+  uint8_t nak_count = 0, ack_count = 0;
   #ifdef IS_MASTER
   uint8_t remote_id = 0;
   uint8_t remote_bus_id[4];
@@ -62,9 +64,26 @@ public:
   
   static PJONModuleInterface *get_singleton() { return singleton; }
   
+  static uint16_t receive_with_error_detection(Link *pjon, uint32_t timeout, uint8_t &error_count, uint8_t &success_count) {
+    // Listen for packets for a certain time, and count CRC errors indicating low signal quality
+    uint32_t start = micros();
+    uint16_t code = PJON_FAIL;
+    while ((uint32_t)(micros() - start) < timeout) {
+      code = pjon->receive();
+      if (code == PJON_ACK) { if (success_count < 255) success_count++; break; }
+      if (code == PJON_NAK && error_count < 255) error_count++; // CRC error in received packet
+    }
+    return code;
+  }
+  
   void update() {
-    pjon->receive(1000);
+    // Listen for packets for 1ms, and count CRC errors indicating low signal quality
+    receive_with_error_detection(pjon, 1000, nak_count, ack_count);
+    
+    // Module-initiated event support
     send_output_events();
+    
+    // If user sketch is posting packets to be sent, send them
     pjon->update();
   }
   #endif 
@@ -221,6 +240,11 @@ public:
       comm_failures = 0; 
     } else if (comm_failures < 255) comm_failures++;
     #endif
+    
+    // Keep counters for communication quality calculation
+    if (status == PJON_ACK) { if (ack_count < 255) ack_count++; } 
+    else if (status == PJON_NAK) { if (nak_count < 255) nak_count++; }
+      
     return status == PJON_ACK;
   }
 
@@ -266,6 +290,16 @@ public:
     return false;
   }  
 
+  // Get communication quality in percent. 0=no packets transferred, 
+  uint8_t get_comm_quality() const {
+    if (get_last_alive_age() == -1) return 0; // No communication yet
+    if (nak_count > 0) 
+      return (uint8_t) (((uint16_t)100*(uint16_t)ack_count)/(uint16_t)(nak_count + ack_count));
+    return 100;
+  }
+  
+  void reset_comm_quality() { ack_count = nak_count = 0; }
+  
   #ifdef IS_MASTER  
   // If any input is flagged as an event, send it immediately to the module from master
   void send_input_events() {

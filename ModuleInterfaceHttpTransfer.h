@@ -217,7 +217,7 @@ void set_scan_columns(JsonObject &root,
         if (last_scan_times->times[scan1h] + 3600 <= curr) {
           last_scan_times->times[scan1h] = curr;
           root["scan1h"] = 1;
-          if (last_scan_times->times[scan1d] + 24*3600 <= curr) {
+          if (last_scan_times->times[scan1d] + 24ul*3600 <= curr) {
             last_scan_times->times[scan1d] = curr;
             root["scan1d"] = 1;
     } } } }
