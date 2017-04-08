@@ -11,17 +11,24 @@
 
 class ModuleInterfaceSet {
 protected:
+  char moduleset_prefix[MVAR_PREFIX_LENGTH+1]; // A unique lower case prefix, usefule if there are multiple masters connected to same db
   bool updated_intermodule_dependencies = false;  
 public:
   uint8_t num_interfaces = 0;
   ModuleInterface **interfaces = NULL;
   
-  ModuleInterfaceSet() { }  
-  ModuleInterfaceSet(const uint8_t num_interfaces) {
+  ModuleInterfaceSet(const char *prefix = NULL) { set_prefix(prefix); }  
+  ModuleInterfaceSet(const uint8_t num_interfaces, const char *prefix = NULL) {
+    set_prefix(prefix);
     this->num_interfaces = num_interfaces; interfaces = new ModuleInterface*[num_interfaces];
     for (uint8_t i=0; i < num_interfaces; i++) {
       interfaces[i] = new ModuleInterface();
-      if (interfaces[i] == NULL) ModuleVariableSet::out_of_memory = true;
+      if (interfaces[i] == NULL) {
+        ModuleVariableSet::out_of_memory = true;
+        #ifdef DEBUG_PRINT
+        Serial.println(F("MIS::constr OUT OF MEMORY"));
+        #endif
+      }
     }
   }
   ~ModuleInterfaceSet() {
@@ -30,6 +37,14 @@ public:
       delete interfaces;
     }
   }
+  void set_prefix(const char *prefix) {
+    if (prefix == NULL) moduleset_prefix[0] = 0; 
+    else {
+      strncpy(moduleset_prefix, prefix, MVAR_PREFIX_LENGTH); 
+      moduleset_prefix[MVAR_PREFIX_LENGTH] = 0;
+    }
+  }
+  const char *get_prefix() const { return moduleset_prefix; }
   
   void assign_names(const char *names[]) { for (int i=0; i<num_interfaces; i++) interfaces[i]->set_name(names[i]); }
   ModuleInterface *operator [] (const uint8_t ix) { return (interfaces[ix]); }
@@ -50,7 +65,12 @@ public:
   
   // If there are inter-module dependencies, then transfer values between modules (outputs to inputs)
   void transfer_outputs_to_inputs() {
-    if (!got_all_contracts()) return;
+    if (!got_all_contracts()) {
+      #ifdef DEBUG_PRINT
+      Serial.println(F("** ALL CONTRACTS NOT SET"));
+      #endif
+      return;
+    }
     if (!updated_intermodule_dependencies) update_intermodule_dependencies();
     uint8_t buf[4]; // Largest value possibly encountered
     for (int i=0; i<num_interfaces; i++) {
@@ -112,6 +132,14 @@ public:
     }
     return true;
   }
+  
+  // If a device gets unplugged or dies, it will register as inactive after a while.
+  // Get the count of inactive modules
+  uint8_t get_inactive_module_count() {
+    uint8_t cnt = 0;
+    for (uint8_t i=0; i<num_interfaces; i++) if (!interfaces[i]->is_active()) cnt++;
+    return cnt;
+  }  
   
   // Register notification callback function common for all interfaces.
   // (Can register individual callback functions instead by calling the associated ModuleInterface function directly.)

@@ -1,9 +1,10 @@
 #pragma once
 
+#include <TimeLib.h>
 #include <ModuleInterface.h>
 #include <Ethernet.h>
 #include <ArduinoJson.h>
-
+#include <MemFrag.h>
 
 //TODO: Transfer for one module at a time to reduce the buffer size?
 //Even on a Mega it will be tight otherwise.
@@ -62,14 +63,14 @@ void set_time_from_json(ModuleInterfaceSet &interfaces, JsonObject& root, uint32
     if (abs((int32_t)(utc - now()) > 2)) {
     #ifdef _Time_h
       #ifdef DEBUG_PRINT
-        Serial.print("--> Adjusted time from web by s: "); Serial.println((int32_t) (utc - now() + delay_ms/1000ul));
+        Serial.print(F("--> Adjusted time from web by s: ")); Serial.println((int32_t) (utc - now() + delay_ms/1000ul));
       #endif
       setTime(utc + delay_ms/1000ul); // Set global system time if using the Time library
     #endif
     }
   }
   #ifdef DEBUG_PRINT
-  else Serial.println("Got no time from web server!");
+  else Serial.println(F("Got no time from web server!"));
   #endif
 }
 
@@ -98,8 +99,9 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, 
                         const uint16_t buffer_size = 2000, const uint16_t timeout_ms = 3000) {
   char *buf = new char[buffer_size];
   if (buf == NULL) {
+    ModuleVariableSet::out_of_memory = true;
     #ifdef DEBUG_PRINT
-    Serial.println("read_json_settings OUT OF MEMORY");
+    Serial.println(F("read_json_settings OUT OF MEMORY"));
     #endif
     return false; // Out of memory at the moment
   }
@@ -111,8 +113,16 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, 
   buf[pos] = 0; // null-terminate
   client.stop();  // Finished using the socket, close it as soon as possible
   #ifdef DEBUG_PRINT
-  Serial.print("Read "); Serial.print(pos); Serial.println(" bytes (settings) from web server.");
+  Serial.print(F("Read ")); Serial.print(pos); Serial.println(F(" bytes (settings) from web server."));
   #endif
+  if (pos >= buffer_size - 1) { 
+    delete buf; 
+    ModuleVariableSet::out_of_memory = true;
+    #ifdef DEBUG_PRINT
+    Serial.println(F("read_json_settings OUT OF MEMORY"));
+    #endif
+    return false;
+  }
   bool status = false;
   if (pos > 0) {
     uint32_t before_parsing = millis();
@@ -181,6 +191,9 @@ void add_module_status(ModuleInterface *interface, JsonObject &root) {
 
   name = interface->get_prefix(); name += F("MemErr");
   root[name] = (uint8_t) interface->out_of_memory;
+
+  name = interface->get_prefix(); name += F("StatBits");
+  root[name] = (uint8_t) interface->get_status_bits();
 }
 
 void add_json_values(ModuleInterface *interface, JsonObject &root) {
@@ -224,18 +237,46 @@ void set_scan_columns(JsonObject &root,
   }
 }
 
+void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
+  // Add number of currently inactive (nonresponding) modules
+  String name = interfaces.get_prefix(); name += F("InactCnt");
+  root[name] = interfaces.get_inactive_module_count();
+  
+  uint16_t num_fragments = 0;
+  size_t total_free = 0, largest_free = largest_free_block(num_fragments, total_free);
+  
+  // Add total free memory
+  name = interfaces.get_prefix(); name += F("FreeTot");
+  root[name] = total_free;
+
+  // Add largest free block
+  name = interfaces.get_prefix(); name += F("FreeMax");
+  root[name] = largest_free;
+
+  // Add number of fragments
+  name = interfaces.get_prefix(); name += F("FragCnt");
+  root[name] = (uint8_t) num_fragments;  
+  
+  // Add out-of-memory status
+  name = interfaces.get_prefix(); name += F("MemErr");
+  root[name] = (uint8_t) ModuleVariableSet::out_of_memory;
+}
+
 bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &client, IPAddress &server,
                                MILastScanTimes *last_scan_times, uint8_t port = 80, 
                                bool update_instead_of_insert = false) {                                 
   // Encode all settings to a JSON string
   String buf;
   { // Separate block to release JSON buffer as soon as possible
-    DynamicJsonBuffer jsonBuffer;
+    DynamicJsonBuffer jsonBuffer(1000);
     JsonObject& root = jsonBuffer.createObject();
     for (int i=0; i<interfaces.num_interfaces; i++) add_json_values(interfaces[i], root);
     
     // Set scan columns in database if inserting (support for plotting with different resolutions)
     if (!update_instead_of_insert) set_scan_columns(root, last_scan_times);
+
+    // Add status for the master    
+    add_master_status(interfaces, root);
     
     root.printTo(buf);
   }
@@ -243,7 +284,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &c
   if (buf.length() <= 2) return true; // Empty buffer, nothing to send, so not a failure
   #ifdef DEBUG_PRINT
   //Serial.println(buf);
-  Serial.print("Writing "); Serial.print(buf.length()); Serial.println(" bytes (outputs) to web server.");
+  Serial.print(F("Writing ")); Serial.print(buf.length()); Serial.println(F(" bytes (outputs) to web server."));
   #endif
 
   // Post JSON to web server
@@ -252,7 +293,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &c
     post_json_to_server(client, buf, update_instead_of_insert);
   }  
   #ifdef DEBUG_PRINT
-  else { Serial.print("Connection to web server failed with code "); Serial.println(code); }
+  else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
   #endif
   client.stop();
   return code == 1;

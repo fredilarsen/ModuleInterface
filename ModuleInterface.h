@@ -28,7 +28,8 @@ enum ModuleCommand {
 };
 
 #define MAX_MODULE_NAME_LENGTH 8
-#define MI_INACTIVE_THRESHOLD  5      // The number of consecutive failed transfers before module is deactivated
+#define MI_INACTIVE_THRESHOLD  5       // The number of consecutive failed transfers before module is deactivated
+#define MI_INACTIVE_TIME_THRESHOLD 120 // The number of seconds without life sign before module is deactivated
 
 // Status bits
 #define CONTRACT_MISMATCH_SETTINGS 1 // We received settings for another version, ask Master to update contract
@@ -73,7 +74,7 @@ public:
   ModuleVariableSet settings,  // Configuration parameters needed by the module to operate
                     inputs,    // Measurements / online values needed as input to the module
                     outputs;   // Measurements / online values delivered by the module
-  uint32_t last_alive = 0;     // time of last life-sign (reply or ACK) for this module
+  uint32_t last_alive = 0;     // time of last life-sign (reply but not ACK) for this module
   uint32_t up_time = 0;        // Uptime in seconds
   uint32_t last_uptime_millis = 0; // Millis when uptime was incremented last
   #ifdef IS_MASTER                    
@@ -125,12 +126,16 @@ public:
     settings.set_variables(settingnames);
     inputs.set_variables(inputnames);
     outputs.set_variables(outputnames);
+    if (settings.get_num_variables() == 0) status_bits &= !MISSING_SETTINGS; // No settings, so do not mark them as missing
+    if (inputs.get_num_variables() == 0) status_bits &= !MISSING_INPUTS;     // No inputs, so do not mark them as missing
   }
   // This function can be called early on to pre-allocate module variables to avoid memory fragmentation.
   // Either specificy variables to constructor in a global declaration, or call this function before allocating strings to send
   // to set_contracts from within a function.
   // If this function returns false, there is a fatal memory problem and the program should be aborted
   bool preallocate_variables(const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) {
+    if (num_settings == 0) status_bits &= !MISSING_SETTINGS; // No settings, so do not mark them as missing
+    if (num_inputs == 0) status_bits &= !MISSING_INPUTS;     // No inputs, so do not mark them as missing
     return settings.preallocate_variables(num_settings) &&
            inputs.preallocate_variables(num_inputs) &&
            outputs.preallocate_variables(num_outputs);
@@ -271,7 +276,7 @@ public:
     response_length = 0;
     if (length < 1) return false;
     #ifdef DEBUG_PRINT
-      dname(); Serial.print("REQUEST TYPE "); Serial.print(message[0]); Serial.print(", len "); Serial.println(length);
+      dname(); Serial.print("REQUEST "); Serial.print(message[0]); Serial.print(", len "); Serial.println(length);
     #endif
     #ifdef IS_MASTER
       comm_failures = 0;
@@ -341,7 +346,7 @@ public:
       outputs.debug_print_values();
     } else  
     if (message[0] == mcSendStatus) {
-      dname(); Serial.print(F("Send Status: ")); Serial.println(message[1]);
+      dname(); Serial.print(F("Send Status: ")); Serial.println(status_bits);
     }
     #endif  
     #endif          
@@ -357,7 +362,7 @@ public:
   // Whether this module is active or has not been reachable for a while
   bool is_active() const { 
     #ifdef IS_MASTER
-    return comm_failures < MI_INACTIVE_THRESHOLD;
+    return comm_failures < MI_INACTIVE_THRESHOLD && get_last_alive_age() != -1 && get_last_alive_age() < 1000ul*MI_INACTIVE_TIME_THRESHOLD;
     #else
     return true;
     #endif  
@@ -419,7 +424,12 @@ friend class ModuleInterfaceSet;
       uint32_t uptime_s = get_uptime_s();   
       memcpy(&(message.get()[3]), &uptime_s, sizeof uptime_s);
       length = 7;
-    } else { length = 0; ModuleVariableSet::out_of_memory = true; }
+    } else { 
+      length = 0; ModuleVariableSet::out_of_memory = true;
+      #ifdef DEBUG_PRINT
+      Serial.println(F("MI::get_status OUT OF MEMORY"));
+      #endif
+    }
   }
     
   // This must be called regularly to keep the time updated (at least once for each each millis() rollover)
@@ -487,7 +497,12 @@ friend class ModuleInterfaceSet;
         input_source_output_ix.allocate(inputs.get_num_variables())) {
       input_source_module_ix.set_all(NO_VARIABLE); // no source
       input_source_output_ix.set_all(NO_VARIABLE); // no source
-    } else ModuleVariableSet::out_of_memory = true;
+    } else {
+      ModuleVariableSet::out_of_memory = true;
+      #ifdef DEBUG_PRINT
+      Serial.println(F("MI::allocate_source_arrays OUT OF MEMORY"));
+      #endif
+    }
   }
   #endif  
 };

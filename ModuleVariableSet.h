@@ -72,7 +72,13 @@ public:
     if (variables) { delete[] variables; variables = NULL; }
     if (num_variables == 0) { contract_id = calculate_contract_id(); return true; }
     variables = new ModuleVariable[num_variables];
-    if (!variables) { out_of_memory = true; return false; }
+    if (!variables) { 
+      out_of_memory = true;
+      #ifdef DEBUG_PRINT
+      Serial.println(F("MVS::preallocate_variables OUT OF MEMORY"));
+      #endif
+      return false; 
+    }
     return true;
   }                               
   
@@ -107,8 +113,16 @@ public:
       deallocate();
       contract_id = new_contract_id;
       num_variables = *p; p++; // First byte is number of variables
-      if (num_variables > 0) variables = new ModuleVariable[num_variables];
-      if (variables == NULL) { out_of_memory = true; return; }
+      if (num_variables > 0) {
+        variables = new ModuleVariable[num_variables];
+        if (variables == NULL) { 
+          out_of_memory = true; 
+          #ifdef DEBUG_PRINT
+          Serial.print(F("MVS::set_variables OUT OF MEMORY. #var=")); Serial.println(num_variables);
+          #endif
+          return;
+        }
+      }
       for (uint8_t i = 0; i < num_variables; i++) {
         variables[i].set_variable(p, variables[i].get_size());
         p += (2 + p[1]); // type byte + length byte + name length
@@ -139,7 +153,12 @@ public:
         memcpy(p, variables[i].name, len);
         p += len;
       }
-    } else out_of_memory = true;
+    } else {
+      out_of_memory = true;
+      #ifdef DEBUG_PRINT
+      Serial.println(F("MVS::get_variables OUT OF MEMORY"));
+      #endif      
+    }
   }
   
   void invalidate_contract() { 
@@ -177,7 +196,7 @@ public:
     }
     #ifdef DEBUG_PRINT
     if (numvar < num_variables) {
-      Serial.print("--> set_values got "); Serial.print(numvar); Serial.print(" of "); Serial.print(num_variables); Serial.println(" values.");
+      Serial.print(F("--> set_values got ")); Serial.print(numvar); Serial.print(F(" of ")); Serial.print(num_variables); Serial.println(F(" values."));
     }
     #endif  
 
@@ -202,7 +221,7 @@ public:
     return true;
   }
     
-  // Get serialized values, usually all, but can be limted to values marked as events
+  // Get serialized values, usually all, but can be limited to values marked as events
   // and/or values marked as changed. If setting both events_only and changes_only,
   // both will be included.
   void get_values(BinaryBuffer &values, uint8_t &length, uint8_t header_byte,
@@ -253,7 +272,12 @@ public:
           }
         }
       }
-    } else out_of_memory = true;
+    } else {
+      out_of_memory = true;
+      #ifdef DEBUG_PRINT
+      Serial.println(F("MVS::get_values OUT OF MEMORY"));
+      #endif
+    }
   }
   
   uint8_t get_num_variables() const { return num_variables; }

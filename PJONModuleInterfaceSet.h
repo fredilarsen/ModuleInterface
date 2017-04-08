@@ -15,14 +15,15 @@ protected:
   mis_receive_function custom_receive_function = NULL;
   friend void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info);  
 public:  
-  PJONModuleInterfaceSet() { init(); }
-  PJONModuleInterfaceSet(Link &bus, const uint8_t num_interfaces) {
+  PJONModuleInterfaceSet(const char *prefix = NULL) : ModuleInterfaceSet(prefix) { init(); }
+  PJONModuleInterfaceSet(Link &bus, const uint8_t num_interfaces, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
     init(); this->num_interfaces = num_interfaces; interfaces = new ModuleInterface*[num_interfaces];
     for (uint8_t i = 0; i < num_interfaces; i++) interfaces[i] = new PJONModuleInterface();
     pjon = &bus;
     pjon->set_receiver(mis_global_receive_function);
   }
-  PJONModuleInterfaceSet(Link &bus, const char *interface_list) { // Textual list like "BlinkModule:bm:44 TestModule:tm:44:0.0.0.1"
+  // Specifying modules as textual list like "BlinkModule:bm:44 TestModule:tm:44:0.0.0.1":
+  PJONModuleInterfaceSet(Link &bus, const char *interface_list, const char *prefix) : ModuleInterfaceSet(prefix) { 
     // Count number of interfaces
     num_interfaces = 0;
     const char *p = interface_list;
@@ -53,15 +54,7 @@ public:
     pjon->set_receiver(mis_global_receive_function); // Make sure main receiver function is registered
     custom_receive_function = r; // Register custom/user callback function to receive non-ModuleInterface related messages
   }
-  
-  // If a device gets unplugged or dies, it will register as inactive after a while.
-  // Get the count of inactive modules
-  uint8_t get_inactive_module_count() {
-    uint8_t cnt = 0;
-    for (uint8_t i=0; i<num_interfaces; i++) cnt += !((PJONModuleInterface*) (interfaces[i]))->is_active();
-    return cnt;
-  }
-  
+    
   void update_contracts() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_contract(sampling_time_outputs); }
   void update_values() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_values(sampling_time_outputs); }
   void update_statuses() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_status(sampling_time_outputs); }

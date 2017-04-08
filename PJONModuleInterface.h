@@ -209,7 +209,7 @@ public:
   }
   bool send_request(const uint8_t &value, uint32_t &requested_time) {
     bool acked = send_cmd(value);
-    if (acked) requested_time = millis(); // Update time only if successfully sent
+    requested_time = millis(); // Update time only if successfully sent
     return acked;
   }
   bool send_setting_contract_request() { return send_request(mcSendSettingContract, settings.contract_requested_time); }
@@ -223,7 +223,7 @@ public:
   
   bool send(uint8_t remote_id, const uint8_t *remote_bus, const uint8_t *message, uint16_t length) {
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-    dname(); Serial.print("Sending len "); Serial.print(length); Serial.print(" cmd "); Serial.print(message[0]);
+    dname(); Serial.print("S len "); Serial.print(length); Serial.print(" cmd "); Serial.print(message[0]);
     Serial.print(" active "); Serial.println(is_active());
     #endif  
 
@@ -236,8 +236,8 @@ public:
     #endif    
     #ifdef IS_MASTER
     if (status == PJON_ACK) {
-      last_alive = millis();
-      comm_failures = 0; 
+      //last_alive = millis();  // Disabled so that reply from extender does not flag module as alive
+      // comm_failures = 0; // Disabled so that reply from extender does not flag module as alive
     } else if (comm_failures < 255) comm_failures++;
     #endif
     
@@ -269,7 +269,7 @@ public:
     if (!((packet_info.header & PJON_EXT_HEAD_BIT) && (packet_info.header & MI_PJON_BIT))) return false; // Message not meant for ModuleInterface use
     
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-    dname(); Serial.print(F("Received len ")); Serial.print(length); Serial.print(F(" cmd ")); Serial.println(payload[0]);   
+    dname(); Serial.print(F("R len ")); Serial.print(length); Serial.print(F(" cmd ")); Serial.println(payload[0]);   
     #endif  
     if (handle_input_message(payload, (uint8_t) length)) {
       #ifdef IS_MASTER

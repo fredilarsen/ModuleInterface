@@ -16,7 +16,7 @@ public:
       buffer = new uint8_t[length];
       len = length; 
     }
-    return buffer != NULL;
+    return length == 0 || buffer != NULL;
   }
   void deallocate() { if (buffer) { delete buffer; buffer = NULL; len = 0; } }
   bool is_empty() const { return buffer == NULL; }
