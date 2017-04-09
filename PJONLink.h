@@ -27,44 +27,4 @@ struct PJONLink : public Link {
   uint8_t get_id() const { return bus.device_id(); }
   const uint8_t *get_bus_id() const { return bus.bus_id; }
   void set_receiver(PJON_Receiver r) { bus.set_receiver(r); }
-  
-protected:
-  // This function will block until packet has been delivered or timeout occurs.
-  // It can accept incoming packets while in send back-off pauses if do_receive is set to true.
-  uint16_t send_packet_blocking(
-    uint8_t id,
-    const uint8_t *b_id,
-    const char *string,
-    uint16_t length,
-    uint16_t header = PJON_NOT_ASSIGNED,
-    uint32_t timeout = 3000000,
-    bool do_receive = false
-  ) {
-    if(!(length = bus.compose_packet(
-      id,
-      (uint8_t *) b_id,
-      (char *)bus.data,
-      string,
-      length,
-      header
-    ))) return PJON_FAIL;
-    uint16_t state = PJON_FAIL;
-    uint32_t attempts = 0;
-    uint32_t time = micros(), start = time;
-    while(state != PJON_ACK && attempts <= bus.strategy.get_max_attempts() && (uint32_t)(micros() - start) <= timeout) {
-      state = bus.send_packet((char*)bus.data, length);
-      if(state == PJON_ACK) return state;
-      attempts++;
-      if (do_receive) {
-        uint32_t delay = bus.strategy.back_off(attempts);
-        if (state != PJON_FAIL) bus.strategy.handle_collision();
-        while((uint32_t)(micros() - time) < delay) bus.receive();
-      } else {
-        if(state != PJON_FAIL) bus.strategy.handle_collision();
-        while((uint32_t)(micros() - time) < bus.strategy.back_off(attempts));
-      }
-      time = micros();
-    }
-    return state;
-  } 
 };
