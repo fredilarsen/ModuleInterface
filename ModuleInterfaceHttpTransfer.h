@@ -74,18 +74,18 @@ void set_time_from_json(ModuleInterfaceSet &interfaces, JsonObject& root, uint32
   #endif
 }
 
-void decode_json_settings(ModuleInterfaceSet &interfaces, JsonObject& root) { 
+void decode_json_settings(ModuleInterfaceSet &interfaces, JsonObject& root) {
   // Old comment:
   // The sequence of parameters here IS important, it must follow the order in the JSON input.
   // (Which by the way is alphabetically sorted when coming from a MariaDb table.)
   // Demand that modules, and variable names within each module, are alphabetically sorted,
   // or do global sorting of variable names here? Or have a prepared index in ModuleInterfaceSet?
-  // Or local index in ModuleInterface if transferring one interface at a time?  
+  // Or local index in ModuleInterface if transferring one interface at a time?
 //TODO: Check if alphabetical is a requirement -- it does not seem so any more?
 
   for (int i=0; i < interfaces.num_interfaces; i++) {
     if (!interfaces[i]->settings.got_contract()) continue;
-    
+
     char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
     for (int j=0; j<interfaces[i]->settings.get_num_variables(); j++) {
       interfaces[i]->settings.get_module_variable(j).get_prefixed_name(interfaces[i]->get_prefix(), prefixed_name, sizeof prefixed_name);
@@ -115,8 +115,8 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, 
   #ifdef DEBUG_PRINT
   Serial.print(F("Read ")); Serial.print(pos); Serial.println(F(" bytes (settings) from web server."));
   #endif
-  if (pos >= buffer_size - 1) { 
-    delete buf; 
+  if (pos >= buffer_size - 1) {
+    delete buf;
     ModuleVariableSet::out_of_memory = true;
     #ifdef DEBUG_PRINT
     Serial.println(F("read_json_settings OUT OF MEMORY"));
@@ -132,7 +132,7 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, 
     if (jsonStart) {
       jsonStart += strlen(jsonDecl) + 1;
       DynamicJsonBuffer jsonBuffer;
-      JsonObject& root = jsonBuffer.parseObject(jsonStart);      
+      JsonObject& root = jsonBuffer.parseObject(jsonStart);
       if (root.success()) {
         // Set system time if UTC was returned from server, exclude parsing time and half of retrieval time
         #ifdef DEBUG_PRINT
@@ -144,15 +144,15 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, 
           Serial.print("Get, parse, set in ms: "); Serial.print((uint32_t)(before_parsing-start)); Serial.print(" ");
           Serial.print((uint32_t)(before_set-before_parsing)); Serial.print(" ");
           Serial.println((uint32_t)(millis()-before_set));
-        #endif        
+        #endif
         status = true;
       }
     }
   }
-  
+
   // Deallocate buffer
   delete buf;
-  
+
   return status;
 }
 
@@ -161,12 +161,12 @@ bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, EthernetClient
   bool success = false;
   if (code == 1) { // 1=CONNECTED
     write_http_settings_request(client);
-    success = read_json_settings(interfaces, client); 
+    success = read_json_settings(interfaces, client);
   }
   #ifdef DEBUG_PRINT
   else { Serial.print("Connection to web server failed with code "); Serial.println(code); }
   #endif
-  client.stop();  
+  client.stop();
   return success;
 }
 
@@ -175,10 +175,10 @@ void post_json_to_server(EthernetClient &client, String &buf, bool update_instea
   client.println(F("Content-Type: application/json"));
   client.println(F("Connection: close"));
   client.print(F("Content-Length: ")); client.println(buf.length());
-  client.println();  
+  client.println();
   client.println(buf);
   client.println();
-  delay(5); // Let web server get some time to read
+  client.flush();
 }
 
 void add_module_status(ModuleInterface *interface, JsonObject &root) {
@@ -198,27 +198,27 @@ void add_module_status(ModuleInterface *interface, JsonObject &root) {
 
 void add_json_values(ModuleInterface *interface, JsonObject &root) {
   if (!interface->outputs.got_contract() || !interface->outputs.is_updated()) return; // Values not available yet
-  
+
   // Add output values
   char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
   for (int i=0; i<interface->outputs.get_num_variables(); i++) {
     interface->outputs.get_module_variable(i).get_prefixed_name(interface->get_prefix(), prefixed_name, sizeof prefixed_name);
     mv_to_json(interface->outputs.get_module_variable(i), root, prefixed_name);
   }
-  
+
   // Add status values
   add_module_status(interface, root);
 }
 
 void set_scan_columns(JsonObject &root,
-                      MILastScanTimes *last_scan_times) // NULL or array of length 4                      
+                      MILastScanTimes *last_scan_times) // NULL or array of length 4
 {
   if (last_scan_times) {
     // Do not sample at startup, init time array to now
     time_t curr = now();
-    for (uint8_t i=0; i<NUM_SCAN_INTERVALS; i++) 
+    for (uint8_t i=0; i<NUM_SCAN_INTERVALS; i++)
       if (last_scan_times->times[i]==0) last_scan_times->times[i] = curr;
-    
+
     // Set one or more of the scan flags to enable plotting with different steps
     const uint8_t scan60s = 0, scan10m = 1, scan1h = 2, scan1d = 3;
     if (last_scan_times->times[scan60s] + 60 <= curr) {
@@ -241,10 +241,10 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
   // Add number of currently inactive (nonresponding) modules
   String name = interfaces.get_prefix(); name += F("InactCnt");
   root[name] = interfaces.get_inactive_module_count();
-  
+
   uint16_t num_fragments = 0;
   size_t total_free = 0, largest_free = largest_free_block(num_fragments, total_free);
-  
+
   // Add total free memory
   name = interfaces.get_prefix(); name += F("FreeTot");
   root[name] = total_free;
@@ -255,49 +255,58 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
 
   // Add number of fragments
   name = interfaces.get_prefix(); name += F("FragCnt");
-  root[name] = (uint8_t) num_fragments;  
-  
+  root[name] = (uint8_t) num_fragments;
+
   // Add out-of-memory status
   name = interfaces.get_prefix(); name += F("MemErr");
   root[name] = (uint8_t) ModuleVariableSet::out_of_memory;
 }
 
 bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &client, IPAddress &server,
-                               MILastScanTimes *last_scan_times, uint8_t port = 80, 
-                               bool update_instead_of_insert = false) {                                 
-  // Encode all settings to a JSON string
-  String buf;
-  { // Separate block to release JSON buffer as soon as possible
-    DynamicJsonBuffer jsonBuffer(1000);
-    JsonObject& root = jsonBuffer.createObject();
-    for (int i=0; i<interfaces.num_interfaces; i++) add_json_values(interfaces[i], root);
-    
-    // Set scan columns in database if inserting (support for plotting with different resolutions)
-    if (!update_instead_of_insert) set_scan_columns(root, last_scan_times);
+                               MILastScanTimes *last_scan_times, uint8_t port = 80,
+                               bool update_instead_of_insert = false) {
+  int successCnt = 0;
+  #ifdef DEBUG_PRINT
+  uint32_t start_time = millis();
+  #endif
+  for (int i=0; i<interfaces.num_interfaces; i++) {
+    // Encode all settings to a JSON string
+    String buf;
+    { // Separate block to release JSON buffer as soon as possible
+      DynamicJsonBuffer jsonBuffer(500);
+      JsonObject& root = jsonBuffer.createObject();
+      add_json_values(interfaces[i], root);
 
-    // Add status for the master    
-    add_master_status(interfaces, root);
-    
-    root.printTo(buf);
+      // Set scan columns in database if inserting (support for plotting with different resolutions)
+      if (i == 0 && !update_instead_of_insert) set_scan_columns(root, last_scan_times);
+
+      // Add status for the master
+      if (i == 0) add_master_status(interfaces, root);
+
+      root.printTo(buf);
+    }
+
+    if (buf.length() <= 2) continue; // Empty buffer, nothing to send, so not a failure
+    #ifdef DEBUG_PRINT
+    //Serial.println(buf);
+    Serial.print(F("Writing ")); Serial.print(buf.length()); Serial.print(F(" bytes (outputs) to web server for "));
+    Serial.println(interfaces[i]->module_name);
+    #endif
+
+    // Post JSON to web server
+    int8_t code = client.connect(server, port);
+    if (code == 1) { // 1=CONNECTED
+      post_json_to_server(client, buf, i != 0 || update_instead_of_insert);
+    }
+    #ifdef DEBUG_PRINT
+    else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
+    #endif
+    client.stop();
+    if (code == 1) successCnt++;
   }
-
-  if (buf.length() <= 2) return true; // Empty buffer, nothing to send, so not a failure
   #ifdef DEBUG_PRINT
-  //Serial.println(buf);
-  Serial.print(F("Writing ")); Serial.print(buf.length()); Serial.println(F(" bytes (outputs) to web server."));
+  Serial.print(F("Writing to web server took ")); Serial.print((uint32_t)(millis() - start_time));
+  Serial.println(F("ms."));
   #endif
-
-  // Post JSON to web server
-  int8_t code = client.connect(server, port);
-  if (code == 1) { // 1=CONNECTED
-    post_json_to_server(client, buf, update_instead_of_insert);
-  }  
-  #ifdef DEBUG_PRINT
-  else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
-  #endif
-  client.stop();
-  return code == 1;
+  return successCnt > 0;
 }
-
-
-
