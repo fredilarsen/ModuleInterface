@@ -18,9 +18,12 @@ struct MILastScanTimes {
   }
 };
 
-void write_http_settings_request(EthernetClient &client) {
-  client.println(F("GET /get_settings.php HTTP/1.0"));
+void write_http_settings_request(const char *module_prefix, EthernetClient &client) {
+  String request = F("GET /get_settings.php?prefix=");
+  request += module_prefix;
+  client.println(request);
   client.println("");
+  client.flush();
 }
 
 bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
@@ -56,7 +59,7 @@ bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) 
   return false;
 }
 
-void set_time_from_json(ModuleInterfaceSet &interfaces, JsonObject& root, uint32_t delay_ms) {
+void set_time_from_json(JsonObject& root, uint32_t delay_ms) {
  // Set time if received (as early as possible)
   uint32_t utc = (uint32_t)root["UTC"];
   if (utc != 0) {
@@ -74,29 +77,19 @@ void set_time_from_json(ModuleInterfaceSet &interfaces, JsonObject& root, uint32
   #endif
 }
 
-void decode_json_settings(ModuleInterfaceSet &interfaces, JsonObject& root) {
-  // Old comment:
-  // The sequence of parameters here IS important, it must follow the order in the JSON input.
-  // (Which by the way is alphabetically sorted when coming from a MariaDb table.)
-  // Demand that modules, and variable names within each module, are alphabetically sorted,
-  // or do global sorting of variable names here? Or have a prepared index in ModuleInterfaceSet?
-  // Or local index in ModuleInterface if transferring one interface at a time?
-//TODO: Check if alphabetical is a requirement -- it does not seem so any more?
+void decode_json_settings(ModuleInterface &interface, JsonObject& root) {
+  if (!interface.settings.got_contract()) return;
 
-  for (int i=0; i < interfaces.num_interfaces; i++) {
-    if (!interfaces[i]->settings.got_contract()) continue;
-
-    char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
-    for (int j=0; j<interfaces[i]->settings.get_num_variables(); j++) {
-      interfaces[i]->settings.get_module_variable(j).get_prefixed_name(interfaces[i]->get_prefix(), prefixed_name, sizeof prefixed_name);
-      json_to_mv(interfaces[i]->settings.get_module_variable(j), root, prefixed_name);
-    }
-    interfaces[i]->settings.set_updated(); // Flag that settings are ready to be used
+  char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
+  for (int j=0; j<interface.settings.get_num_variables(); j++) {
+    interface.settings.get_module_variable(j).get_prefixed_name(interface.get_prefix(), prefixed_name, sizeof prefixed_name);
+    json_to_mv(interface.settings.get_module_variable(j), root, prefixed_name);
   }
+  interface.settings.set_updated(); // Flag that settings are ready to be used
 }
 
-bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, const uint8_t port = 80,
-                        const uint16_t buffer_size = 2000, const uint16_t timeout_ms = 3000) {
+bool read_json_settings(ModuleInterface &interface, EthernetClient &client, const uint8_t port = 80,
+                        const uint16_t buffer_size = 500, const uint16_t timeout_ms = 3000) {
   char *buf = new char[buffer_size];
   if (buf == NULL) {
     ModuleVariableSet::out_of_memory = true;
@@ -113,13 +106,14 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, 
   buf[pos] = 0; // null-terminate
   client.stop();  // Finished using the socket, close it as soon as possible
   #ifdef DEBUG_PRINT
-  Serial.print(F("Read ")); Serial.print(pos); Serial.println(F(" bytes (settings) from web server."));
+//  Serial.print(F("Read ")); Serial.print(pos); Serial.print(F(" bytes (settings) from web server for "));
+//  Serial.print(interface.module_name);
   #endif
   if (pos >= buffer_size - 1) {
     delete buf;
     ModuleVariableSet::out_of_memory = true;
     #ifdef DEBUG_PRINT
-    Serial.println(F("read_json_settings OUT OF MEMORY"));
+    Serial.println(); Serial.print(F("read_json_settings BUFFER TOO SMALL"));
     #endif
     return false;
   }
@@ -129,8 +123,9 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, 
     // Locate JSON part of reply
     const char *jsonDecl = "Content-Type: application/json";
     char *jsonStart = strstr(buf, jsonDecl);
-    if (jsonStart) {
-      jsonStart += strlen(jsonDecl) + 1;
+    if (jsonStart) jsonStart += strlen(jsonDecl) + 1;
+    else jsonStart = buf;
+    {
       DynamicJsonBuffer jsonBuffer;
       JsonObject& root = jsonBuffer.parseObject(jsonStart);
       if (root.success()) {
@@ -138,17 +133,24 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, 
         #ifdef DEBUG_PRINT
         uint32_t before_set = millis();
         #endif
-        set_time_from_json(interfaces, root, ((uint32_t)(millis()-before_parsing)) + ((uint32_t)(before_parsing-start))/2ul);
-        decode_json_settings(interfaces, root);
+        set_time_from_json(root, ((uint32_t)(millis()-before_parsing)) + ((uint32_t)(before_parsing-start))/2ul);
+        decode_json_settings(interface, root);
         #ifdef DEBUG_PRINT
-          Serial.print("Get, parse, set in ms: "); Serial.print((uint32_t)(before_parsing-start)); Serial.print(" ");
-          Serial.print((uint32_t)(before_set-before_parsing)); Serial.print(" ");
-          Serial.println((uint32_t)(millis()-before_set));
+//        Serial.print(": Get, parse, set in ms: "); Serial.print((uint32_t)(before_parsing-start)); Serial.print(" ");
+//        Serial.print((uint32_t)(before_set-before_parsing)); Serial.print(" ");
+//        Serial.print((uint32_t)(millis()-before_set));
         #endif
         status = true;
+      } else {
+        #ifdef DEBUG_PRINT
+        Serial.print("Failed parsing settings JSON. Out of memory?");
+        #endif
       }
     }
   }
+  #ifdef DEBUG_PRINT
+  //Serial.println();
+  #endif
 
   // Deallocate buffer
   delete buf;
@@ -157,17 +159,27 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, EthernetClient &client, 
 }
 
 bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, EthernetClient &client, IPAddress &server, uint8_t port = 80) {
-  int8_t code = client.connect(server, port);
-  bool success = false;
-  if (code == 1) { // 1=CONNECTED
-    write_http_settings_request(client);
-    success = read_json_settings(interfaces, client);
+  #ifdef DEBUG_PRINT
+  uint32_t start_time = millis();
+  #endif
+  uint8_t cnt = 0;
+  for (int i=0; i < interfaces.num_interfaces; i++) {
+    int8_t code = client.connect(server, port);
+    bool success = false;
+    if (code == 1) { // 1=CONNECTED
+      write_http_settings_request(interfaces[i]->module_prefix, client);
+      success = read_json_settings(*interfaces[i], client);
+    }
+    #ifdef DEBUG_PRINT
+    else { Serial.print("Connection to web server failed with code "); Serial.println(code); }
+    #endif
+    client.stop();
+    if (success) cnt++;
   }
   #ifdef DEBUG_PRINT
-  else { Serial.print("Connection to web server failed with code "); Serial.println(code); }
+  Serial.print(F("Reading settings took ")); Serial.print((uint32_t)(millis() - start_time)); Serial.println("ms.");
   #endif
-  client.stop();
-  return success;
+  return cnt > 0;
 }
 
 void post_json_to_server(EthernetClient &client, String &buf, bool update_instead_of_insert) {
@@ -289,8 +301,8 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &c
     if (buf.length() <= 2) continue; // Empty buffer, nothing to send, so not a failure
     #ifdef DEBUG_PRINT
     //Serial.println(buf);
-    Serial.print(F("Writing ")); Serial.print(buf.length()); Serial.print(F(" bytes (outputs) to web server for "));
-    Serial.println(interfaces[i]->module_name);
+    //Serial.print(F("Writing ")); Serial.print(buf.length()); Serial.print(F(" bytes (outputs) to web server for "));
+    //Serial.println(interfaces[i]->module_name);
     #endif
 
     // Post JSON to web server
