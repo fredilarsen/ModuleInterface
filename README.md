@@ -12,7 +12,7 @@ This library has the following focus:
 - Full user control and privacy. No data into the cloud (unless you want it).
 - The broker / master is also implemented on a small device, making it possible to run setups not involving computers.
 - It can run a whole setup or parts of it without Ethernet. This removes vulnerabilities, which is a hot topic with Ethernet-enabled devices like ESP8266.
-- It can communicate using the PJON library with a bus on a a single wire with no hardware add-ons/shields. Cheap and uncomplicated.
+- It can communicate using the PJON library with a bus on a a single wire with no hardware add-ons/shields. Cheap and uncomplicated. Or wirelessly using cheap 433 MHz ASK modules, or using WiFi or through LAN or Internet. Or a combination.
 - If web page control / visualization is needed, this is easy to do with a local LAMP/WAMP setup. Usable examples are included.
 
 #### Features
@@ -99,7 +99,7 @@ Because of the low memory amount available on Arduinos, the variable name of a s
 
 Variable names for settings and outputs within a module can be specified without the module prefix, which will be added automatically by the master when communicating with the web server / database, and when exchanging values between modules. If the module prefix is skipped, the core variable name length must still be kept 2 characters shorter than the total limit, or it will be truncated. Omitting module prefix from variable names saves a little storage space, and makes it easier to run multiple modules with the same sketch (except the PJON device id which must be unique).
 
-Variable names for inputs must contain the module prefix for the module where they are expected to come from. For example, a GreenHouse monitoring module can specify an input with name "omTemp" to subscribe to an output with the name "Temp" in an "OutsideMonitor" module with prefix "om". 
+Variable names for inputs must contain the module prefix for the module where they are expected to come from. For example, a GreenHouse monitoring module can specify an input with name "omTemp" to subscribe to an output with the name "Temp" in an "OutsideMonitor" module with prefix "om".
 
 #### Web pages
 
@@ -107,7 +107,7 @@ The included HTTP client retrieves settings from a database behind a web server 
 
 PHP scripts and a database scheme plus instructions are included, making it easy to get the transfer of settings and values up and running in a standard, free LAMP or WAMP setup (Linux/Windows + Apache + MySQL/MariaDb + PHP) on your computer.
 
-Web pages are not included so far, but the included PHP scripts make it trivial to transfer settings and values between web pages and the database as JSON using jquery or what you like best. 
+Web pages are not included so far, but the included PHP scripts make it trivial to transfer settings and values between web pages and the database as JSON using jquery or what you like best.
 A working web page template controlling and visualizing output from one or more example modules is planned to be included.
 
 Here is a snapshot of my own responsive home automation web page, running on a server on my own LAN:
