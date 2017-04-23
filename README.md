@@ -1,4 +1,4 @@
-## ModuleInterface v0.82
+## ModuleInterface v0.8.4
 ModuleInterface is an Arduino compatible library for automatic transfer of settings and values between devices, with very little programming needed for each device.
 
 This is ideal for quickly creating a master-slave based collection of devices (modules) doing things like measuring temperatures and other sensors, turning things on and off, regulating heating and so on. With synchronization between the modules, and between the modules and a database if using the HTTP client that is available for the master module.
