@@ -12,9 +12,13 @@
     "type": "git",
     "url": "https://github.com/fredilarsen/ModuleInterface.git"
   },
-  "version": "0.81",
+  "version": "0.8.4",
+  "downloadUrl": "https://github.com/fredilarsen/ModuleInterface/archive/v0.8.4.tar.gz",
   "examples": "examples/*/*/*/*.ino",
   "frameworks": "arduino",
+  "dependencies": {
+      "PJON" : "~8.0.0"
+  },
   "platforms":
   [
     "atmelavr",

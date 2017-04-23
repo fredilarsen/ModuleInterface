@@ -10,8 +10,7 @@
  * of values between modules (through the master).
  */
 
-#include <PJONModuleInterfaceSet.h>
-#include <PJONLink.h>
+#include <MiMaster.h>
 
 // Modules
 #define BLINKMODULE  0 // index of the BlinkModule interface if we need to access it directly

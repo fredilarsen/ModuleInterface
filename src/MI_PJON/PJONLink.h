@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Link.h>
+#include <MI_PJON/Link.h>
 
 template<typename Strategy>
 struct PJONLink : public Link {

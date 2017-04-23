@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ModuleVariable.h>
+#include <MI/ModuleVariable.h>
 
 // Value returned by get_variable_ix when variable name not found. Means that max 255 variables may be used.
 #define NO_VARIABLE 0xFF
@@ -444,6 +444,9 @@ public:
     if (values_received_time==0) values_received_time = 1;
   }
   uint32_t get_updated_time_ms() const { return values_received_time; }
+  void clear_updated_if_too_old(uint32_t age_limit_ms = 3600000) { 
+    if ((uint32_t)(millis() - values_received_time) > age_limit_ms)  values_received_time = 0;
+  }
         
   // Helper variables not used internally, available for use by a communication protocol
   #ifdef IS_MASTER

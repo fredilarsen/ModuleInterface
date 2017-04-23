@@ -9,8 +9,7 @@
  * The result is that the BlinkFollower module will change its blink interval immediately.
  */
 
-#include <PJONModuleInterface.h>
-#include <PJONLink.h>
+#include <MiModule.h>
 
 // Settings
 #define s_time_interval_ix 0

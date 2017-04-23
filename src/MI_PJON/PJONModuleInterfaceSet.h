@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ModuleInterfaceSet.h>
-#include <PJONModuleInterface.h>
+#include <MI/ModuleInterfaceSet.h>
+#include <MI_PJON/PJONModuleInterface.h>
 
 typedef void (*mis_receive_function)(const uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info, const ModuleInterface *module_interface);
 

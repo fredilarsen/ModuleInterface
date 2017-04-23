@@ -7,8 +7,7 @@
  * same interval.
  */
 
-#include <PJONModuleInterface.h>
-#include <PJONLink.h>
+#include <MiModule.h>
 
 // Settings
 #define iTimeIntervalIx 0

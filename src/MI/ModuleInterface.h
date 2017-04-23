@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ModuleVariableSet.h>
+#include <MI/ModuleVariableSet.h>
 
 // Commands for transferring information between modules via some protocol
 enum ModuleCommand {
@@ -152,9 +152,8 @@ public:
   }
   
   void set_name(const char *name) {
-    uint8_t len = min(strlen(name), MAX_MODULE_NAME_LENGTH);
-    strncpy(module_name, name, len);
-    module_name[len] = 0; // Null-terminate
+    strncpy(module_name, name, MAX_MODULE_NAME_LENGTH);
+    module_name[MAX_MODULE_NAME_LENGTH] = 0; // Null-terminate
   }
   
   #ifdef DEBUG_PRINT

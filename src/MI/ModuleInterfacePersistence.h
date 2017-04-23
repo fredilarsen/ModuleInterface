@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ModuleInterface.h>
+#include <MI/ModuleInterface.h>
 #include <EEPROM.h>
 
 // Persistent storage

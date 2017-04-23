@@ -21,12 +21,7 @@
  * will delay the master.
  */
 
-//#define DEBUG_PRINT
-//#include <Time.h>
-#include <PJONModuleInterface.h>
-#include <PJONLink.h>
-#include <ModuleInterfacePersistence.h>
-
+#include <MiModule.h>
 
 // Settings
 #define s_time_interval_ix 0

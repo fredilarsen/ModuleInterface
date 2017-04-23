@@ -17,10 +17,7 @@
  * determined by the sampling_time* members of PJONMOduleInterfaceSet.
  */
  
-//#define DEBUG_PRINT
-//#include <Time.h>
-#include <PJONModuleInterfaceSet.h>
-#include <PJONLink.h>
+#include <MiMaster.h>
 
 // Modules
 #define BLINKMODULE 0 // index of the BlinkModule interface if we need to access it directly

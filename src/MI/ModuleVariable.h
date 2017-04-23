@@ -1,6 +1,7 @@
 #pragma once
 
-#include <BinaryBuffer.h>
+#include <Arduino.h>
+#include <utils/BinaryBuffer.h>
 
 // To avoid memory fragmentation the name buffers are preallocated.
 // The maximum name length can be overridden by defining MVAR_MAX_NAME_LENGTH before including this file.

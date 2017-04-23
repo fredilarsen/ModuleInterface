@@ -22,7 +22,6 @@ BinaryBuffer	KEYWORD1
 # Methods and Functions (KEYWORD2)
 #######################################
 
-acquire_id KEYWORD2
 
 #######################################
 # Instances (KEYWORD2)

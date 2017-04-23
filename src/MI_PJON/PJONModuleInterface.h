@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ModuleInterface.h>
+#include <MI/ModuleInterface.h>
 
 #ifndef PJON_MAX_PACKETS
   #define PJON_MAX_PACKETS 1
@@ -9,7 +9,7 @@
   #define PJON_PACKET_MAX_LENGTH 250
 #endif
 
-#include <Link.h>
+#include <MI_PJON/Link.h>
 
 // A timeout to make sure a lost request or reply does not stop everything permanently
 #define MI_REQUEST_TIMEOUT 5000000   // (us) How long to wait for an active module to reply to a request

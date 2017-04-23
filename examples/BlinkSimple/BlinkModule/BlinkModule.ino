@@ -10,8 +10,7 @@
  * not used except in a setup with BlinkModuleMasterMultiple and BlinkModuleFollower.
  */
 
-#include <PJONModuleInterface.h>
-#include <PJONLink.h>
+#include <MiModule.h>
 
 // Settings
 #define s_time_interval_ix 0

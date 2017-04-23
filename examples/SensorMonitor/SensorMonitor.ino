@@ -8,8 +8,7 @@
    a database, for example for plotting in a web page or triggering of events.
 */
 
-#include <PJONModuleInterface.h>
-#include <PJONLink.h>
+#include <MiModule.h>
 
 PJONLink<SoftwareBitBang> link(4); // PJON device id 4
 

@@ -1,13 +1,10 @@
 #pragma once
 
 #include <TimeLib.h>
-#include <ModuleInterface.h>
-#include <Ethernet.h>
 #include <ArduinoJson.h>
-#include <MemFrag.h>
-
-//TODO: Transfer for one module at a time to reduce the buffer size?
-//Even on a Mega it will be tight otherwise.
+//#include <Ethernet.h>
+#include <MI/ModuleInterface.h>
+#include <utils/MemFrag.h>
 
 #define NUM_SCAN_INTERVALS 4
 
@@ -272,6 +269,10 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
   // Add out-of-memory status
   name = interfaces.get_prefix(); name += F("MemErr");
   root[name] = (uint8_t) ModuleVariableSet::out_of_memory;
+  
+  // Add uptime
+  name = interfaces.get_prefix(); name += F("Uptime");
+  root[name] = (uint32_t) ModuleInterfaceSet::uptime();
 }
 
 bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &client, IPAddress &server,

@@ -37,9 +37,7 @@
 #define MAX_PACKETS 1
 
 #include <TimeLib.h>  // Including Time.h will enable time sync to all devices
-#include <PJONModuleInterfaceSet.h>
-#include <PJONLink.h>
-#include <ModuleInterfaceHttpTransfer.h>
+#include <MiMaster.h>
 
 // Modules
 #define BLINKMODULE 0 // index of the BlinkModule interface if we need to access it directly
