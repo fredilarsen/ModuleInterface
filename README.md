@@ -58,8 +58,7 @@ The SensorMonitor example shows the simplicity of creating a module that reads o
 The SensorMonitor example is simply reading a motion detector:
 
 ```cpp
-#include <PJONModuleInterface.h>
-#include <PJONLink.h>
+#include <MiModule.h>
 
 PJONLink<SoftwareBitBang> link(4); // PJON device id 4
 
@@ -117,7 +116,7 @@ Here is a snapshot of my own responsive home automation web page, running on a s
 #### License
 
 ```cpp
-/* Copyright 2016 Fred Larsen
+/* Copyright 2016-2017 Fred Larsen
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
