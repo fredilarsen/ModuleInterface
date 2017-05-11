@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Arduino.h>
 #include <MI/ModuleVariable.h>
 
 // Value returned by get_variable_ix when variable name not found. Means that max 255 variables may be used.

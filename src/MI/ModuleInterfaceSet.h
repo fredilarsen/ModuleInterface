@@ -8,6 +8,7 @@
 #define NO_MODULE 255
 
 #include <MI/ModuleInterface.h>
+#include <utils/MITime.h>
 
 class ModuleInterfaceSet {
 protected:
@@ -161,14 +162,5 @@ public:
     }
     module_ix = output_ix = NO_MODULE;
     return false;
-  }
-  
-  static uint32_t uptime() {
-    #if !defined(NO_TIME_SYNC) && defined(_Time_h)
-	  static time_t startupTime = now();
-	  return (uint32_t)(now() - startupTime);
-    #else
-    return 0;
-    #endif
   }
 };

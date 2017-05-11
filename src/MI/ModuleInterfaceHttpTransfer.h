@@ -1,17 +1,17 @@
 #pragma once
 
-#include <TimeLib.h>
 #include <ArduinoJson.h>
-//#include <Ethernet.h>
 #include <MI/ModuleInterface.h>
+#include <utils/MITime.h>
+#include <utils/MIUptime.h>
 #include <utils/MemFrag.h>
 
 #define NUM_SCAN_INTERVALS 4
 
 struct MILastScanTimes {
-  time_t times[NUM_SCAN_INTERVALS];
+  uint32_t times[NUM_SCAN_INTERVALS];
   MILastScanTimes() {
-    memset(times, NUM_SCAN_INTERVALS*sizeof(time_t), 0);
+    memset(times, NUM_SCAN_INTERVALS*sizeof(uint32_t), 0);
   }
 };
 
@@ -60,12 +60,12 @@ void set_time_from_json(JsonObject& root, uint32_t delay_ms) {
  // Set time if received (as early as possible)
   uint32_t utc = (uint32_t)root["UTC"];
   if (utc != 0) {
-    if (abs((int32_t)(utc - now()) > 2)) {
-    #ifdef _Time_h
+    if (abs((int32_t)(utc -miGetTime()) > 2)) {
+    #ifndef NO_TIME_SYNC
       #ifdef DEBUG_PRINT
-        Serial.print(F("--> Adjusted time from web by s: ")); Serial.println((int32_t) (utc - now() + delay_ms/1000ul));
+        Serial.print(F("--> Adjusted time from web by s: ")); Serial.println((int32_t) (utc - miGetTime() + delay_ms/1000ul));
       #endif
-      setTime(utc + delay_ms/1000ul); // Set global system time if using the Time library
+      miSetTime(utc + delay_ms/1000ul); // Set system time
     #endif
     }
   }
@@ -224,7 +224,7 @@ void set_scan_columns(JsonObject &root,
 {
   if (last_scan_times) {
     // Do not sample at startup, init time array to now
-    time_t curr = now();
+    uint32_t curr = miGetTime();
     for (uint8_t i=0; i<NUM_SCAN_INTERVALS; i++)
       if (last_scan_times->times[i]==0) last_scan_times->times[i] = curr;
 
@@ -253,7 +253,11 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
 
   uint16_t num_fragments = 0;
   size_t total_free = 0, largest_free = largest_free_block(num_fragments, total_free);
-
+  #ifdef DEBUG_PRINT
+  Serial.print(F("MEM Free=")); Serial.print(total_free); Serial.print(F(", #frag=")); Serial.print(num_fragments);
+  Serial.print(", bigfrag="); Serial.println(largest_free);
+  #endif
+  
   // Add total free memory
   name = interfaces.get_prefix(); name += F("FreeTot");
   root[name] = total_free;
@@ -272,7 +276,11 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
   
   // Add uptime
   name = interfaces.get_prefix(); name += F("Uptime");
-  root[name] = (uint32_t) ModuleInterfaceSet::uptime();
+  root[name] = (uint32_t) miGetUptime();
+  
+  // Add system time
+  name = interfaces.get_prefix(); name += F("UTC");
+  root[name] = (uint32_t) miGetTime();
 }
 
 bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &client, IPAddress &server,
@@ -295,7 +303,6 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &c
 
       // Add status for the master
       if (i == 0) add_master_status(interfaces, root);
-
       root.printTo(buf);
     }
 

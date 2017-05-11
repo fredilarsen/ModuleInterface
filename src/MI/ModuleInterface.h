@@ -1,6 +1,7 @@
 #pragma once
 
 #include <MI/ModuleVariableSet.h>
+#include <utils/MITime.h>
 
 // Commands for transferring information between modules via some protocol
 enum ModuleCommand {
@@ -407,7 +408,7 @@ public:
     return up_time; // If time sync disabled or not received, return accumulated calculated uptime
     #endif // IS_MASTER
   }  
-  
+
 protected:  
 
 friend class ModuleInterfaceSet; 
@@ -445,7 +446,7 @@ friend class ModuleInterfaceSet;
   }
   #endif
   
-  // Support setting time automatically if the Time.h header file is included before this
+  // Receiving time sync from master
   void set_time(const uint8_t *message, const uint8_t length) {
     #ifndef NO_TIME_SYNC
     if (length == 4) {
@@ -456,9 +457,6 @@ friend class ModuleInterfaceSet;
       time_utc_s = *(uint32_t*)message; 
       time_utc_received_s = time_utc_s; // Remember what time was received last
       status_bits &= ~MISSING_TIME; // Clear the missing-time bit
-      #ifdef _Time_h
-        setTime(time_utc_s);  // Adjust "system clock" in UTC as well if the Time library is used
-      #endif
       #ifdef DEBUG_PRINT
         dname(); Serial.print(F("Time adjusted by ")); Serial.print((uint32_t) (time_utc_s - initial_time));
         Serial.print(F("s to UTC ")); Serial.println(time_utc_s);

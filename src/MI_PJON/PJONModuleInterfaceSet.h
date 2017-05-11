@@ -73,20 +73,20 @@ public:
     clear_input_events();
   }
   
-  // If Time.h is included before this, time can be broadcast to all modules
-  #ifdef _Time_h
+  // If TimeLib.h is included before this, time can be broadcast to all modules
+  #ifndef NO_TIME_SYNC
   void broadcast_time() {
-    if (timeStatus() == timeSet) {
+    if (miIsTimeSynced()) {
       bool do_sync = ((uint32_t)(millis() - last_time_sync) >= 60000); // Time for a scheduled broadcast?
       #ifdef DEBUG_PRINT
-        if (do_sync) {Serial.print(F("Scheduled broadcast of time sync: ")); Serial.println(now()); }
-      #endif  
+        if (do_sync) {Serial.print(F("Scheduled broadcast of time sync: ")); Serial.println(miGetTime()); }
+      #endif
       // Check if any module has reported that is it missing time
       if (!do_sync) {
         for (uint8_t i = 0; i < num_interfaces; i++) if (interfaces[i]->status_bits & MISSING_TIME) {
           #ifdef DEBUG_PRINT
             Serial.print(F("Module ")); Serial.print(interfaces[i]->module_name);
-            Serial.print(F(" missing time, broadcasting: ")); Serial.println(now());
+            Serial.print(F(" missing time, broadcasting: ")); Serial.println(miGetTime());
           #endif
           do_sync = true;
           break;
@@ -96,7 +96,7 @@ public:
         last_time_sync = millis();
         char buf[5];
         buf[0] = (char) mcSetTime;
-        time_t t = now();      
+        uint32_t t = miGetTime();      
         memcpy(&buf[1], &t, 4);
         uint32_t dummy_bus_id = 0;
         uint16_t packet = pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, 0, 
@@ -119,7 +119,7 @@ public:
     handle_events();
     
     // Broadcast time to all modules with a few minutes interval
-    #ifdef _Time_h
+    #ifndef NO_TIME_SYNC
     broadcast_time();
     #endif
     
