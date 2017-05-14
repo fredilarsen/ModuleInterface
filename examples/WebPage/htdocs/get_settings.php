@@ -5,14 +5,17 @@ include "db_config.php";
 // tell the browser what's coming
 header('Content-type: application/json');
 
-// Retrieve only settings starting with specified prefix
-$prefix = $_GET['prefix'];
+// Retrieve only settings starting with specified prefix?
+$prefix = null;
+if (!empty($_GET)) $prefix = array_key_exists('prefix', $_GET) ? $_GET['prefix'] : null;
 
 // open database connection
 $conn = new PDO("mysql:host=$server;dbname=$database", $username, $password);
 
 // use prepared statements!
-$query = $conn->prepare("select id, value from settings where id like '$prefix%'");
+$sql = "select id, value from settings";
+if ($prefix != null) $sql = $sql . " where id like '$prefix%'";
+$query = $conn->prepare($sql);
 $query->execute();
 
 $result = $query->setFetchMode(PDO::FETCH_NUM);

@@ -73,7 +73,7 @@ public:
     clear_input_events();
   }
   
-  // If TimeLib.h is included before this, time can be broadcast to all modules
+  // Time will be broadcast to all modules unless NO_TIME_SYNC is defined or master itself is not timesynced
   #ifndef NO_TIME_SYNC
   void broadcast_time() {
     if (miIsTimeSynced()) {
@@ -96,10 +96,10 @@ public:
         last_time_sync = millis();
         char buf[5];
         buf[0] = (char) mcSetTime;
-        uint32_t t = miGetTime();      
+        uint32_t t = miGetTime();
         memcpy(&buf[1], &t, 4);
         uint32_t dummy_bus_id = 0;
-        uint16_t packet = pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, 0, 
+        uint16_t packet = pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, MI_REDUCED_SEND_TIMEOUT, 
           pjon->get_header() | PJON_EXT_HEAD_BIT | MI_PJON_BIT);
         
         // Clear time-missing bit to avoid this triggering continuous broadcasts.

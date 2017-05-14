@@ -33,14 +33,7 @@
  * libraries that are used.
  */
 
-// (Time synchronization will be disabled if setting this to 0)
-#define MAX_PACKETS 1
-
-#include <TimeLib.h>  // Including Time.h will enable time sync to all devices
 #include <MiMaster.h>
-
-// Modules
-#define BLINKMODULE 0 // index of the BlinkModule interface if we need to access it directly
 
 // PJON related
 PJONLink<SoftwareBitBang> bus(1); // PJON device id 1
@@ -84,7 +77,7 @@ void loop() {
   static uint32_t last_s = 0;
   if (millis() - last_s >= 10000) {
     last_s = millis();
-    get_settings_from_web_server(interfaces, web_client, web_server, 80);
+    get_settings_from_web_server(interfaces, web_client, web_server);
   }
   
   // Store all measurements to the database via the web server
@@ -92,13 +85,14 @@ void loop() {
   if (millis() - last_v >= 10000) {
     last_v = millis();
     static MILastScanTimes last_scan_times;
-    // (update=true to coexist with another master temporarily)
-    send_values_to_web_server(interfaces, web_client, web_server, &last_scan_times, 80, false); 
+    // (set primary_master=false on all masters but one if there are more than one)
+    send_values_to_web_server(interfaces, web_client, web_server, &last_scan_times); 
   }
   
   // Let activity flash go to rapid if one or more modules are inactive
   static uint32_t last_led_change = millis();
-  uint16_t intervalms = interfaces.get_inactive_module_count() > 0 ? 100 : 1000;
+  uint16_t intervalms = interfaces.get_inactive_module_count() > 0 ? 300 : 1000;
+  if (ModuleVariableSet::out_of_memory) intervalms = 30;
   if (millis() - last_led_change >= intervalms) {
     last_led_change = millis();
     static bool led_on = false;
@@ -110,7 +104,7 @@ void loop() {
 
 void receive_function(const uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info, const ModuleInterface *module_interface){
   // Handle specialized messages to this module
-  Serial.print("!!!!!!!!!!!!!!!!! CUSTOM MESSAGE from ");
+  Serial.print(F("NON-ModuleInterface message from "));
   Serial.print(module_interface ? module_interface->module_name : "unregistered device");
   Serial.print(", len "); Serial.print(length); Serial.print(":");
   for (int i=0; i<length; i++) { Serial.print(payload[i]); Serial.print(" "); }

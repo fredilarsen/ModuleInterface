@@ -3,7 +3,7 @@
 #include <MI/ModuleInterface.h>
 
 #ifndef PJON_MAX_PACKETS
-  #define PJON_MAX_PACKETS 1
+  #define PJON_MAX_PACKETS 0
 #endif
 #ifndef PJON_PACKET_MAX_LENGTH
   #define PJON_PACKET_MAX_LENGTH 250
@@ -51,7 +51,7 @@ public:
   #ifndef IS_MASTER  
   PJONModuleInterface(const char *module_name, Link &pjon, 
                       const char *settingnames, const char *inputnames, const char *outputnames) :
-    ModuleInterface(module_name, settingnames, inputnames, outputnames) {      
+    ModuleInterface(module_name, settingnames, inputnames, outputnames) {
     set_link(pjon);
   }
   // This constructor is available only because the F() macro can only be used in a function.

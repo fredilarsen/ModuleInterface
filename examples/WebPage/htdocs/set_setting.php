@@ -1,4 +1,5 @@
 <?php
+// Insert or update the supplied JSON name:value pair in the settings table.
 if(!empty($_POST))
 {
 	//database settings
@@ -14,19 +15,17 @@ if(!empty($_POST))
 		{
 			//update the values
 			$sql = "INSERT INTO settings (id, value) VALUES('$field_id', $val) ON DUPLICATE KEY UPDATE value=$val";
-			try {
-			
-			$conn ->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-			
-			// Prepare statement
-			$stmt = $conn->prepare($sql);
-	
-			// execute the query
-			$stmt->execute();
-			//mysql_query("UPDATE settings SET value = '$val' WHERE name = $field_id") or mysql_error();
-			// echo a message to say the UPDATE succeeded
-			echo $stmt->rowCount() . " records UPDATED successfully";
-			//echo "Updated";
+			try {			
+				$conn ->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+				
+				// Prepare statement
+				$stmt = $conn->prepare($sql);
+		
+				// execute the query
+				$stmt->execute();
+
+				// echo a message to say the UPDATE succeeded
+				echo $stmt->rowCount() . " records UPDATED successfully";
 			}
 			catch(PDOException $e)
 			{

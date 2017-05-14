@@ -49,7 +49,7 @@ bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) 
     case mvtUint32: root[name] = v.get_uint32(); return true;
     case mvtInt32: root[name] = v.get_int32(); return true;
     case mvtFloat32:
-      if (v.get_float() != SYS_ZERO && !isnan(v.get_float())) {
+      if (v.get_float() != SYS_ZERO && !isnan(v.get_float()) && !isinf(v.get_float())) {
         root[name] = v.get_float(); return true;
       } else return false;
   }
@@ -179,8 +179,8 @@ bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, EthernetClient
   return cnt > 0;
 }
 
-void post_json_to_server(EthernetClient &client, String &buf, bool update_instead_of_insert) {
-  client.println(update_instead_of_insert ? F("POST /update_jsonstatus.php HTTP/1.0") : F("POST /set_jsonstatus.php HTTP/1.0"));
+void post_json_to_server(EthernetClient &client, String &buf) {
+  client.println(F("POST /set_currentvalues.php HTTP/1.0"));
   client.println(F("Content-Type: application/json"));
   client.println(F("Connection: close"));
   client.print(F("Content-Length: ")); client.println(buf.length());
@@ -229,20 +229,25 @@ void set_scan_columns(JsonObject &root,
       if (last_scan_times->times[i]==0) last_scan_times->times[i] = curr;
 
     // Set one or more of the scan flags to enable plotting with different steps
-    const uint8_t scan60s = 0, scan10m = 1, scan1h = 2, scan1d = 3;
-    if (last_scan_times->times[scan60s] + 60 <= curr) {
-      last_scan_times->times[scan60s] = curr;
-      root["scan1m"] = 1;
+    const uint8_t scan1m = 0, scan10m = 1, scan1h = 2, scan1d = 3;
+    uint8_t set1m = 0, set10m = 0, set1h = 0, set1d = 0;
+    if (last_scan_times->times[scan1m] + 60 <= curr) {
+      last_scan_times->times[scan1m] = curr;
+      set1m = 1;
       if (last_scan_times->times[scan10m] + 600 <= curr) {
         last_scan_times->times[scan10m] = curr;
-        root["scan10m"] = 1;
+        set10m = 1;
         if (last_scan_times->times[scan1h] + 3600 <= curr) {
           last_scan_times->times[scan1h] = curr;
-          root["scan1h"] = 1;
+          set1h = 1;
           if (last_scan_times->times[scan1d] + 24ul*3600 <= curr) {
             last_scan_times->times[scan1d] = curr;
-            root["scan1d"] = 1;
+            set1d = 1;
     } } } }
+    root[F("scan1m")]  = set1m;
+    root[F("scan10m")] = set10m;
+    root[F("scan1h")]  = set1h;
+    root[F("scan1d")]  = set1d;
   }
 }
 
@@ -285,7 +290,8 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
 
 bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &client, IPAddress &server,
                                MILastScanTimes *last_scan_times, uint8_t port = 80,
-                               bool update_instead_of_insert = false) {
+                               bool primary_master = true, // (set primary_master=false on all masters but one if more than one)
+                               uint16_t json_buffer_size = 500) {
   int successCnt = 0;
   #ifdef DEBUG_PRINT
   uint32_t start_time = millis();
@@ -294,12 +300,12 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &c
     // Encode all settings to a JSON string
     String buf;
     { // Separate block to release JSON buffer as soon as possible
-      DynamicJsonBuffer jsonBuffer(500);
+      DynamicJsonBuffer jsonBuffer(json_buffer_size);
       JsonObject& root = jsonBuffer.createObject();
       add_json_values(interfaces[i], root);
 
       // Set scan columns in database if inserting (support for plotting with different resolutions)
-      if (i == 0 && !update_instead_of_insert) set_scan_columns(root, last_scan_times);
+      if (primary_master && i == 0) set_scan_columns(root, last_scan_times);
 
       // Add status for the master
       if (i == 0) add_master_status(interfaces, root);
@@ -316,7 +322,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &c
     // Post JSON to web server
     int8_t code = client.connect(server, port);
     if (code == 1) { // 1=CONNECTED
-      post_json_to_server(client, buf, i != 0 || update_instead_of_insert);
+      post_json_to_server(client, buf);
     }
     #ifdef DEBUG_PRINT
     else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
@@ -324,6 +330,19 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, EthernetClient &c
     client.stop();
     if (code == 1) successCnt++;
   }
+  
+  // Take a snapshot of the currentvalues table into the timeseries table
+  if (primary_master) {
+    int8_t code = client.connect(server, port);
+    if (code == 1) { // 1=CONNECTED
+      client.println(F("GET /store_currentvalues.php"));
+    }
+    #ifdef DEBUG_PRINT
+    else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
+    #endif
+    client.stop();
+  }
+  
   #ifdef DEBUG_PRINT
   Serial.print(F("Writing to web server took ")); Serial.print((uint32_t)(millis() - start_time));
   Serial.println(F("ms."));
