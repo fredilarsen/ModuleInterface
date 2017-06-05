@@ -107,7 +107,7 @@ bool read_json_settings(ModuleInterface &interface, EthernetClient &client, cons
 //  Serial.print(interface.module_name);
   #endif
   if (pos >= buffer_size - 1) {
-    delete buf;
+    delete[] buf;
     ModuleVariableSet::out_of_memory = true;
     #ifdef DEBUG_PRINT
     Serial.println(); Serial.print(F("read_json_settings BUFFER TOO SMALL"));
@@ -150,7 +150,7 @@ bool read_json_settings(ModuleInterface &interface, EthernetClient &client, cons
   #endif
 
   // Deallocate buffer
-  delete buf;
+  delete[] buf;
 
   return status;
 }
@@ -206,6 +206,7 @@ void add_module_status(ModuleInterface *interface, JsonObject &root) {
 }
 
 void add_json_values(ModuleInterface *interface, JsonObject &root) {
+  
   if (!interface->outputs.got_contract() || !interface->outputs.is_updated()) return; // Values not available yet
 
   // Add output values

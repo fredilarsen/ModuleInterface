@@ -12,13 +12,13 @@ public:
   ~BinaryBuffer() { deallocate(); }
   bool allocate(const uint16_t length) { 
     if (len < length) { 
-      if (buffer) delete buffer;
+      if (buffer) delete[] buffer;
       buffer = new uint8_t[length];
       len = length; 
     }
     return length == 0 || buffer != NULL;
   }
-  void deallocate() { if (buffer) { delete buffer; buffer = NULL; len = 0; } }
+  void deallocate() { if (buffer) { delete[] buffer; buffer = NULL; len = 0; } }
   bool is_empty() const { return buffer == NULL; }
   
   const uint8_t *get() const { return buffer; }

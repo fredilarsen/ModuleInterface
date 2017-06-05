@@ -6,6 +6,10 @@
 // Value returned by get_variable_ix when variable name not found. Means that max 255 variables may be used.
 #define NO_VARIABLE 0xFF
 
+// A callback for getting the contract string when needed without keeping the names in RAM.
+// It must return the character at the given position in the string, and return char(0) after the last character.
+typedef char (* MVS_getContractChar)(uint16_t position);
+
 // This variable object can be used on the master side to handle changing contracts,
 // where a variable index may become invalid if the number of parameters or parameter order changes.
 // It can be used on the module side as well if the extra bytes of storage/RAM usage is acceptable.
@@ -38,8 +42,10 @@ private:
   uint8_t total_value_length = 0;    // Length of all values serialized after another
   uint32_t contract_id = 0;          // Number used for detecting changes in contract
   uint32_t values_received_time = 0; // Set by set_values when setting values
-  bool master = false;
-
+  #ifndef IS_MASTER
+  MVS_getContractChar get_contract_callback = NULL;
+  #endif
+  
   void deallocate() { if (variables) { delete[] variables; variables = NULL; num_variables = 0; } }
 
   void calculate_total_value_length() {
@@ -49,12 +55,20 @@ private:
   
   uint32_t calculate_contract_id() const { // A contract id that can be used to detect a changed contract
     uint32_t id = 0x33333333; // Non-zero to be able to accept a contract with no variables
+    char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
+    uint16_t source_pos = 0;
+    uint8_t len;
     for (uint8_t i = 0; i < num_variables; i++) {
-      uint8_t len = strlen(variables[i].name);
+      #ifdef IS_MASTER
+      strncpy(name_buf, variables[i].name, MVAR_MAX_NAME_LENGTH);
+      #else
+      if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) return 0;
+      remove_type(name_buf, len);
+      #endif
       ((uint8_t*) &id)[0] += variables[i].get_size();
       ((uint8_t*) &id)[1] += len;
       ((uint8_t*) &id)[2] += (uint8_t) variables[i].get_type(); 
-      for (uint8_t j=0; j<len; j++) ((uint8_t*) &id)[3] ^= variables[i].name[j]; // XOR of chars in names
+      for (uint8_t j=0; j<len; j++) ((uint8_t*) &id)[3] ^= name_buf[j]; // XOR of chars in names
     }
     // TODO: Use 32 bit CRC of all above instead of sums and XOR?
     return id;
@@ -63,6 +77,39 @@ private:
 public:  
   ModuleVariableSet() { }
   ~ModuleVariableSet() { deallocate(); }  
+  
+  #ifdef IS_MASTER
+  bool get_variable_name(uint8_t ix, char *name_buf) const {
+    strncpy(name_buf, variables[ix].name, MVAR_MAX_NAME_LENGTH);
+    name_buf[MVAR_MAX_NAME_LENGTH] = 0;
+    return true;
+  }
+  #endif
+    
+  #ifndef IS_MASTER  
+  bool get_next_word_from_contract(uint16_t &source_pos, uint8_t  &word_len, char *name_buf, uint8_t buf_size) {
+    word_len = 0;
+    if (get_contract_callback == NULL) return false;
+    uint8_t cnt = 0;
+    char c;
+    do {
+      c = get_contract_callback(source_pos);
+      if (c != 0) source_pos++;
+      if (c != 0 && c != ' ' && cnt < buf_size-1) name_buf[cnt++] = c;    
+      else { // A complete word is read
+        name_buf[cnt] = 0;
+        word_len = cnt;
+        return word_len > 0;
+      }
+    } while (c != 0 && c != ' ' && cnt < buf_size-1);
+    return false;
+  }
+  
+  static void remove_type(char *name_buf, uint8_t &name_len) {
+    char *colon_pos = strchr(name_buf, ':');
+    if (colon_pos != NULL) { *colon_pos = 0; name_len = colon_pos - name_buf; }
+  }
+  #endif
   
   // A flag that should be set if memory allocation fails (can be set and read from all places)
   static bool out_of_memory;  
@@ -82,30 +129,36 @@ public:
     }
     return true;
   }                               
-  
-  void set_variables(const char *names_and_types) { // Textual format like "var1:u1 var2:f" specified in worker
-    // Parse string, count number of variables  
-    if (names_and_types) {
-      const char *p = names_and_types;
-      uint8_t nvar = 0;
-      while (*p) { p++; if (*p == 0 || *p == ' ') nvar++; }     
+
+  void set_variables_by_callback(MVS_getContractChar contract_callback) { // Textual format like "var1:u1 var2:f" specified in worker
+    // Remember how to get the contract when needed
+    get_contract_callback = contract_callback;
+    
+    // Parse string, count number of variables    
+    char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
+    uint16_t source_pos = 0;
+    uint8_t len, nvar = 0;
+    while (get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) nvar++;
+    if (nvar > 0) {      
       if (num_variables && nvar != num_variables) deallocate(); // Deallocate if num_variables changed
       // Init variables
       if (nvar && !num_variables) variables = new ModuleVariable[nvar];
       num_variables = nvar;
-      p = names_and_types;
-      uint8_t cnt = 0;
-      while (*p) {      
-        variables[cnt++].set_variable(p);
-        while (*p && *p != ' ') p++;
-        if (*p == ' ') p++; // First char after space
+      source_pos = 0;
+      for (uint8_t i = 0; i < num_variables; i++) {
+        if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) {
+          deallocate(); 
+          break;
+        }
+        variables[i].set_variable(name_buf);
       }
-    } else deallocate();
+    } else deallocate();  
     calculate_total_value_length();
     contract_id = calculate_contract_id();
   }
   #endif
   
+  #ifdef IS_MASTER
   void set_variables(const uint8_t *names_and_types, const uint8_t length) { // Serialized data coming from worker to master
     const uint8_t *p = names_and_types;
     uint32_t new_contract_id = 0;
@@ -129,29 +182,38 @@ public:
         p += (2 + p[1]); // type byte + length byte + name length
       }
       calculate_total_value_length();
-      master = true; // Assuming that contract is sent from module to master.
     }
     #ifdef DEBUG_PRINT    
     else { Serial.print(F("IGNORED DUPLICATE CONTRACT ")); Serial.println(contract_id); }
     #endif
   }
+  #endif
   
+  #ifndef IS_MASTER
   void get_variables(BinaryBuffer &names_and_types, uint8_t &length, uint8_t header_byte) const {
     // Calculate total buffer size
     length = 6; // Header byte plus Contract id plus number of variables byte
-    for (uint8_t i = 0; i < num_variables; i++) length += (2 + strlen(variables[i].name)); // 2 bytes for type, length
-    
+    char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
+    uint16_t source_pos = 0;
+    uint8_t len;
+    for (uint8_t i = 0; i < num_variables; i++) {
+      if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) { length = 0; break; }
+      remove_type(name_buf, len);
+      length += 2 + len; // 2 bytes for type, length
+    }
     // Allocate buffer, fill in
     if (names_and_types.allocate(length)) { 
       uint8_t *p = names_and_types.get();
       *p = header_byte; p++;
       memcpy(p, &contract_id, 4); p += 4; // Add contract id
       *p = num_variables; p++; // Add number of variables
+      source_pos = 0;
       for (uint8_t i = 0; i < num_variables; i++) { // Add each variable type and name
-        *p = (uint8_t) variables[i].get_type(); p++;      
-        uint8_t len = strlen(variables[i].name);
+        *p = (uint8_t) variables[i].get_type(); p++;    
+        if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) { length = 0; break; }
+        remove_type(name_buf, len);
         *p = len; p++;
-        memcpy(p, variables[i].name, len);
+        memcpy(p, name_buf, len);
         p += len;
       }
     } else {
@@ -161,6 +223,7 @@ public:
       #endif      
     }
   }
+  #endif
   
   void invalidate_contract() { 
     #ifdef DEBUG_PRINT
@@ -283,17 +346,29 @@ public:
   
   uint8_t get_num_variables() const { return num_variables; }
   
-  uint8_t get_variable_ix(const char *variable_name) const {
+  uint8_t get_variable_ix(const char *variable_name) const { 
+    #ifdef IS_MASTER
+    for (uint8_t i = 0; i < num_variables; i++)
+      if (strncmp(variable_name, variables[i].name, MVAR_MAX_NAME_LENGTH) == 0) return i;
+    #else
+    char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
+    uint16_t source_pos = 0;
+    uint8_t len;
     for (uint8_t i = 0; i < num_variables; i++) {
-      if (strcmp(variable_name, variables[i].name) == 0) return i;
+      if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) {
+        return NO_VARIABLE;
+      }
+      remove_type(name_buf, len);
+      if (strncmp(variable_name, name_buf, MVAR_MAX_NAME_LENGTH) == 0) return i;
     }
+    #endif
     return NO_VARIABLE;
   }
 
   const ModuleVariable &get_module_variable(const uint8_t ix) const { return variables[ix]; }
   ModuleVariable &get_module_variable(const uint8_t ix) { return variables[ix]; }
   
-  const char *get_name(const uint8_t ix) const { return variables[ix].name; }
+  //const char *get_name(const uint8_t ix) const { return variables[ix].name; }
   ModuleVariableType get_type(const uint8_t ix) const { return variables[ix].get_type(); }
   
   // Low-level setter and getter. Use these on module size where ix is constant.
@@ -414,8 +489,6 @@ public:
   int32_t  get_int32(const uint8_t ix) const { return *(int32_t*)get_value_pointer(ix); }
   float    get_float(const uint8_t ix) const { return *(float*)get_value_pointer(ix); }
   
-  bool is_master() const { return master; }  // Whether this VariableSet is on the module or master side of a connection
-
   
   // Change detection
   bool is_changed() const {
@@ -455,33 +528,58 @@ public:
            requested_time = 0;
   #endif
  
+  #if defined(DEBUG_PRINT) || defined(STATUS_PRINT)
     void debug_print_contract() const {
       if (num_variables == 0) Serial.print(F("Empty contract."));
-      else for (uint8_t i = 0; i < num_variables; i++) {
-        if (i > 0) Serial.print(" "); 
-        Serial.print(variables[i].name); Serial.print(":"); Serial.print(ModuleVariableTypeNames[(uint8_t)variables[i].get_type()]);
+      else {
+        Serial.print(num_variables); Serial.print(F(":"));
+        char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
+        uint16_t source_pos = 0;
+        uint8_t len;
+        for (uint8_t i = 0; i < num_variables; i++) {
+          #ifdef IS_MASTER
+          strncpy(name_buf, variables[i].name, MVAR_MAX_NAME_LENGTH);
+          #else
+          if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) break;
+          remove_type(name_buf, len);
+          #endif
+          if (i > 0) Serial.print(" ");
+          Serial.print(name_buf); Serial.print(":"); Serial.print(ModuleVariableTypeNames[(uint8_t)variables[i].get_type()]);
+        }
       }
       Serial.println("");
     }
 
     void debug_print_values() const {
       if (num_variables == 0) Serial.print(F("Empty contract."));
-      else for (uint8_t i = 0; i < num_variables; i++) {
-        if (i > 0) Serial.print(" "); 
-        Serial.print(variables[i].name); Serial.print("=");
-        switch(variables[i].get_type()) {
-        case mvtBoolean: Serial.print(*((bool*)variables[i].value)); break;
-        case mvtUint8: Serial.print(*((uint8_t*)variables[i].value)); break;
-        case mvtInt8: Serial.print(*((int8_t*)variables[i].value)); break;
-        case mvtUint16: Serial.print(*((uint16_t*)variables[i].value)); break;
-        case mvtInt16: Serial.print(*((int16_t*)variables[i].value)); break;
-        case mvtUint32: Serial.print(*((uint32_t*)variables[i].value)); break;
-        case mvtInt32: Serial.print(*((int32_t*)variables[i].value)); break;
-        case mvtFloat32: Serial.print(*((float*)variables[i].value)); break;
-        default: Serial.print("Unrecognized type "); Serial.print(variables[i].get_type()); break;
+      else {
+        char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
+        uint16_t source_pos = 0;
+        uint8_t len;
+        for (uint8_t i = 0; i < num_variables; i++) {
+          #ifdef IS_MASTER
+          strncpy(name_buf, variables[i].name, MVAR_MAX_NAME_LENGTH);
+          #else
+          if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) break;
+          remove_type(name_buf, len);
+          #endif
+          if (i > 0) Serial.print(" "); 
+          Serial.print(name_buf); Serial.print("=");
+          switch(variables[i].get_type()) {
+          case mvtBoolean: Serial.print(*((bool*)variables[i].value)); break;
+          case mvtUint8: Serial.print(*((uint8_t*)variables[i].value)); break;
+          case mvtInt8: Serial.print(*((int8_t*)variables[i].value)); break;
+          case mvtUint16: Serial.print(*((uint16_t*)variables[i].value)); break;
+          case mvtInt16: Serial.print(*((int16_t*)variables[i].value)); break;
+          case mvtUint32: Serial.print(*((uint32_t*)variables[i].value)); break;
+          case mvtInt32: Serial.print(*((int32_t*)variables[i].value)); break;
+          case mvtFloat32: Serial.print(*((float*)variables[i].value)); break;
+          default: Serial.print(F("Unrecognized type ")); Serial.print(variables[i].get_type()); break;
+          }
         }
       }
-      Serial.println("");
-    }      
+      Serial.println("");            
+    } 
+    #endif
 };
 

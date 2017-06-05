@@ -49,7 +49,7 @@ byte mac[] = {0xDE, 0xCD, 0x4E, 0xEF, 0xFE, 0xED};
 byte ip[] = { 192, 1, 1, 180 };
 
 // Module interfaces
-PJONModuleInterfaceSet interfaces(bus, "Blink:b1:4");
+PJONModuleInterfaceSet interfaces(bus, "Blink:b1:4", "m1");
 // TODO: This could even be retrieved from the web server at startup, to make it possible to
 // configure and activate new modules in a web page :-)
 
@@ -89,7 +89,7 @@ void loop() {
     send_values_to_web_server(interfaces, web_client, web_server, &last_scan_times); 
   }
   
-  // Let activity flash go to rapid if one or more modules are inactive
+  // Let activity flash go to rapid if one or more modules are inactive, faster if low mem
   static uint32_t last_led_change = millis();
   uint16_t intervalms = interfaces.get_inactive_module_count() > 0 ? 300 : 1000;
   if (ModuleVariableSet::out_of_memory) intervalms = 30;

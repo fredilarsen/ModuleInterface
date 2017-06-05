@@ -11,9 +11,16 @@
 #endif
 
 // The first part of a variable can be a lower case module prefix.
+// (This is included in the MVAR_MAX_NAME_LENGTH)
 #ifndef MVAR_PREFIX_LENGTH
   #define MVAR_PREFIX_LENGTH 2
 #endif
+
+// Type length including colon (":u4" etc)
+#define MVAR_TYPE_LENGTH 3
+
+// Name including prefix, plus type length
+#define MVAR_COMPOSITE_NAME_LENGTH (MVAR_MAX_NAME_LENGTH + MVAR_TYPE_LENGTH)
 
 
 enum ModuleVariableType {
@@ -35,18 +42,27 @@ struct ModuleVariable {
 private:
   ModuleVariableType type = mvtUnknown; // To save memory we use the uppermost bits for change detection, therefore do not allow direct access
 public:  
-  uint8_t value[4];  // A 4 byte buffer covers all supported value types, better than using a pointer and allocating memory
+  uint8_t value[4];  // A 4 byte buffer covers all supported value types, better than using a pointer and allocating memory  
+  #ifdef IS_MASTER
   char name[MVAR_MAX_NAME_LENGTH + 1];
-
-  ModuleVariable() { name[0] = 0; memset(value, 0, 4); }
+  #endif
+  
+  ModuleVariable() { 
+    #ifdef IS_MASTER
+    name[0] = 0; 
+    #endif
+    memset(value, 0, 4);
+  }
   
   // Setters and getters for serializing (type,length,name)
   void set_variable(const uint8_t *name_and_type, const uint8_t length) {
     // Read name length byte
     type = (ModuleVariableType) name_and_type[0];
     uint8_t len = min(name_and_type[1], MVAR_MAX_NAME_LENGTH);
+    #ifdef IS_MASTER
     memcpy(name, &name_and_type[2], len);
     name[len] = 0; // Null-terminator   
+    #endif
   }
 
   // Setting from text
@@ -55,21 +71,25 @@ public:
     const char *pos1 = strchr(s, ':'), *pos2 = strchr(s, ' ');
     if (pos1 == NULL || (pos2 != NULL && pos2 < pos1)) { // No colon in this variable declaration, use float as default
       uint8_t len = min(pos2 == NULL ? strlen(s) : pos2-s, MVAR_MAX_NAME_LENGTH);
+      #ifdef IS_MASTER
       memcpy(name, s, len);
       name[len] = 0; // Null-terminator
+      #endif
       type = mvtFloat32; // Default data type
     } else { // There is a colon in the declaration
+      #ifdef IS_MASTER
       uint8_t len = min(pos1 - s, MVAR_MAX_NAME_LENGTH);
       memcpy(name, s, len);
       name[len] = 0; // Null-terminate
+      #endif
       type = get_type(&pos1[1]);
     }
   }
   
+  #ifdef IS_MASTER
   // Return whether this variable name has a module prefix (lower case) or is a local name
-  bool has_module_prefix() const {
-    return name[0] >= 'a' && name[0] <= 'z';
-  }
+  bool has_module_prefix() const { return name[0] >= 'a' && name[0] <= 'z'; }
+  
   // Return prefixed name, either prefixed from before, or with a prefix added now
   void get_prefixed_name(const char *prefix, char *output_name_buf, uint8_t buf_size) const {
     if (has_module_prefix() || !prefix) strncpy(output_name_buf, name, buf_size); // Already prefixed
@@ -80,7 +100,8 @@ public:
       output_name_buf[buf_size-1] = 0;
     }
   }
-
+  #endif
+  
   ModuleVariableType get_type() const { return (ModuleVariableType) (type & 0b00111111); }
   
   // Change detection

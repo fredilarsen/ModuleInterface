@@ -73,7 +73,7 @@ void loop() {
   }
 }
 
-void notification_function(NotificationType notification_type, const ModuleInterface *module_interface) {
+void notification_function(NotificationType notification_type, const ModuleInterface *module_interface) { 
   if (notification_type == ntNewOutputs) {
     // Display a measurement
     uint8_t heartbeat = interfaces[BLINKMODULE]->outputs.get_uint8(o_b1heartbeat);

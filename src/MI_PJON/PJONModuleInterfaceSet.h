@@ -23,7 +23,7 @@ public:
     pjon->set_receiver(mis_global_receive_function);
   }
   // Specifying modules as textual list like "BlinkModule:bm:44 TestModule:tm:44:0.0.0.1":
-  PJONModuleInterfaceSet(Link &bus, const char *interface_list, const char *prefix) : ModuleInterfaceSet(prefix) { 
+  PJONModuleInterfaceSet(Link &bus, const char *interface_list, const char *prefix = NULL) : ModuleInterfaceSet(prefix) { 
     // Count number of interfaces
     num_interfaces = 0;
     const char *p = interface_list;

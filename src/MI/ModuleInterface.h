@@ -64,11 +64,14 @@ enum NotificationType {
 // Notification callback
 class ModuleInterface;
 typedef void (*notify_function)(NotificationType notification_type, const ModuleInterface *module_interface);
-
-void dummy_notification_function(NotificationType notification_type, const ModuleInterface *module_interface) {};
-
+extern void dummy_notification_function(NotificationType notification_type, const ModuleInterface *module_interface);
 
 class ModuleInterface {
+  #ifndef IS_MASTER
+  static const char *settings_contract, // Pointer to ordinary or PROGMEM string constant
+                    *inputs_contract,
+                    *outputs_contract;
+  #endif
 public:
   char module_name[MAX_MODULE_NAME_LENGTH+1];  // A user readable name for the module
   uint8_t status_bits = 0;     // Bits for requesting transfer of contracts or values from master
@@ -114,19 +117,71 @@ public:
   
   // Constructor for module side
   #ifndef IS_MASTER
-  // Specify contracts to constructor...
-  ModuleInterface(const char *module_name, const char *settingnames, const char *inputnames, const char *outputnames) { 
-   init(); set_contracts(module_name, settingnames, inputnames, outputnames);
+  // Specify contracts to constructor by providing string constants (must remain accessible, they will not be copied)...
+  ModuleInterface(const char *module_name, 
+                  const char *settingnames, 
+                  const char *inputnames, 
+                  const char *outputnames) { 
+    init(); 
+    set_contracts(module_name, settingnames, inputnames, outputnames);
+  }
+  // Specify contracts to constructor by providing PROGMEM constants... (MUST have a terminating null character, like "Motion:u1\0")
+  ModuleInterface(const char *module_name,
+                  const bool names_are_explicitly_nullterminated, // Must be true, this is a requirement
+                  const PROGMEM char *settingnames, 
+                  const PROGMEM char *inputnames, 
+                  const PROGMEM char *outputnames) { 
+    init(); 
+    if (names_are_explicitly_nullterminated) set_contracts_P(module_name, settingnames, inputnames, outputnames);
+  }
+  // Specify contracts to constructor by providing callback functions...
+  ModuleInterface(const char                *module_name, 
+                        MVS_getContractChar settingnames,
+                        MVS_getContractChar inputnames, 
+                        MVS_getContractChar outputnames) { 
+    init();
+    set_contracts(module_name, settingnames, inputnames, outputnames);
   }
   // ... or just preallocate variables, then use set_contracts to configure
   ModuleInterface(const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) {
     init(); preallocate_variables(num_settings, num_inputs, num_outputs);
   }
-  void set_contracts(const char *module_name, const char *settingnames, const char *inputnames, const char *outputnames) {
+
+  void set_contracts(const char *module_name, 
+                     const char *settingnames, 
+                     const char *inputnames, 
+                     const char *outputnames) {
+    // Remember pointers to the strings                     
+    settings_contract = settingnames;
+    inputs_contract   = inputnames;
+    outputs_contract  = outputnames;   
+    
+    // Register the callbacks that relate to an ordinary string
+    set_contracts(module_name, settings_callback, inputs_callback, outputs_callback);
+  }
+  void set_contracts_P(const char *module_name, 
+                       const PROGMEM char *settingnames, 
+                       const PROGMEM char *inputnames, 
+                       const PROGMEM char *outputnames) {
+    // Remember pointers to the strings                     
+    settings_contract = settingnames;
+    inputs_contract   = inputnames;
+    outputs_contract  = outputnames;   
+    
+    // Register the callbacks that relate to a PROGMEM string
+    set_contracts(module_name, settings_callback_P, inputs_callback_P, outputs_callback_P);
+  }
+  void set_contracts(const char *module_name, 
+                           MVS_getContractChar settingnames_callback, 
+                           MVS_getContractChar inputnames_callback, 
+                           MVS_getContractChar outputnames_callback) {
     set_name(module_name);
-    settings.set_variables(settingnames);
-    inputs.set_variables(inputnames);
-    outputs.set_variables(outputnames);
+    
+    // Register the user-specified callbacks
+    settings.set_variables_by_callback(settingnames_callback);
+    inputs.set_variables_by_callback(inputnames_callback);
+    outputs.set_variables_by_callback(outputnames_callback);
+    
     if (settings.get_num_variables() == 0) status_bits &= !MISSING_SETTINGS; // No settings, so do not mark them as missing
     if (inputs.get_num_variables() == 0) status_bits &= !MISSING_INPUTS;     // No inputs, so do not mark them as missing
   }
@@ -189,7 +244,7 @@ public:
     #ifdef IS_MASTER
       comm_failures = 0;
     #endif
-    last_alive = millis(); if (last_alive == 0) last_alive = 1;
+    last_alive = millis(); if (last_alive == 0) last_alive = 1;    
     switch(message[0]) {
       #ifdef IS_MASTER
       case mcSetSettingContract: 
@@ -239,6 +294,7 @@ public:
       #endif
       default: return false; // Unrecognized message
     }
+    
     #ifdef DEBUG_PRINT
       if (message[0] == mcSetSettingContract) {
         dname(); Serial.print(F("Settings contract: "));
@@ -267,12 +323,12 @@ public:
       else if (message[0] == mcSetStatus) {
         dname(); Serial.print(F("Status: ")); Serial.println(message[1]);
       }
-    #endif      
+    #endif
     return true;
   }
   
   // Try to parse it as a request for data, returning the data in response if returning true
-  bool handle_request_message(const uint8_t *message, const uint8_t length, BinaryBuffer &response, uint8_t &response_length) {
+  bool handle_request_message(const uint8_t *message, const uint8_t length, BinaryBuffer &response, uint8_t &response_length) {   
     response_length = 0;
     if (length < 1) return false;
     #ifdef DEBUG_PRINT
@@ -318,6 +374,7 @@ public:
       #endif  
       default: return false; // Unrecognized message
     }
+    
     #ifdef DEBUG_PRINT
     if (message[0] == mcSendSettings) { // Can be called for master, and for module if it has own GUI
       dname(); Serial.print(F("Send Settings: "));
@@ -349,7 +406,7 @@ public:
       dname(); Serial.print(F("Send Status: ")); Serial.println(status_bits);
     }
     #endif  
-    #endif          
+    #endif  
     return true;
   }
   
@@ -361,7 +418,7 @@ public:
 
   // Whether this module is active or has not been reachable for a while
   bool is_active() const { 
-    #ifdef IS_MASTER
+    #ifdef IS_MASTER    
     return comm_failures < MI_INACTIVE_THRESHOLD && get_last_alive_age() != -1 && get_last_alive_age() < 1000ul*MI_INACTIVE_TIME_THRESHOLD;
     #else
     return true;
@@ -447,12 +504,13 @@ friend class ModuleInterfaceSet;
   #endif
   
   // Receiving time sync from master
-  void set_time(const uint8_t *message, const uint8_t length) {
+  void set_time(const uint8_t *message, const uint8_t length) { 
     #ifndef NO_TIME_SYNC
     if (length == 4) {
       #ifdef DEBUG_PRINT
         uint32_t initial_time = get_time_utc_s();
       #endif
+      miSetTime(time_utc_s);
       time_utc_incremented_ms = millis(); // Remember when it was received so it can be auto-incremented
       time_utc_s = *(uint32_t*)message; 
       time_utc_received_s = time_utc_s; // Remember what time was received last
@@ -474,7 +532,7 @@ friend class ModuleInterfaceSet;
       status_bits = message[0];
       out_of_memory = message[1];
       memcpy(&up_time, &message[2], sizeof up_time);
-      if (got_contract() && settings.is_master() && (status_bits & (CONTRACT_MISMATCH_SETTINGS | CONTRACT_MISMATCH_INPUTS))) {
+      if (got_contract() && (status_bits & (CONTRACT_MISMATCH_SETTINGS | CONTRACT_MISMATCH_INPUTS))) {
         // Module flags that it does not have the same contract, usually for settings or inputs. Invalidate relevant part.
         #ifdef DEBUG_PRINT
           dname(); Serial.print(F("Module changed contract. Invalidating ")); Serial.println(status_bits);           
@@ -489,7 +547,7 @@ friend class ModuleInterfaceSet;
  
   BinaryBuffer input_source_module_ix,
                input_source_output_ix;
-  void allocate_source_arrays() {
+  void allocate_source_arrays() {   
     if (input_source_module_ix.allocate(inputs.get_num_variables()) &&
         input_source_output_ix.allocate(inputs.get_num_variables())) {
       input_source_module_ix.set_all(NO_VARIABLE); // no source
@@ -501,7 +559,17 @@ friend class ModuleInterfaceSet;
       #endif
     }
   }
-  #endif  
+  #endif
+
+  // Callbacks for reading contracts from ordinary string constants
+  static char settings_callback(uint16_t pos);
+  static char inputs_callback(uint16_t pos);
+  static char outputs_callback(uint16_t pos);
+
+  // Callbacks for reading contracts from PROGMEM string constants
+  static char settings_callback_P(uint16_t pos);
+  static char inputs_callback_P(uint16_t pos);
+  static char outputs_callback_P(uint16_t pos);
 };
 
 

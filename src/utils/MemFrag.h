@@ -28,7 +28,7 @@ size_t largest_free_block(uint16_t &num_fragments, size_t &free_memory)
   return max;
 }
 
-// Return an integer percentage of the largest fragment divided byt total free memory.
+// Return an integer percentage of the largest fragment divided by total free memory.
 // (No fragmentation gives 100%, low numbers are bad.)
 uint8_t get_largest_fragment_percentage() {
   uint16_t num_fragments;

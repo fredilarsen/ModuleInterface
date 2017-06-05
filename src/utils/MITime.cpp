@@ -27,6 +27,6 @@ bool miIsTimeSynced() { miUpdateTime(); return miLastSyncedMs != 0 && 1483228800
 bool miWasSyncedWithin(uint32_t limit_ms) { miUpdateTime(); return ((uint32_t)(millis() - miLastSyncedMs) <= limit_ms); }
 uint32_t miGetLastSyncedAtMs() { miUpdateTime(); return miLastSyncedMs; }
   
-uint8_t miGetWeekDay(uint32_t utc_s) { return ((utc_s / MI_SECONDS_PER_DAY + 3) % 7ul) + 1; } // 1=monday
-uint16_t miGetMinuteOfDay(uint32_t utc_s) { return utc_s % MI_SECONDS_PER_DAY; }
-  
+uint8_t miGetWeekDay(uint32_t utc_s) { return ((utc_s / MI_SECONDS_PER_DAY + 3) % 7ul); } // 0=monday
+uint32_t miGetSecondOfDay(uint32_t utc_s) { return utc_s % MI_SECONDS_PER_DAY; }
+uint16_t miGetMinuteOfDay(uint32_t utc_s) { return miGetSecondOfDay(utc_s) / 60; }

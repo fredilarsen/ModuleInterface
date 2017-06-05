@@ -12,9 +12,9 @@
 #include <MI_PJON/Link.h>
 
 // A timeout to make sure a lost request or reply does not stop everything permanently
-#define MI_REQUEST_TIMEOUT 5000000   // (us) How long to wait for an active module to reply to a request
-#define MI_SEND_TIMEOUT 5000000      // (us) How long to wait for an active device to PJON_ACK
-#define MI_REDUCED_SEND_TIMEOUT 5000 // (us) How long to try to contact a moduled that is marked as inactive
+#define MI_REQUEST_TIMEOUT 5000000    // (us) How long to wait for an active module to reply to a request
+#define MI_SEND_TIMEOUT 5000000       // (us) How long to wait for an active device to PJON_ACK
+#define MI_REDUCED_SEND_TIMEOUT 10000 // (us) How long to try to contact a module that is marked as inactive
 
 // A status bit for the PJON extended header byte, used to quickly separate ModuleInterface related messages from others
 #define MI_PJON_BIT PJON_SESSION_BIT
@@ -54,6 +54,17 @@ public:
     ModuleInterface(module_name, settingnames, inputnames, outputnames) {
     set_link(pjon);
   }
+  PJONModuleInterface(const char *module_name, Link &pjon, 
+                      bool names_are_explicitly_nullterminated, // Required to be true! e.g. "MyParam1:f4 MyParam2:i2\0" 
+                      const char PROGMEM *settingnames, const char PROGMEM *inputnames, const char PROGMEM *outputnames) :
+    ModuleInterface(module_name, names_are_explicitly_nullterminated, settingnames, inputnames, outputnames) {
+    set_link(pjon);
+  }
+  PJONModuleInterface(const char *module_name, Link &pjon, 
+                      MVS_getContractChar settingnames, MVS_getContractChar inputnames, MVS_getContractChar outputnames) :
+    ModuleInterface(module_name, settingnames, inputnames, outputnames) {
+    set_link(pjon);
+  }  
   // This constructor is available only because the F() macro can only be used in a function.
   // So if RAM is tight, use this constructor and call set_contracts from setup()
   PJONModuleInterface(Link &pjon, const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) :
@@ -77,12 +88,12 @@ public:
   }
   
   void update() {
-    // Listen for packets for 1ms, and count CRC errors indicating low signal quality
+    // Listen for packets for 1ms, and count CRC errors indicating low signal quality 
     receive_with_error_detection(pjon, 1000, nak_count, ack_count);
-    
+
     // Module-initiated event support
     send_output_events();
-    
+
     // If user sketch is posting packets to be sent, send them
     pjon->update();
   }
@@ -223,10 +234,9 @@ public:
   
   bool send(uint8_t remote_id, const uint8_t *remote_bus, const uint8_t *message, uint16_t length) {
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-    dname(); Serial.print("S len "); Serial.print(length); Serial.print(" cmd "); Serial.print(message[0]);
-    Serial.print(" active "); Serial.println(is_active());
+    dname(); Serial.print("S "); Serial.print(remote_id); Serial.print(" len "); Serial.print(length); 
+    Serial.print(" cmd "); Serial.print(message[0]); Serial.print(" active "); Serial.println(is_active());
     #endif  
-
     uint16_t status = pjon->send_packet(remote_id, remote_bus, (const char*)message, length, 
       is_active() ? MI_SEND_TIMEOUT : MI_REDUCED_SEND_TIMEOUT, 
       pjon->get_header() | MI_PJON_BIT | PJON_EXT_HEAD_BIT);
@@ -318,7 +328,7 @@ public:
   
   #ifndef IS_MASTER  
   // If any output is flagged as an event, send it immediately to the master (breaking the master-slave pattern)
-  void send_output_events() {
+  void send_output_events() {    
     BinaryBuffer response;
     uint8_t response_length;
     outputs.get_values(response, response_length, mcSetOutputs, true);

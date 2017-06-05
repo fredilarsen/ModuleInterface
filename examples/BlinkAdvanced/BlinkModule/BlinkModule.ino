@@ -1,25 +1,29 @@
 /* This sketch demonstrates the ModuleInterface library.
- * 
- * The sketch does a simple task that requires some configuration. That configuration is kept in a 
- * ModuleInterface object, allowing it to be set and read from another device through some protocol,
- * in this case PJON.
- * The remote device will upon connection get this device's contract, that is, the names and types of
- * the settings and inputs it requires, and the outputs it offers.
- * 
- * The sketch takes a measurement as well, and this is transported to the remote side as an output.
- * It does not require or demonstrate any inputs.
- * 
- * This sketch illustrates saving of settings to EPROM for continued self-sufficient operation with 
- * the same settings after a restart.
- * 
- * It also illustrates how to add a custom handler for PJON messages. PJON messages can be sent and
- * received as usual, even with the ModuleInterface communication doing its work.
- * 
- * Also shown is the use of the notification callback. This allows immediate action to be taken when
- * new settings or inputs arrive, or to do sampling immediately before outputs are retrieved. It is 
- * important not to do long-lasting work in the notification function for ntSampleOutputs, as it 
- * will delay the master.
- */
+
+   The sketch does a simple task that requires some configuration. That configuration is kept in a
+   ModuleInterface object, allowing it to be set and read from another device through some protocol,
+   in this case PJON.
+   The remote device will upon connection get this device's contract, that is, the names and types of
+   the settings and inputs it requires, and the outputs it offers.
+
+   The sketch takes a measurement as well, and this is transported to the remote side as an output.
+   It does not require or demonstrate any inputs.
+
+   This sketch illustrates saving of settings to EPROM for continued self-sufficient operation with
+   the same settings after a restart.
+
+   It also illustrates how to add a custom handler for PJON messages. PJON messages can be sent and
+   received as usual, even with the ModuleInterface communication doing its work.
+
+   Also shown is the use of the notification callback. This allows immediate action to be taken when
+   new settings or inputs arrive, or to do sampling immediately before outputs are retrieved. It is
+   important not to do long-lasting work in the notification function for ntSampleOutputs, as it
+   will delay the master.
+*/
+
+// Save some RAM by reducing PJON packet size, and by including only the strategy in use
+#define PJON_PACKET_MAX_LENGTH 50
+#define PJON_INCLUDE_SWBB
 
 #include <MiModule.h>
 
@@ -34,14 +38,13 @@
 #define o_uptime_ix    0
 #define o_heartbeat_ix 1
 
-// PJON related
-PJONLink<SoftwareBitBang> bus(4); // PJON device id 4
+// Illustrating the use of PROGMEM to save RAM (especially useful if there are many parameters)
+const char PROGMEM settings[] = "TimeInt:u4 Duty:u1";
+const char PROGMEM inputs[]   = "HeartB:u1";
+const char PROGMEM outputs[]  = "Uptime:u4 HeartB:u1";
 
-PJONModuleInterface interface("Blink",                     // Module name
-                              bus,                         // PJON bus
-                              "TimeInt:u4 Duty:u1",        // Settings
-                              "HeartB:u1",                 // Inputs                       
-                              "Uptime:u4 HeartB:u1");      // Outputs (measurements)                         
+PJONLink<SoftwareBitBang> bus(4); // PJON device id 4
+PJONModuleInterface interface("Blink", bus, true, settings, inputs, outputs);
 
 bool light_on = false;
 uint8_t heartbeat = 0;
@@ -54,7 +57,7 @@ void setup() {
   bus.bus.strategy.set_pin(7);
   interface.set_notification_callback(notification_function);
   read_settings_from_eeprom(interface);
-  
+
   pinMode(13, OUTPUT);
   digitalWrite(13, LOW);
 }
@@ -75,8 +78,8 @@ void notification_function(NotificationType notification_type, const ModuleInter
     uint8_t heartbeat_return = 0;
     interface.inputs.get_value(i_return_heartbeat_ix, heartbeat_return);
     Serial.print(F("Return heartbeat is ")); Serial.println(heartbeat_return);
-  } 
-  else if (notification_type == ntNewSettings) {
+  }
+  else if (notification_type == ntNewSettings) {    
     // Make sure settings are kept in EEPROM, ready for self-sufficient work after reboot
     static uint32_t last_eeprom_save = 0;
     write_to_eeprom_when_needed(interface, last_eeprom_save);
@@ -89,12 +92,12 @@ void receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info 
 
   // Handle specialized messages to this module, or broadcast
   if (do_something(payload, length)) return;
-  
+
   // Else unrecognized message
 }
 
 bool do_something(uint8_t *message, uint8_t length) {
-  // ... 
+  // ...
   return false;
 }
 
@@ -105,9 +108,9 @@ void blink() {
   if (interface.settings.is_updated()) {
     interface.settings.get_value(s_time_interval_ix, interval);
     uint8_t dutycycle_percent = interface.settings.get_uint8(s_dutycycle_ix);
-    interval = light_on ? dutycycle_percent*interval/100 : (100-dutycycle_percent)*interval/100;
+    interval = light_on ? dutycycle_percent * interval / 100 : (100 - dutycycle_percent) * interval / 100;
   }
-  
+
   // Turn on or off when interval elapsed
   static uint32_t last_change = millis();
   uint32_t now = millis();
