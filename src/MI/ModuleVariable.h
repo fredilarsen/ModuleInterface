@@ -35,25 +35,23 @@ enum ModuleVariableType {
   mvtFloat32
 };
 
-// Short name for each of the enums
-extern const char *ModuleVariableTypeNames[];
 
 struct ModuleVariable {
 private:
   ModuleVariableType type = mvtUnknown; // To save memory we use the uppermost bits for change detection, therefore do not allow direct access
-public:  
-  uint8_t value[4];  // A 4 byte buffer covers all supported value types, better than using a pointer and allocating memory  
+public:
+  uint8_t value[4];  // A 4 byte buffer covers all supported value types, better than using a pointer and allocating memory
   #ifdef IS_MASTER
   char name[MVAR_MAX_NAME_LENGTH + 1];
   #endif
-  
-  ModuleVariable() { 
+
+  ModuleVariable() {
     #ifdef IS_MASTER
-    name[0] = 0; 
+    name[0] = 0;
     #endif
     memset(value, 0, 4);
   }
-  
+
   // Setters and getters for serializing (type,length,name)
   void set_variable(const uint8_t *name_and_type, const uint8_t length) {
     // Read name length byte
@@ -61,12 +59,12 @@ public:
     uint8_t len = min(name_and_type[1], MVAR_MAX_NAME_LENGTH);
     #ifdef IS_MASTER
     memcpy(name, &name_and_type[2], len);
-    name[len] = 0; // Null-terminator   
+    name[len] = 0; // Null-terminator
     #endif
   }
 
   // Setting from text
-  void set_variable(const char *s) { // Format like "lightOn:b1"   
+  void set_variable(const char *s) { // Format like "lightOn:b1"
     // Read name length byte
     const char *pos1 = strchr(s, ':'), *pos2 = strchr(s, ' ');
     if (pos1 == NULL || (pos2 != NULL && pos2 < pos1)) { // No colon in this variable declaration, use float as default
@@ -85,11 +83,11 @@ public:
       type = get_type(&pos1[1]);
     }
   }
-  
+
   #ifdef IS_MASTER
   // Return whether this variable name has a module prefix (lower case) or is a local name
   bool has_module_prefix() const { return name[0] >= 'a' && name[0] <= 'z'; }
-  
+
   // Return prefixed name, either prefixed from before, or with a prefix added now
   void get_prefixed_name(const char *prefix, char *output_name_buf, uint8_t buf_size) const {
     if (has_module_prefix() || !prefix) strncpy(output_name_buf, name, buf_size); // Already prefixed
@@ -101,25 +99,25 @@ public:
     }
   }
   #endif
-  
+
   ModuleVariableType get_type() const { return (ModuleVariableType) (type & 0b00111111); }
-  
+
   // Change detection
   void set_changed(bool changed = true) {
     if (changed) type = (ModuleVariableType)(type | 0b10000000);
     else type = (ModuleVariableType)(type & 0b01111111);
   }
   bool is_changed() const { return (type & 0b10000000) != 0; }
-  
+
   // Event flag
   void set_event(bool event = true) {
     if (event) type = (ModuleVariableType)(type | 0b01000000);
     else type = (ModuleVariableType)(type & 0b10111111);
   }
-  bool is_event() const { return (type & 0b01000000) != 0; }  
-  
+  bool is_event() const { return (type & 0b01000000) != 0; }
+
   // Value setters and getters
-  void set_value(const void *v, const uint8_t size) { 
+  void set_value(const void *v, const uint8_t size) {
     if (get_size() == size) {
       if (memcmp(value, v, size) != 0) set_changed(true); // Detect changes
       memcpy(value, v, size);
@@ -136,7 +134,7 @@ public:
   void set_value(const int16_t v) { set_value(&v, 2); }
   void set_value(const int32_t v) { set_value(&v, 4); }
   void set_value(const float v) { set_value(&v, 4); }
-  
+
   // Specialized convenience getters (these do not cost memory because of inlining)
   void get_value(bool &v) const { get_value(&v, 1); }
   void get_value(uint8_t &v) const { get_value(&v, 1); }
@@ -155,9 +153,9 @@ public:
   int8_t get_int8() const { return *(int8_t*)value; }
   int16_t get_int16() const { return *(int16_t*)value; }
   int32_t get_int32() const { return *(int32_t*)value; }
-  float get_float() const { return *(float*)value; }  
-  
-  // Memory management 
+  float get_float() const { return *(float*)value; }
+
+  // Memory management
   uint8_t get_size() const {
     switch(get_type()) {
     case mvtBoolean:
@@ -171,14 +169,6 @@ public:
     }
     return 0;
   }
-  static ModuleVariableType get_type(const char *type_name) {
-    for (uint8_t i = 0; ModuleVariableTypeNames[i] != NULL; i++) {
-      if (strncmp(type_name, ModuleVariableTypeNames[i], strlen(ModuleVariableTypeNames[i])) == 0)
-        return (ModuleVariableType) i;
-    }
-    return mvtUnknown;
-  }
+  static ModuleVariableType get_type(const char *type_name);
+  static void get_type_name(const ModuleVariableType mvt, char name[]); // name must have length >= MVAR_TYPE_LENGTH chars
 };
-
-
-

@@ -6,7 +6,7 @@
 // Commands for transferring information between modules via some protocol
 enum ModuleCommand {
   mcUnknownCommand,
-  
+
   mcSendSettingContract,  // 1
   mcSendInputContract,
   mcSendOutputContract,
@@ -17,14 +17,14 @@ enum ModuleCommand {
 
   mcSendSettings,         // 7
   mcSendInputs,
-  mcSendOutputs,  
+  mcSendOutputs,
   mcSendStatus, // Master is asking regularly if the module has anything to report that is not available in the variable sets
-  
+
   mcSetSettings,          // 11
   mcSetInputs,
   mcSetOutputs,
   mcSetStatus,
-  
+
   mcSetTime               // 15
 };
 
@@ -43,17 +43,17 @@ enum ModuleCommand {
 // Notification types for the notification callback function
 enum NotificationType {
   ntUnknown,
-  
+
   ntNewSettingContract, // Called after new settings have been received (module side and possibly master side)
   ntNewInputContract,   // Called after new inputs have been received (module side)
   ntNewOutputContract,  // Called after new outputs have been received (master side)
-  
+
   ntNewSettings,        // Called after new settings have been received (module side and possibly master side)
   ntNewInputs,          // Called after new inputs have been received (module side)
   ntNewOutputs,         // Called after new outputs have been received (master side)
   ntNewStatus,          // Called after new status has been received (master side)
   ntNewTime,            // Called after new time has been received (module side)
-  
+
   ntSampleSettings,     // Called before inputs are sent to module (master side)
   ntSampleInputs,       // Called before inputs are sent to module (master side)
   ntSampleOutputs,      // Called before outputs are sent to master, allowing for immediate sampling of sensors (module side)
@@ -81,14 +81,14 @@ public:
   uint32_t last_alive = 0;     // time of last life-sign (reply but not ACK) for this module
   uint32_t up_time = 0;        // Uptime in seconds
   uint32_t last_uptime_millis = 0; // Millis when uptime was incremented last
-  #ifdef IS_MASTER                    
+  #ifdef IS_MASTER
   char module_prefix[MVAR_PREFIX_LENGTH+1];    // A unique lower case prefix for the module, separating it from other modules
   uint8_t comm_failures = 0;   // If a module is unreachable it can be temporarily deactivated
   bool out_of_memory = false;  // If a module has reached an out-of-memory exception (but still can report back)
   ModuleVariableSet *confirmed_settings = NULL; // Configuration parameters received from the module
   ModuleCommand last_incoming_cmd = mcUnknownCommand;  // Cmd in last received packet
   #endif
-    
+
   // Time sync support
   #ifndef NO_TIME_SYNC
   #ifndef IS_MASTER
@@ -99,46 +99,46 @@ public:
            time_utc_startup_s = 0;       // Startup time, for calculating uptime
   #endif
   #endif
-  
-  ModuleInterface() { 
-    init(); 
-    module_name[0] = 0; 
+
+  ModuleInterface() {
+    init();
+    module_name[0] = 0;
     #ifdef IS_MASTER
     module_prefix[0] = 0;
     #endif
   }
-    
+
   // Constructors for master side
-  #ifdef IS_MASTER  
+  #ifdef IS_MASTER
   ModuleInterface(const char *module_name, const char *prefix) {
     init(); set_name(module_name); set_prefix(prefix);
   }
   #endif
-  
+
   // Constructor for module side
   #ifndef IS_MASTER
   // Specify contracts to constructor by providing string constants (must remain accessible, they will not be copied)...
-  ModuleInterface(const char *module_name, 
-                  const char *settingnames, 
-                  const char *inputnames, 
-                  const char *outputnames) { 
-    init(); 
+  ModuleInterface(const char *module_name,
+                  const char *settingnames,
+                  const char *inputnames,
+                  const char *outputnames) {
+    init();
     set_contracts(module_name, settingnames, inputnames, outputnames);
   }
-  // Specify contracts to constructor by providing PROGMEM constants... (MUST have a terminating null character, like "Motion:u1\0")
+  // Specify contracts to constructor by providing PROGMEM constants...
   ModuleInterface(const char *module_name,
-                  const bool names_are_explicitly_nullterminated, // Must be true, this is a requirement
-                  const PROGMEM char *settingnames, 
-                  const PROGMEM char *inputnames, 
-                  const PROGMEM char *outputnames) { 
-    init(); 
-    if (names_are_explicitly_nullterminated) set_contracts_P(module_name, settingnames, inputnames, outputnames);
+                  const bool is_progmem, // Must be true, this is a requirement
+                  const PROGMEM char *settingnames,
+                  const PROGMEM char *inputnames,
+                  const PROGMEM char *outputnames) {
+    init();
+    if (is_progmem) set_contracts_P(module_name, settingnames, inputnames, outputnames);
   }
   // Specify contracts to constructor by providing callback functions...
-  ModuleInterface(const char                *module_name, 
+  ModuleInterface(const char                *module_name,
                         MVS_getContractChar settingnames,
-                        MVS_getContractChar inputnames, 
-                        MVS_getContractChar outputnames) { 
+                        MVS_getContractChar inputnames,
+                        MVS_getContractChar outputnames) {
     init();
     set_contracts(module_name, settingnames, inputnames, outputnames);
   }
@@ -147,41 +147,41 @@ public:
     init(); preallocate_variables(num_settings, num_inputs, num_outputs);
   }
 
-  void set_contracts(const char *module_name, 
-                     const char *settingnames, 
-                     const char *inputnames, 
+  void set_contracts(const char *module_name,
+                     const char *settingnames,
+                     const char *inputnames,
                      const char *outputnames) {
-    // Remember pointers to the strings                     
+    // Remember pointers to the strings
     settings_contract = settingnames;
     inputs_contract   = inputnames;
-    outputs_contract  = outputnames;   
-    
+    outputs_contract  = outputnames;
+
     // Register the callbacks that relate to an ordinary string
     set_contracts(module_name, settings_callback, inputs_callback, outputs_callback);
   }
-  void set_contracts_P(const char *module_name, 
-                       const PROGMEM char *settingnames, 
-                       const PROGMEM char *inputnames, 
+  void set_contracts_P(const char *module_name,
+                       const PROGMEM char *settingnames,
+                       const PROGMEM char *inputnames,
                        const PROGMEM char *outputnames) {
-    // Remember pointers to the strings                     
+    // Remember pointers to the strings
     settings_contract = settingnames;
     inputs_contract   = inputnames;
-    outputs_contract  = outputnames;   
-    
+    outputs_contract  = outputnames;
+
     // Register the callbacks that relate to a PROGMEM string
     set_contracts(module_name, settings_callback_P, inputs_callback_P, outputs_callback_P);
   }
-  void set_contracts(const char *module_name, 
-                           MVS_getContractChar settingnames_callback, 
-                           MVS_getContractChar inputnames_callback, 
+  void set_contracts(const char *module_name,
+                           MVS_getContractChar settingnames_callback,
+                           MVS_getContractChar inputnames_callback,
                            MVS_getContractChar outputnames_callback) {
     set_name(module_name);
-    
+
     // Register the user-specified callbacks
     settings.set_variables_by_callback(settingnames_callback);
     inputs.set_variables_by_callback(inputnames_callback);
     outputs.set_variables_by_callback(outputnames_callback);
-    
+
     if (settings.get_num_variables() == 0) status_bits &= !MISSING_SETTINGS; // No settings, so do not mark them as missing
     if (inputs.get_num_variables() == 0) status_bits &= !MISSING_INPUTS;     // No inputs, so do not mark them as missing
   }
@@ -197,7 +197,7 @@ public:
            outputs.preallocate_variables(num_outputs);
   }
   #endif
-  
+
   void init() {
     #ifndef IS_MASTER
     status_bits = MISSING_SETTINGS | MISSING_INPUTS; // We want new settings and inputs after a restart
@@ -206,12 +206,12 @@ public:
     #endif
     #endif
   }
-  
+
   void set_name(const char *name) {
     strncpy(module_name, name, MAX_MODULE_NAME_LENGTH);
     module_name[MAX_MODULE_NAME_LENGTH] = 0; // Null-terminate
   }
-  
+
   #ifdef DEBUG_PRINT
   // To ease prefixing all debug messages with module name
   void dname() {
@@ -220,10 +220,10 @@ public:
     #endif
   }
   #endif
-  
+
   // Return the time passed since the last life sign was received from module, or -1 if no life sign received after startup
-  int32_t get_last_alive_age() const { return last_alive ? (uint32_t) ((millis() - last_alive))/1000ul : -1; }  
-    
+  int32_t get_last_alive_age() const { return last_alive ? (uint32_t) ((millis() - last_alive))/1000ul : -1; }
+
   #ifdef IS_MASTER
   void set_prefix(const char *prefix) {
     uint8_t len = prefix ? min(strlen(prefix), MVAR_PREFIX_LENGTH) : 0;
@@ -234,42 +234,42 @@ public:
   bool got_prefix() const { return module_prefix[0] != 0; }
   bool got_contract() const { return settings.got_contract() && inputs.got_contract() && outputs.got_contract(); }
   #endif
-  
+
   // Try to parse and handle an incoming message without response, return true if handled
-  bool handle_input_message(const uint8_t *message, const uint8_t length) {  
+  bool handle_input_message(const uint8_t *message, const uint8_t length) {
     if (length < 1) return false;
     #ifdef DEBUG_PRINT
       dname(); Serial.print(F("INPUT TYPE ")); Serial.print(message[0]); Serial.print(F(", len ")); Serial.println(length);
-    #endif 
+    #endif
     #ifdef IS_MASTER
       comm_failures = 0;
     #endif
-    last_alive = millis(); if (last_alive == 0) last_alive = 1;    
+    last_alive = millis(); if (last_alive == 0) last_alive = 1;
     switch(message[0]) {
       #ifdef IS_MASTER
-      case mcSetSettingContract: 
-        settings.set_variables(&message[1], length-1); 
+      case mcSetSettingContract:
+        settings.set_variables(&message[1], length-1);
         status_bits &= ~CONTRACT_MISMATCH_SETTINGS;
         notify(ntNewSettingContract, this);
         break;
-      case mcSetInputContract: 
+      case mcSetInputContract:
         inputs.set_variables(&message[1], length-1);
-        status_bits &= ~CONTRACT_MISMATCH_INPUTS; 
+        status_bits &= ~CONTRACT_MISMATCH_INPUTS;
         notify(ntNewInputContract, this);
         break;
-      case mcSetOutputContract: 
+      case mcSetOutputContract:
         outputs.set_variables(&message[1], length-1);
         notify(ntNewOutputContract, this);
         break;
-      case mcSetOutputs: 
+      case mcSetOutputs:
         outputs.set_values(&message[1], length-1);
         if (outputs.is_updated()) notify(ntNewOutputs, this);
         break;
       case mcSetStatus: set_status(&message[1], length-1); notify(ntNewStatus, this); break;
       #endif
-      case mcSetSettings: 
+      case mcSetSettings:
         if (!settings.set_values(&message[1], length-1)) // Set or clear contract mismatch bit depending on success
-           status_bits |= CONTRACT_MISMATCH_SETTINGS; 
+           status_bits |= CONTRACT_MISMATCH_SETTINGS;
          else {
            status_bits &= ~CONTRACT_MISMATCH_SETTINGS; // Clear "missing settings contract" flag
            if (settings.is_updated()) {
@@ -279,7 +279,7 @@ public:
          }
          break;
       #ifndef IS_MASTER
-      case mcSetInputs: 
+      case mcSetInputs:
         if (!inputs.set_values(&message[1], length-1)) // Set or clear contract mismatch bit depending on success
            status_bits |= CONTRACT_MISMATCH_INPUTS;
          else {
@@ -294,7 +294,7 @@ public:
       #endif
       default: return false; // Unrecognized message
     }
-    
+
     #ifdef DEBUG_PRINT
       if (message[0] == mcSetSettingContract) {
         dname(); Serial.print(F("Settings contract: "));
@@ -326,9 +326,9 @@ public:
     #endif
     return true;
   }
-  
+
   // Try to parse it as a request for data, returning the data in response if returning true
-  bool handle_request_message(const uint8_t *message, const uint8_t length, BinaryBuffer &response, uint8_t &response_length) {   
+  bool handle_request_message(const uint8_t *message, const uint8_t length, BinaryBuffer &response, uint8_t &response_length) {
     response_length = 0;
     if (length < 1) return false;
     #ifdef DEBUG_PRINT
@@ -340,41 +340,41 @@ public:
     last_alive = millis(); if (last_alive == 0) last_alive = 1;
     switch(message[0]) {
       #ifndef IS_MASTER
-      case mcSendSettingContract: 
-        settings.get_variables(response, response_length, mcSetSettingContract); 
-        status_bits &= ~CONTRACT_MISMATCH_SETTINGS; 
+      case mcSendSettingContract:
+        settings.get_variables(response, response_length, mcSetSettingContract);
+        status_bits &= ~CONTRACT_MISMATCH_SETTINGS;
         break; // Requested by master, so clear the bit
-      case mcSendInputContract:   
+      case mcSendInputContract:
         inputs.get_variables(response, response_length, mcSetInputContract);
         status_bits &= ~CONTRACT_MISMATCH_INPUTS;
         break; // Requested by master, so clear the bit
-      case mcSendOutputContract:    
+      case mcSendOutputContract:
         outputs.get_variables(response, response_length, mcSetOutputContract);
         break;
       case mcSendOutputs:
-        notify(ntSampleOutputs, this); 
-        outputs.get_values(response, response_length, mcSetOutputs); 
+        notify(ntSampleOutputs, this);
+        outputs.get_values(response, response_length, mcSetOutputs);
         outputs.clear_events();  // Will be transferred normally, so clear event flag
         outputs.clear_changed(); // Changes are detected between each transfer
         break;
       case mcSendStatus:
-        notify(ntSampleStatus, this);      
-        get_status(response, response_length); 
+        notify(ntSampleStatus, this);
+        get_status(response, response_length);
         break;
-      #endif  
+      #endif
       case mcSendSettings:
-        notify(ntSampleSettings, this);      
+        notify(ntSampleSettings, this);
         settings.get_values(response, response_length, mcSetSettings);  // TODO: use MODIFIED_SETTINGS bit for modules with a GUI
         break;
-      #ifdef IS_MASTER          
-      case mcSendInputs:          
+      #ifdef IS_MASTER
+      case mcSendInputs:
         notify(ntSampleInputs, this);
-        inputs.get_values(response, response_length, mcSetInputs); 
+        inputs.get_values(response, response_length, mcSetInputs);
         break;
-      #endif  
+      #endif
       default: return false; // Unrecognized message
     }
-    
+
     #ifdef DEBUG_PRINT
     if (message[0] == mcSendSettings) { // Can be called for master, and for module if it has own GUI
       dname(); Serial.print(F("Send Settings: "));
@@ -385,15 +385,15 @@ public:
       dname(); Serial.print(F("Send Inputs: "));
       inputs.debug_print_values();
     }
-    #else  
+    #else
     if (message[0] == mcSendSettingContract) {
       dname(); Serial.print(F("Send Settings contract: "));
       settings.debug_print_contract();
-    } else 
+    } else
     if (message[0] == mcSendInputContract) {
       dname(); Serial.print(F("Send Inputs contract: "));
       inputs.debug_print_contract();
-    } else 
+    } else
     if (message[0] == mcSendOutputContract) {
       dname(); Serial.print(F("Send Outputs contract: "));
       outputs.debug_print_contract();
@@ -401,15 +401,15 @@ public:
     if (message[0] == mcSendOutputs) {
       dname(); Serial.print(F("Send Outputs: "));
       outputs.debug_print_values();
-    } else  
+    } else
     if (message[0] == mcSendStatus) {
       dname(); Serial.print(F("Send Status: ")); Serial.println(status_bits);
     }
-    #endif  
-    #endif  
+    #endif
+    #endif
     return true;
   }
-  
+
   // Get the status for a module
   uint8_t get_status_bits() const { return status_bits; }
 
@@ -417,14 +417,14 @@ public:
   void set_notification_callback(notify_function n) { notify = n; }
 
   // Whether this module is active or has not been reachable for a while
-  bool is_active() const { 
-    #ifdef IS_MASTER    
+  bool is_active() const {
+    #ifdef IS_MASTER
     return comm_failures < MI_INACTIVE_THRESHOLD && get_last_alive_age() != -1 && get_last_alive_age() < 1000ul*MI_INACTIVE_TIME_THRESHOLD;
     #else
     return true;
-    #endif  
+    #endif
   }
-  
+
   #ifndef IS_MASTER
   #ifndef NO_TIME_SYNC
   // Has time been set in the not too far past?
@@ -440,7 +440,7 @@ public:
     return time_utc_received_s ? time_utc_s : 0;
   }
   #endif // !NO_TIME_SYNC
-  #endif // !IS_MASTER  
+  #endif // !IS_MASTER
 
   // Return the uptime in seconds of this module
   uint32_t get_uptime_s() {
@@ -464,31 +464,31 @@ public:
     #endif // !NO_TIME_SYNC
     return up_time; // If time sync disabled or not received, return accumulated calculated uptime
     #endif // IS_MASTER
-  }  
+  }
 
-protected:  
+protected:
 
-friend class ModuleInterfaceSet; 
+friend class ModuleInterfaceSet;
 
   notify_function notify = dummy_notification_function;
-    
+
   #ifndef IS_MASTER
   void get_status(BinaryBuffer &message, uint8_t &length) {
     if (message.allocate(7)) {
       message.get()[0] = mcSetStatus;
-      message.get()[1] = (uint8_t) status_bits; 
-      message.get()[2] = (uint8_t) ModuleVariableSet::out_of_memory; 
-      uint32_t uptime_s = get_uptime_s();   
+      message.get()[1] = (uint8_t) status_bits;
+      message.get()[2] = (uint8_t) ModuleVariableSet::out_of_memory;
+      uint32_t uptime_s = get_uptime_s();
       memcpy(&(message.get()[3]), &uptime_s, sizeof uptime_s);
       length = 7;
-    } else { 
+    } else {
       length = 0; ModuleVariableSet::out_of_memory = true;
       #ifdef DEBUG_PRINT
       Serial.println(F("MI::get_status OUT OF MEMORY"));
       #endif
     }
   }
-    
+
   // This must be called regularly to keep the time updated (at least once for each each millis() rollover)
   #ifndef NO_TIME_SYNC
   void update_time() {
@@ -502,17 +502,16 @@ friend class ModuleInterfaceSet;
     } else status_bits |= MISSING_TIME;
   }
   #endif
-  
+
   // Receiving time sync from master
-  void set_time(const uint8_t *message, const uint8_t length) { 
+  void set_time(const uint8_t *message, const uint8_t length) {
     #ifndef NO_TIME_SYNC
     if (length == 4) {
       #ifdef DEBUG_PRINT
         uint32_t initial_time = get_time_utc_s();
       #endif
-      miSetTime(time_utc_s);
       time_utc_incremented_ms = millis(); // Remember when it was received so it can be auto-incremented
-      time_utc_s = *(uint32_t*)message; 
+      time_utc_s = *(uint32_t*)message;
       time_utc_received_s = time_utc_s; // Remember what time was received last
       status_bits &= ~MISSING_TIME; // Clear the missing-time bit
       #ifdef DEBUG_PRINT
@@ -521,10 +520,10 @@ friend class ModuleInterfaceSet;
       #endif
     }
     #endif
-  }  
+  }
   #endif // !IS_MASTER
-  
-  #ifdef IS_MASTER  
+
+  #ifdef IS_MASTER
   void set_status(const uint8_t *message, const uint8_t length) {
     if (length == 6) {
       last_alive = millis(); if (last_alive == 0) last_alive = 1;
@@ -535,19 +534,19 @@ friend class ModuleInterfaceSet;
       if (got_contract() && (status_bits & (CONTRACT_MISMATCH_SETTINGS | CONTRACT_MISMATCH_INPUTS))) {
         // Module flags that it does not have the same contract, usually for settings or inputs. Invalidate relevant part.
         #ifdef DEBUG_PRINT
-          dname(); Serial.print(F("Module changed contract. Invalidating ")); Serial.println(status_bits);           
-        #endif  
+          dname(); Serial.print(F("Module changed contract. Invalidating ")); Serial.println(status_bits);
+        #endif
         if (status_bits & CONTRACT_MISMATCH_SETTINGS) settings.invalidate_contract();
         if (status_bits & CONTRACT_MISMATCH_INPUTS) inputs.invalidate_contract();
       }
     }
-  }  
-  
+  }
+
   // These are used by ModuleInterfaceSet to manage inter-module value transfer
- 
+
   BinaryBuffer input_source_module_ix,
                input_source_output_ix;
-  void allocate_source_arrays() {   
+  void allocate_source_arrays() {
     if (input_source_module_ix.allocate(inputs.get_num_variables()) &&
         input_source_output_ix.allocate(inputs.get_num_variables())) {
       input_source_module_ix.set_all(NO_VARIABLE); // no source
@@ -571,5 +570,3 @@ friend class ModuleInterfaceSet;
   static char inputs_callback_P(uint16_t pos);
   static char outputs_callback_P(uint16_t pos);
 };
-
-

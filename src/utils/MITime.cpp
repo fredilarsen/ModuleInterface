@@ -5,18 +5,20 @@
 #define MI_SECONDS_YEAR_2017 1483228800ul;
 
 uint32_t miTimeS = 0,                 // current time in UTC seconds, maintained by update()
-         miLastUpdatedTimeMs = 0,    // system time in ms for last update()
+         miLastUpdatedTimeMs = 0,     // system time in ms for last update()
          miLastSyncedMs = 0;          // system time in ms() for last setTime() call from external time source
  
 void miUpdateTime() {
   // Update current time
+  if (miLastSyncedMs == 0) return;
   uint32_t msElapsed = millis() - miLastUpdatedTimeMs, sElapsed = msElapsed/1000ul;
-  miTimeS += sElapsed;
-  miLastUpdatedTimeMs += sElapsed*1000ul;
-}    
+  if (sElapsed > 0) {
+    miTimeS += sElapsed;
+    miLastUpdatedTimeMs += sElapsed*1000ul;
+  }
+}
 
 void miSetTime(uint32_t utc_seconds) {
-    miUpdateTime();
     miTimeS = utc_seconds;
     miLastUpdatedTimeMs = miLastSyncedMs = millis();
 }

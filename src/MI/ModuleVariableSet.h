@@ -15,15 +15,15 @@ typedef char (* MVS_getContractChar)(uint16_t position);
 // It can be used on the module side as well if the extra bytes of storage/RAM usage is acceptable.
 #ifdef USE_MIVARIABLE
 class MIVariable {
-friend class ModuleVariableSet;  
-protected:  
+friend class ModuleVariableSet;
+protected:
   char name[MVAR_MAX_NAME_LENGTH + 1];
   uint32_t contract_id = 0;
   uint8_t ix = NO_VARIABLE;
-public:  
+public:
   MIVariable() { name[0] = 0; }
   MIVariable(const char *variable_name) { set_name(variable_name); }
-  
+
   void set_name(const char *variable_name) {
     contract_id = 0;
     ix = NO_VARIABLE;
@@ -36,7 +36,7 @@ public:
 #endif
 
 struct ModuleVariableSet {
-private:  
+private:
   uint8_t num_variables = 0;
   ModuleVariable *variables = NULL;
   uint8_t total_value_length = 0;    // Length of all values serialized after another
@@ -45,14 +45,14 @@ private:
   #ifndef IS_MASTER
   MVS_getContractChar get_contract_callback = NULL;
   #endif
-  
+
   void deallocate() { if (variables) { delete[] variables; variables = NULL; num_variables = 0; } }
 
   void calculate_total_value_length() {
     total_value_length = 0;
-    for (uint8_t i = 0; i < num_variables; i++) total_value_length += variables[i].get_size(); 
+    for (uint8_t i = 0; i < num_variables; i++) total_value_length += variables[i].get_size();
   }
-  
+
   uint32_t calculate_contract_id() const { // A contract id that can be used to detect a changed contract
     uint32_t id = 0x33333333; // Non-zero to be able to accept a contract with no variables
     char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
@@ -67,17 +67,17 @@ private:
       #endif
       ((uint8_t*) &id)[0] += variables[i].get_size();
       ((uint8_t*) &id)[1] += len;
-      ((uint8_t*) &id)[2] += (uint8_t) variables[i].get_type(); 
+      ((uint8_t*) &id)[2] += (uint8_t) variables[i].get_type();
       for (uint8_t j=0; j<len; j++) ((uint8_t*) &id)[3] ^= name_buf[j]; // XOR of chars in names
     }
     // TODO: Use 32 bit CRC of all above instead of sums and XOR?
     return id;
   }
-  
-public:  
+
+public:
   ModuleVariableSet() { }
-  ~ModuleVariableSet() { deallocate(); }  
-  
+  ~ModuleVariableSet() { deallocate(); }
+
   #ifdef IS_MASTER
   bool get_variable_name(uint8_t ix, char *name_buf) const {
     strncpy(name_buf, variables[ix].name, MVAR_MAX_NAME_LENGTH);
@@ -85,8 +85,8 @@ public:
     return true;
   }
   #endif
-    
-  #ifndef IS_MASTER  
+
+  #ifndef IS_MASTER
   bool get_next_word_from_contract(uint16_t &source_pos, uint8_t  &word_len, char *name_buf, uint8_t buf_size) {
     word_len = 0;
     if (get_contract_callback == NULL) return false;
@@ -95,7 +95,7 @@ public:
     do {
       c = get_contract_callback(source_pos);
       if (c != 0) source_pos++;
-      if (c != 0 && c != ' ' && cnt < buf_size-1) name_buf[cnt++] = c;    
+      if (c != 0 && c != ' ' && cnt < buf_size-1) name_buf[cnt++] = c;
       else { // A complete word is read
         name_buf[cnt] = 0;
         word_len = cnt;
@@ -104,42 +104,42 @@ public:
     } while (c != 0 && c != ' ' && cnt < buf_size-1);
     return false;
   }
-  
+
   static void remove_type(char *name_buf, uint8_t &name_len) {
     char *colon_pos = strchr(name_buf, ':');
     if (colon_pos != NULL) { *colon_pos = 0; name_len = colon_pos - name_buf; }
   }
   #endif
-  
+
   // A flag that should be set if memory allocation fails (can be set and read from all places)
-  static bool out_of_memory;  
-  
+  static bool out_of_memory;
+
   #ifndef IS_MASTER
   bool preallocate_variables(const uint8_t variable_count) {
     num_variables = variable_count;
     if (variables) { delete[] variables; variables = NULL; }
     if (num_variables == 0) { contract_id = calculate_contract_id(); return true; }
     variables = new ModuleVariable[num_variables];
-    if (!variables) { 
+    if (!variables) {
       out_of_memory = true;
       #ifdef DEBUG_PRINT
       Serial.println(F("MVS::preallocate_variables OUT OF MEMORY"));
       #endif
-      return false; 
+      return false;
     }
     return true;
-  }                               
+  }
 
   void set_variables_by_callback(MVS_getContractChar contract_callback) { // Textual format like "var1:u1 var2:f" specified in worker
     // Remember how to get the contract when needed
     get_contract_callback = contract_callback;
-    
-    // Parse string, count number of variables    
+
+    // Parse string, count number of variables
     char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
     uint16_t source_pos = 0;
     uint8_t len, nvar = 0;
     while (get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) nvar++;
-    if (nvar > 0) {      
+    if (nvar > 0) {
       if (num_variables && nvar != num_variables) deallocate(); // Deallocate if num_variables changed
       // Init variables
       if (nvar && !num_variables) variables = new ModuleVariable[nvar];
@@ -147,17 +147,17 @@ public:
       source_pos = 0;
       for (uint8_t i = 0; i < num_variables; i++) {
         if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) {
-          deallocate(); 
+          deallocate();
           break;
         }
         variables[i].set_variable(name_buf);
       }
-    } else deallocate();  
+    } else deallocate();
     calculate_total_value_length();
     contract_id = calculate_contract_id();
   }
   #endif
-  
+
   #ifdef IS_MASTER
   void set_variables(const uint8_t *names_and_types, const uint8_t length) { // Serialized data coming from worker to master
     const uint8_t *p = names_and_types;
@@ -169,8 +169,8 @@ public:
       num_variables = *p; p++; // First byte is number of variables
       if (num_variables > 0) {
         variables = new ModuleVariable[num_variables];
-        if (variables == NULL) { 
-          out_of_memory = true; 
+        if (variables == NULL) {
+          out_of_memory = true;
           #ifdef DEBUG_PRINT
           Serial.print(F("MVS::set_variables OUT OF MEMORY. #var=")); Serial.println(num_variables);
           #endif
@@ -183,12 +183,12 @@ public:
       }
       calculate_total_value_length();
     }
-    #ifdef DEBUG_PRINT    
+    #ifdef DEBUG_PRINT
     else { Serial.print(F("IGNORED DUPLICATE CONTRACT ")); Serial.println(contract_id); }
     #endif
   }
   #endif
-  
+
   #ifndef IS_MASTER
   void get_variables(BinaryBuffer &names_and_types, uint8_t &length, uint8_t header_byte) const {
     // Calculate total buffer size
@@ -202,14 +202,14 @@ public:
       length += 2 + len; // 2 bytes for type, length
     }
     // Allocate buffer, fill in
-    if (names_and_types.allocate(length)) { 
+    if (names_and_types.allocate(length)) {
       uint8_t *p = names_and_types.get();
       *p = header_byte; p++;
       memcpy(p, &contract_id, 4); p += 4; // Add contract id
       *p = num_variables; p++; // Add number of variables
       source_pos = 0;
       for (uint8_t i = 0; i < num_variables; i++) { // Add each variable type and name
-        *p = (uint8_t) variables[i].get_type(); p++;    
+        *p = (uint8_t) variables[i].get_type(); p++;
         if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) { length = 0; break; }
         remove_type(name_buf, len);
         *p = len; p++;
@@ -220,14 +220,14 @@ public:
       out_of_memory = true;
       #ifdef DEBUG_PRINT
       Serial.println(F("MVS::get_variables OUT OF MEMORY"));
-      #endif      
+      #endif
     }
   }
   #endif
-  
-  void invalidate_contract() { 
+
+  void invalidate_contract() {
     #ifdef DEBUG_PRINT
-      Serial.println(F("***** INVALIDATING CONTRACT")); 
+      Serial.println(F("***** INVALIDATING CONTRACT"));
     #endif
     #ifdef IS_MASTER
       contract_id = 0;
@@ -236,8 +236,8 @@ public:
   }
   bool got_contract() const { return (contract_id != 0); }
   uint32_t get_contract_id() const { return contract_id; }
-  
-  // Returns true if values registered, false if the values do not conform to the current contract id  
+
+  // Returns true if values registered, false if the values do not conform to the current contract id
   bool set_values(const uint8_t *values, const uint8_t length) { // contract_id(4), num_variables(1), <variables>
     // Get number of variables and contract id
     if (length < 5) return false; // Invalid message
@@ -245,8 +245,8 @@ public:
     uint8_t numvar = *(p+4);
     bool event = (numvar & 0b10000000) != 0;
     if (event) numvar = (uint8_t) (numvar & 0b01111111); // Remove event bit
-    if ((*(uint32_t*)p) != contract_id || (numvar > num_variables)) { 
-      invalidate_contract(); 
+    if ((*(uint32_t*)p) != contract_id || (numvar > num_variables)) {
+      invalidate_contract();
       #ifdef DEBUG_PRINT
         Serial.print(F("Values received with mismatched contract id ")); Serial.println(*(uint32_t*)p);
       #endif
@@ -255,14 +255,14 @@ public:
     if (numvar == 0) {
       #ifdef DEBUG_PRINT
         Serial.print(F("--> set_values got no values, not updated on sender side yet. Length = ")); Serial.println(length);
-      #endif      
+      #endif
       return true; // Conforms to contract, but values not available yet
     }
     #ifdef DEBUG_PRINT
     if (numvar < num_variables) {
       Serial.print(F("--> set_values got ")); Serial.print(numvar); Serial.print(F(" of ")); Serial.print(num_variables); Serial.println(F(" values."));
     }
-    #endif  
+    #endif
 
     // Data corresponds to current contract, so parse values
     p += 5; // Skip over contract id and variable count
@@ -272,11 +272,11 @@ public:
       if (varpos >= num_variables) {
         #ifdef DEBUG_PRINT
         Serial.println(F("--> set_values got corrupted packet"));
-        #endif      
+        #endif
         return false; // Corrupted message
       }
       uint8_t len = variables[varpos].get_size();
-      variables[varpos].set_value(p, len); 
+      variables[varpos].set_value(p, len);
       p += len;
       if (event) variables[varpos].set_event(); // Set event flag on receiving side
     }
@@ -284,14 +284,14 @@ public:
     if (numvar == num_variables) set_updated();
     return true;
   }
-    
+
   // Get serialized values, usually all, but can be limited to values marked as events
   // and/or values marked as changed. If setting both events_only and changes_only,
   // both will be included.
   void get_values(BinaryBuffer &values, uint8_t &length, uint8_t header_byte,
                   bool events_only = false, bool changes_only = false) const {
     length = 0;
-    
+
     // Determine the number of variables to be serialized, all or a subset
     uint8_t numvar = num_variables, total_len = total_value_length;
     if (events_only || changes_only) {
@@ -305,7 +305,7 @@ public:
       if (numvar != num_variables) total_len += numvar; // One byte with variable number before each value
       if (numvar == 0) return; // No events or changes to send
     }
-    
+
     // Serialize
     if (values.allocate(6 + total_len)) {
       // Header
@@ -326,12 +326,12 @@ public:
       if (numvar != 0) {
         for (uint8_t i = 0; i < num_variables; i++) {
           if (numvar == num_variables || // include all
-            (events_only && variables[i].is_event()) || // event 
+            (events_only && variables[i].is_event()) || // event
             (is_updated() && changes_only && variables[i].is_changed())) // changed
           {
             if (numvar != num_variables) { *p = i; p++; } // Variable number if not serializing all
             uint8_t len = variables[i].get_size();
-            variables[i].get_value(p, len); 
+            variables[i].get_value(p, len);
             p += len;
           }
         }
@@ -343,10 +343,10 @@ public:
       #endif
     }
   }
-  
+
   uint8_t get_num_variables() const { return num_variables; }
-  
-  uint8_t get_variable_ix(const char *variable_name) const { 
+
+  uint8_t get_variable_ix(const char *variable_name) const {
     #ifdef IS_MASTER
     for (uint8_t i = 0; i < num_variables; i++)
       if (strncmp(variable_name, variables[i].name, MVAR_MAX_NAME_LENGTH) == 0) return i;
@@ -367,10 +367,10 @@ public:
 
   const ModuleVariable &get_module_variable(const uint8_t ix) const { return variables[ix]; }
   ModuleVariable &get_module_variable(const uint8_t ix) { return variables[ix]; }
-  
+
   //const char *get_name(const uint8_t ix) const { return variables[ix].name; }
   ModuleVariableType get_type(const uint8_t ix) const { return variables[ix].get_type(); }
-  
+
   // Low-level setter and getter. Use these on module size where ix is constant.
   void set_value(const uint8_t ix, const void *value, const uint8_t size) {
     if (ix < num_variables) variables[ix].set_value(value, size);
@@ -395,13 +395,13 @@ public:
   }
   void set_value(MIVariable &var, const void *value, const uint8_t size) {
     verify_mivariable(var);
-    
+
     // Set the value with the verified ix
     if (var.ix < num_variables) variables[var.ix].set_value(value, size);
   }
   const void get_value(MIVariable &var, void *value, const uint8_t size) const {
     verify_mivariable(var);
-    
+
     // Get the value with the verified ix
     if (var.ix < num_variables) variables[var.ix].get_value(value, size);
   }
@@ -409,7 +409,7 @@ public:
     verify_mivariable(var);
     return get_value_pointer(var.ix);
   }
-  
+
   // Specialized convenience setters
   void set_value(MIVariable &var, const bool &v) { set_value(var, &v, 1); }
   void set_value(MIVariable &var, const uint8_t &v) { set_value(var, &v, 1); }
@@ -419,7 +419,7 @@ public:
   void set_value(MIVariable &var, const int16_t &v) { set_value(var, &v, 2); }
   void set_value(MIVariable &var, const int32_t &v) { set_value(var, &v, 4); }
   void set_value(MIVariable &var, const float &v) { set_value(var, &v, 4); }
-    
+
     // Specialized convenience getters
   void get_value(MIVariable &var, bool &v) const { get_value(var, &v, 1); }
   void get_value(MIVariable &var, uint8_t &v) const { get_value(var, &v, 1); }
@@ -428,8 +428,8 @@ public:
   void get_value(MIVariable &var, int8_t &v) const { get_value(var, &v, 1); }
   void get_value(MIVariable &var, int16_t &v) const { get_value(var, &v, 2); }
   void get_value(MIVariable &var, int32_t &v) const { get_value(var, &v, 4); }
-  void get_value(MIVariable &var, float &v) const { get_value(var, &v, 4); }  
-  
+  void get_value(MIVariable &var, float &v) const { get_value(var, &v, 4); }
+
   // More specialized convenience getters
   bool     get_bool(MIVariable &var) const { return *(bool*)get_value_pointer(var); }
   uint8_t  get_uint8(MIVariable &var) const { return *(uint8_t*)get_value_pointer(var); }
@@ -439,26 +439,26 @@ public:
   int16_t  get_int16(MIVariable &var) const { return *(int16_t*)get_value_pointer(var); }
   int32_t  get_int32(MIVariable &var) const { return *(int32_t*)get_value_pointer(var); }
   float    get_float(MIVariable &var) const { return *(float*)get_value_pointer(var); }
-  
+
   // Change detection
-  bool is_changed(MIVariable &var) const { 
+  bool is_changed(MIVariable &var) const {
     verify_mivariable(var);
     if (var.ix < num_variables) return variables[var.ix].is_changed();
     return false;
   }
-  
+
   // Event support
-  bool is_event(MIVariable &var) const { 
+  bool is_event(MIVariable &var) const {
     verify_mivariable(var);
     if (var.ix < num_variables) return variables[var.ix].is_event();
     return false;
   }
-  bool set_event(MIVariable &var, const bool event = true) const { 
+  bool set_event(MIVariable &var, const bool event = true) const {
     verify_mivariable(var);
     if (var.ix < num_variables) variables[var.ix].set_event(event);
   }
   #endif
-  
+
   // Specialized convenience setters
   void set_value(const uint8_t ix, const bool &v) { set_value(ix, &v, 1); }
   void set_value(const uint8_t ix, const uint8_t &v) { set_value(ix, &v, 1); }
@@ -468,7 +468,7 @@ public:
   void set_value(const uint8_t ix, const int16_t &v) { set_value(ix, &v, 2); }
   void set_value(const uint8_t ix, const int32_t &v) { set_value(ix, &v, 4); }
   void set_value(const uint8_t ix, const float &v) { set_value(ix, &v, 4); }
-  
+
   // Specialized convenience getters
   void get_value(const uint8_t ix, bool &v) const { get_value(ix, &v, 1); }
   void get_value(const uint8_t ix, uint8_t &v) const { get_value(ix, &v, 1); }
@@ -488,47 +488,47 @@ public:
   int16_t  get_int16(const uint8_t ix) const { return *(int16_t*)get_value_pointer(ix); }
   int32_t  get_int32(const uint8_t ix) const { return *(int32_t*)get_value_pointer(ix); }
   float    get_float(const uint8_t ix) const { return *(float*)get_value_pointer(ix); }
-  
-  
+
+
   // Change detection
   bool is_changed() const {
     for (uint8_t i=0; i<num_variables; i++) if (variables[i].is_changed()) return true;
     return false;
   }
   void clear_changed() { for (uint8_t i=0; i<num_variables; i++) variables[i].set_changed(false); }
-  bool is_changed(const uint8_t ix) const { if (ix < num_variables) return variables[ix].is_changed(); return false; } 
-  
-  
+  bool is_changed(const uint8_t ix) const { if (ix < num_variables) return variables[ix].is_changed(); return false; }
+
+
   // Event support
   bool has_events() const {
     for (uint8_t i=0; i<num_variables; i++) if (variables[i].is_event()) return true;
     return false;
   }
-  void clear_events() { for (uint8_t i=0; i<num_variables; i++) variables[i].set_event(false); } 
+  void clear_events() { for (uint8_t i=0; i<num_variables; i++) variables[i].set_event(false); }
   bool is_event(const uint8_t ix) const { if (ix < num_variables) return variables[ix].is_event(); return false; }
-  void set_event(const uint8_t ix, const bool event = true) { if (ix < num_variables) variables[ix].set_event(event); } 
+  void set_event(const uint8_t ix, const bool event = true) { if (ix < num_variables) variables[ix].set_event(event); }
 
-  
+
   // These are used for determining when values are ready to be used. If setting values manually, call the set_updated
   // function when all values have been set so that they can be distributed to module or master.
   bool is_updated() const { return values_received_time != 0; }
   void set_updated() {
-    if (!got_contract()) return; 
-    values_received_time = millis(); 
+    if (!got_contract()) return;
+    values_received_time = millis();
     if (values_received_time==0) values_received_time = 1;
   }
   uint32_t get_updated_time_ms() const { return values_received_time; }
-  void clear_updated_if_too_old(uint32_t age_limit_ms = 3600000) { 
+  void clear_updated_if_too_old(uint32_t age_limit_ms = 3600000) {
     if ((uint32_t)(millis() - values_received_time) > age_limit_ms)  values_received_time = 0;
   }
-        
+
   // Helper variables not used internally, available for use by a communication protocol
   #ifdef IS_MASTER
   uint32_t contract_requested_time = 0,
            requested_time = 0;
   #endif
- 
-  #if defined(DEBUG_PRINT) || defined(STATUS_PRINT)
+
+  #if defined(DEBUG_PRINT) || defined(STATUS_PRINT) || defined(DEBUGPRINT_SETTINGS)
     void debug_print_contract() const {
       if (num_variables == 0) Serial.print(F("Empty contract."));
       else {
@@ -544,7 +544,9 @@ public:
           remove_type(name_buf, len);
           #endif
           if (i > 0) Serial.print(" ");
-          Serial.print(name_buf); Serial.print(":"); Serial.print(ModuleVariableTypeNames[(uint8_t)variables[i].get_type()]);
+          Serial.print(name_buf); Serial.print(":");
+          ModuleVariable::get_type_name(variables[i].get_type(), name_buf);
+          Serial.print(name_buf);
         }
       }
       Serial.println("");
@@ -563,7 +565,7 @@ public:
           if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) break;
           remove_type(name_buf, len);
           #endif
-          if (i > 0) Serial.print(" "); 
+          if (i > 0) Serial.print(" ");
           Serial.print(name_buf); Serial.print("=");
           switch(variables[i].get_type()) {
           case mvtBoolean: Serial.print(*((bool*)variables[i].value)); break;
@@ -578,8 +580,7 @@ public:
           }
         }
       }
-      Serial.println("");            
-    } 
+      Serial.println("");
+    }
     #endif
 };
-
