@@ -2,7 +2,7 @@
 #include "MITime.h"
 
 #define MI_SECONDS_PER_DAY 86400ul
-#define MI_SECONDS_YEAR_2017 1483228800ul;
+#define MI_SECONDS_YEAR_2017 1483228800ul
 
 uint32_t miTimeS = 0,                 // current time in UTC seconds, maintained by update()
          miLastUpdatedTimeMs = 0,     // system time in ms for last update()
@@ -10,22 +10,22 @@ uint32_t miTimeS = 0,                 // current time in UTC seconds, maintained
  
 void miUpdateTime() {
   // Update current time
-  if (miLastSyncedMs == 0) return;
   uint32_t msElapsed = millis() - miLastUpdatedTimeMs, sElapsed = msElapsed/1000ul;
-  if (sElapsed > 0) {
     miTimeS += sElapsed;
     miLastUpdatedTimeMs += sElapsed*1000ul;
   }
-}
 
 void miSetTime(uint32_t utc_seconds) {
+  miUpdateTime();
+  if (MI_SECONDS_YEAR_2017 < utc_seconds) { // Do not accept invalid time
     miTimeS = utc_seconds;
     miLastUpdatedTimeMs = miLastSyncedMs = millis();
+}
 }
   
 uint32_t miGetTime() { miUpdateTime(); return miTimeS; }
   
-bool miIsTimeSynced() { miUpdateTime(); return miLastSyncedMs != 0 && 1483228800ul < miTimeS; }
+bool miIsTimeSynced() { miUpdateTime(); return miLastSyncedMs != 0 && MI_SECONDS_YEAR_2017 < miTimeS; }
 bool miWasSyncedWithin(uint32_t limit_ms) { miUpdateTime(); return ((uint32_t)(millis() - miLastSyncedMs) <= limit_ms); }
 uint32_t miGetLastSyncedAtMs() { miUpdateTime(); return miLastSyncedMs; }
   

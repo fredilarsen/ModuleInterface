@@ -47,6 +47,28 @@ public:
 
   // Constructors for Module side
   #ifndef IS_MASTER  
+  #ifdef MI_NO_DYNAMIC_MEM
+  PJONModuleInterface(const char *module_name, Link &pjon,
+    const uint8_t num_settings, ModuleVariable *setting_variables, const char PROGMEM *settingnames,
+    const uint8_t num_inputs,   ModuleVariable *input_variables,   const char PROGMEM *inputnames,
+    const uint8_t num_outputs,  ModuleVariable *output_variables,  const char PROGMEM *outputnames) {
+    set_variables(num_settings, setting_variables,
+                  num_inputs,   input_variables,
+                  num_outputs,  output_variables);
+    set_contracts_P(module_name, settingnames, inputnames, outputnames);
+    set_link(pjon);
+  }
+  PJONModuleInterface(const char *module_name, Link &pjon,
+    const uint8_t num_settings, ModuleVariable *setting_variables, MVS_getContractChar settingnames,
+    const uint8_t num_inputs,   ModuleVariable *input_variables,   MVS_getContractChar inputnames,
+    const uint8_t num_outputs,  ModuleVariable *output_variables,  MVS_getContractChar outputnames) {
+    set_variables(num_settings, setting_variables,
+                  num_inputs,   input_variables,
+                  num_outputs,  output_variables);
+    set_contracts(module_name, settingnames, inputnames, outputnames);
+    set_link(pjon);
+  }
+  #else
   PJONModuleInterface(const char *module_name, Link &pjon, 
                       const char *settingnames, const char *inputnames, const char *outputnames) :
     ModuleInterface(module_name, settingnames, inputnames, outputnames) {
@@ -69,6 +91,7 @@ public:
     ModuleInterface(num_settings, num_inputs, num_outputs) {
     set_link(pjon);
   }
+  #endif
   PJONModuleInterface(Link &pjon) : ModuleInterface() { set_link(pjon); }
   
   static PJONModuleInterface *get_singleton() { return singleton; }

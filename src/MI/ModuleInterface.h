@@ -1,7 +1,6 @@
 #pragma once
 
 #include <MI/ModuleVariableSet.h>
-#include <utils/MITime.h>
 
 // Commands for transferring information between modules via some protocol
 enum ModuleCommand {
@@ -66,6 +65,8 @@ class ModuleInterface;
 typedef void (*notify_function)(NotificationType notification_type, const ModuleInterface *module_interface);
 extern void dummy_notification_function(NotificationType notification_type, const ModuleInterface *module_interface);
 
+#define TIME_UTC_2017 1483228800ul
+
 class ModuleInterface {
   #ifndef IS_MASTER
   static const char *settings_contract, // Pointer to ordinary or PROGMEM string constant
@@ -81,6 +82,7 @@ public:
   uint32_t last_alive = 0;     // time of last life-sign (reply but not ACK) for this module
   uint32_t up_time = 0;        // Uptime in seconds
   uint32_t last_uptime_millis = 0; // Millis when uptime was incremented last
+  static ModuleInterface *singleton;
   #ifdef IS_MASTER
   char module_prefix[MVAR_PREFIX_LENGTH+1];    // A unique lower case prefix for the module, separating it from other modules
   uint8_t comm_failures = 0;   // If a module is unreachable it can be temporarily deactivated
@@ -117,6 +119,15 @@ public:
 
   // Constructor for module side
   #ifndef IS_MASTER
+  #ifdef MI_NO_DYNAMIC_MEM
+  void set_variables(uint8_t num_settings, ModuleVariable *setting_variables,
+                     uint8_t num_inputs,   ModuleVariable *input_variables,
+                     uint8_t num_outputs,  ModuleVariable *output_variables) {
+    settings.set_variables(num_settings, setting_variables);
+    inputs.set_variables(num_inputs, input_variables);
+    outputs.set_variables(num_outputs, output_variables);
+  }
+  #else
   // Specify contracts to constructor by providing string constants (must remain accessible, they will not be copied)...
   ModuleInterface(const char *module_name,
                   const char *settingnames,
@@ -127,12 +138,12 @@ public:
   }
   // Specify contracts to constructor by providing PROGMEM constants...
   ModuleInterface(const char *module_name,
-                  const bool is_progmem, // Must be true, this is a requirement
+                  const bool use_progmem, // Must be true, this is a requirement
                   const PROGMEM char *settingnames,
                   const PROGMEM char *inputnames,
                   const PROGMEM char *outputnames) {
     init();
-    if (is_progmem) set_contracts_P(module_name, settingnames, inputnames, outputnames);
+    if (use_progmem) set_contracts_P(module_name, settingnames, inputnames, outputnames);
   }
   // Specify contracts to constructor by providing callback functions...
   ModuleInterface(const char                *module_name,
@@ -146,6 +157,7 @@ public:
   ModuleInterface(const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) {
     init(); preallocate_variables(num_settings, num_inputs, num_outputs);
   }
+  #endif
 
   void set_contracts(const char *module_name,
                      const char *settingnames,
@@ -185,6 +197,7 @@ public:
     if (settings.get_num_variables() == 0) status_bits &= !MISSING_SETTINGS; // No settings, so do not mark them as missing
     if (inputs.get_num_variables() == 0) status_bits &= !MISSING_INPUTS;     // No inputs, so do not mark them as missing
   }
+  #ifndef MI_NO_DYNAMIC_MEM
   // This function can be called early on to pre-allocate module variables to avoid memory fragmentation.
   // Either specificy variables to constructor in a global declaration, or call this function before allocating strings to send
   // to set_contracts from within a function.
@@ -196,6 +209,7 @@ public:
            inputs.preallocate_variables(num_inputs) &&
            outputs.preallocate_variables(num_outputs);
   }
+  #endif
   #endif
 
   void init() {
@@ -430,7 +444,7 @@ public:
   // Has time been set in the not too far past?
   bool is_time_set() {
     update_time();
-    return (time_utc_received_s != 0 && time_utc_s != 0 && time_utc_s > 1450656000ul // After 2017-01-01
+    return (time_utc_received_s != 0 && time_utc_s != 0 && time_utc_s > TIME_UTC_2017
            && ((uint32_t)(time_utc_s - time_utc_received_s) < 48ul*3600ul)); // Synced not more than 2 days ago
   }
 
@@ -506,7 +520,7 @@ friend class ModuleInterfaceSet;
   // Receiving time sync from master
   void set_time(const uint8_t *message, const uint8_t length) {
     #ifndef NO_TIME_SYNC
-    if (length == 4) {
+    if (length == 4 && *(uint32_t*)message > TIME_UTC_2017) {
       #ifdef DEBUG_PRINT
         uint32_t initial_time = get_time_utc_s();
       #endif

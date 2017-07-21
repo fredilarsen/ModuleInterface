@@ -46,7 +46,11 @@ private:
   MVS_getContractChar get_contract_callback = NULL;
   #endif
 
-  void deallocate() { if (variables) { delete[] variables; variables = NULL; num_variables = 0; } }
+  void deallocate() {
+    #ifndef MI_NO_DYNAMIC_MEM
+    if (variables) { delete[] variables; variables = NULL; num_variables = 0; }
+    #endif
+  }
 
   void calculate_total_value_length() {
     total_value_length = 0;
@@ -115,6 +119,13 @@ public:
   static bool out_of_memory;
 
   #ifndef IS_MASTER
+  #ifdef MI_NO_DYNAMIC_MEM
+  // Support for having variables declared in user sketch to avoid dynamic allocation
+  void set_variables(uint8_t variable_count, ModuleVariable *variable_array) {
+    num_variables = variable_count;
+    variables = variable_array;
+  }
+  #else
   bool preallocate_variables(const uint8_t variable_count) {
     num_variables = variable_count;
     if (variables) { delete[] variables; variables = NULL; }
@@ -129,6 +140,7 @@ public:
     }
     return true;
   }
+  #endif
 
   void set_variables_by_callback(MVS_getContractChar contract_callback) { // Textual format like "var1:u1 var2:f" specified in worker
     // Remember how to get the contract when needed
@@ -140,10 +152,12 @@ public:
     uint8_t len, nvar = 0;
     while (get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) nvar++;
     if (nvar > 0) {
+      #ifndef MI_NO_DYNAMIC_MEM
       if (num_variables && nvar != num_variables) deallocate(); // Deallocate if num_variables changed
       // Init variables
       if (nvar && !num_variables) variables = new ModuleVariable[nvar];
       num_variables = nvar;
+      #endif
       source_pos = 0;
       for (uint8_t i = 0; i < num_variables; i++) {
         if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) {
