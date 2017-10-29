@@ -21,7 +21,7 @@ and a Mega can be used as master for controlling many workers and synchronize wi
 The modules do not know about each other or the master. The master will have a list of device ids it shall manage, without
 knowing anything about each device before starting and requesting contracts from each module.
 
-The master could also be run on a Windows PC, Linux PC or Raspberry PI using the PJON Surrogate principle to parttake in a PJON
+The master could also be run on a Windows PC, Linux PC or Raspberry PI using the PJON Surrogate principle to take part in a PJON
 bus via Ethernet even if not having the possibility to run the PJON strategy like SWBB directly.
 
 ### Autonomy
@@ -101,3 +101,5 @@ is simple to configure and maintain, it is well known, easily integrated with Ap
 efficiency with the proposed schema. And it is best suited for the settings and current values.
 
 Of course, the historian part can be replaced with a dedicated time series database (like InfluxDb, OpenTSDB and others) if needed, if maintaining the http request syntax for reading and writing to it.
+
+To use another type of database, change the server-side php scripts.
