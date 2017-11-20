@@ -1,8 +1,7 @@
 ## Design principles
 
 ModuleInterface makes it easy to focus on the automation tasks at hand, and let communication take care of itself.
-Each module declares its settings, inputs and outputs and registers these with a ModuleInterface object. After this,
-these values will be synchronized automatically.
+Each module declares its settings, inputs and outputs and registers these with a ModuleInterface object. Both input and output values will be synchronized automatically.
 
 * _Settings_ are the configuration parameters needed for a module to do its work. The idea is that these are configured
 outside of the module and synchronized to the module when changed. Typically, configuration is done in a web page.
@@ -15,7 +14,7 @@ subscribe to them, and so that they may be archived in a database and shown in a
 
 The principle is that one Master (or more) is the "hub" for exchanging values. This master may need more resources than the
 worker devices, that can be kept minimal, especially if communicating using PJON SWBB without extra hardware. Cheap and
-robust (at least if you feed them 5V and not depend on the built-in regulator) Arduino Nanos are ideal as workers for many tasks,
+robust (at least if you feed them 5V and not depend on the built-in regulator, that is not extremely reliable) Arduino Nanos are ideal as workers for many tasks,
 and a Mega can be used as master for controlling many workers and synchronize with a database that is used by web pages.
 
 The modules do not know about each other or the master. The master will have a list of device ids it shall manage, without
@@ -26,11 +25,11 @@ bus via Ethernet even if not having the possibility to run the PJON strategy lik
 
 ### Autonomy
 
-A single point of failure not good. The master will at some point be down for restart or maintenance, and it would be a bad
+A single point of failure is not good. The master will at some point be down for restart or maintenance, and it would be a bad
 idea to let all workers stop when this happens. So instead of letting each module only do work when asked, it should
 use the settings it has and continue doing its work even if communication with the master is temporarily down.
 
-If a module is relying on time to do it's work, the recommended solution is to let if continue without new time synchronization
+If a module is relying on time to do it's work, the recommended solution is to let it continue without new time synchronization
 based on the hardware clock for some time depending on precision requirements, then drop down into a fallback mode if
 meaningful. A light controller could drop all logic based on time and fall back to using ambient light measurements and motion
 alone.
@@ -44,8 +43,8 @@ it will mean full operation without a master.
 
 ### Persistence
 
-To make it easier to create autonomous modules, for example an exterior light controller that has settings for movement
-and light threshold and light boost duration, ModuleInterface makes it easy to keep settings stored to EEPROM so that the
+To make autonomous modules creation easier, for example an exterior light controller that has settings for movement
+and light intensity, ModuleInterface keeps settings stored to EEPROM so that the
 latest registered settings are immediately available after reboot. It can then continue working as it did before the reboot
 even if communication is down.
 Saving of settings to EEPROM is done in a way that minimizes the wear on the EEPROM.
@@ -74,7 +73,7 @@ Also for these operations, PHP files are supplied, and these can be used as-is o
 
 ### Database structure
 
-The proposed database schema is provided. It includes the following tables:
+The proposed database schema includes the following tables:
 
 * Settings (id, value, modified, description)
 * Current values (latest measurements from all modules) (id, value, modified)
