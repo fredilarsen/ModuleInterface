@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <MI_PJON/PJONModuleInterfaceSet.h>
 #include <MI_PJON/PJONLink.h>
+#include <utils/MIUtilities.h>
 
 // Include HTTP support if Ethernet.h has been included before MI_PJON.h.
 // The reason for not always including it is that some storage and RAM is 
