@@ -86,7 +86,7 @@ void decode_json_settings(ModuleInterface &interface, JsonObject& root) {
 }
 
 bool read_json_settings(ModuleInterface &interface, EthernetClient &client, const uint8_t port = 80,
-                        const uint16_t buffer_size = 500, const uint16_t timeout_ms = 3000) {
+                        const uint16_t buffer_size = 800, const uint16_t timeout_ms = 3000) {
   char *buf = new char[buffer_size];
   if (buf == NULL) {
     ModuleVariableSet::out_of_memory = true;
@@ -110,7 +110,7 @@ bool read_json_settings(ModuleInterface &interface, EthernetClient &client, cons
     delete[] buf;
     ModuleVariableSet::out_of_memory = true;
     #ifdef DEBUG_PRINT
-    Serial.println(); Serial.print(F("read_json_settings BUFFER TOO SMALL"));
+    Serial.print(pos); Serial.println(F(" bytes, read_json_settings BUFFER TOO SMALL"));
     #endif
     return false;
   }
@@ -140,7 +140,7 @@ bool read_json_settings(ModuleInterface &interface, EthernetClient &client, cons
         status = true;
       } else {
         #ifdef DEBUG_PRINT
-        Serial.print("Failed parsing settings JSON. Out of memory?");
+        Serial.println("Failed parsing settings JSON. Out of memory?");
         #endif
       }
     }
