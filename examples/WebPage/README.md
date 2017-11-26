@@ -1,45 +1,59 @@
 ## WebPage example
-This is not a sketch, but a recipe of how to set up a complete setup with one or more modules being visualized and controlled from a web page.
+This is not a single sketch, but a recipe of how to set up a complete setup with two modules being visualized and controlled from a web page. It shall be easy to add more modules to this setup.
+
+A "module" is simply a device like Arduino Nano equipped with necessary equipment like sensors, servos, relays etc, programmed with a sketch that communicates with a ModuleInterface master.
 
 #### Components
-1. A worker module, for example the BlinkSimple/BlinkModule example running on an Arduino Uno or Nano.
-2. A master module with an Ethernet shield, for example the ModuleMasterHttp example running on an Arduino Mega (because of memory requirements) with an Ethernet shield.
-3. A computer with a LAMP/WAMP setup. <INSERT LINK TO DOWNLOAD>
+1. A SensorMonitor module, for example running on an Arduino Uno or Nano. This module simply reads a light sensor and reports it to the master.
+2. A LightController module, for example running on an Arduino Uno or Nano. This module subscribes to the light sensor reading from the SensorMonitor, and gets settings like time interval and light limit from the Master for controlling the light. It reports current light state (or or off) to the master.
+3. A ModuleMasterHttp module running on an Arduino Mega (because of memory requirements) with an Ethernet shield. This will transfer settings from the database and outputs to the database using JSON and HTTP requests.
+4. A computer with a LAMP/WAMP setup. For example ![XAMPP](https://www.apachefriends.org/download.html) or ![WampServer](http://www.wampserver.com/en/).
 
-#### Configuration of worker
-The PJON device id of the worker must match the one used by the master for referring to it. That's it.
-The worker device and the master must be connected with two wires -- one connecting digital pin 7 on both devices, and one connecting ground.
-Note that a pulldown resistor between signal and earth may improve the speed. See the PJON project for more details.
+#### Configuration of SensorMonitor
+Program a device with the SensorMonitor sketch. Connect the analog pin of a light sensor to pin A0 (plus ground and voltage to sensor, of course). Connect pin 7 to the PJON bus on pin 7 of the master. Connect device ground to ground on the master.
 
-#### Configuration of master
+#### Configuration of LightController
+Program a device with the LightController sketch. Connect pin 7 to the PJON bus on pin 7 of the master. Connect device ground to ground on the master.
+
+#### Configuration of ModuleMasterHttp
  The master must have a correct network configuration for the network to which it is connected. This includes:
  - A unique MAC address, just fiddle with the MAC address in the sketch.
  - A unique IP address. The example use a fixed IP address for simplicity and to not be depending on a DHCP server being present. Make sure that the assigned IP address is outside any DHCP pool in your router if you want this as a permanent setup.
  - The IP of your gateway, normally the router address. This is not strictly needed if the web server is on the same network segment.
  - The network mask for your network. Normally the mask is 255.255.255.0.
 
-#### Configuration of web server and database
-1. The database is created as specified in the "database setup/Table structure.txt", or by running "database setup/home_control_structure.sql".
-2. The files from the "htdocs" folder are copied into the "Apache/htdocs" folder along with a web page.
-3. The db_config.php file edited to contain the selected database name, user name and password.
-4. Columns must be created in the time_series table for all outputs for which to record historical values, for plotting and analysis.
+The master must also know the IP address of your web server.
+
+After modifying the network and IP addresses in the ModuleMasterHttp sketch, program a Mega with this.
+
+Then add an Ethernet shield to the Mega, connect a CAT5 cable between the shield and your network switch or router, then power on.
+
+#### Installation of web server and database
+1. Run the XAMPP or WampServer installation package.
+
+#### Configuration of database
+Start Apache and MySQL/MariaDb and open the phpMyAdmin page. OR use a similar tool, like HeidiSQL if you want to keep your htdocs directory clean from other stuff.
+2. Go to the Import tab and run the "database setup/home_control.sql" file to create the required tables.
+3. You now have the home_control database running. Data should be updated in the curentvalues table after a short while.
+
+#### Configuration of web server
+1. The files from the "htdocs" folder are copied into the "C:/xampp/htdocs" folder (depending on installation). Unfortunately, XAMPP has a lot of files present here to supply phpMyAdmin etc, so it will be a mix. Some Other WAMP/LAMP distros keep the htdocs directory empty and supply database management tools like the native program HeidiSQL.
+2. The db_config.php file edited to contain the selected database name, user name and password. Initially the password will be empty, so get it working before setting a password.
 
 #### Testing
-When all is mounted and configured, check this:
-1. Are new rows being created in the time_series table? You can inspect the table with HeidiSQL or other tools.
-2. Are you getting the values shown in the plot in the web page?
-3. Can you change the frequency in the web page and see the that the worker changes blink frequency?
+When all is up and running, check this:
+1, Are values updated in the currentvalues table?
+2. Are new rows being created in the time_series table? You can inspect the table with HeidiSQL or phpMyAdmin.
+3. Are you getting the values shown in the plot in the web page?
+4. Can you change the LightController mode (on/off/auto) and see the on-board LED reflect this?
 
 #### Debugging
 If it does not work right away, you can try the following steps.
-1. Try to program the master with the BlinkSimple/BlinkModuleMaster (check device id match) and see if the worker blink frquency changes every 5 seconds as expected.
-  - Yes: PJON communication is configured correctly. Double-check that the ModuleMasterHttp has the same settings as BlinkModuleMaster, then program with the ModuleMasterHttp and proceed.
-  - No: Concentrate on getting the BlinkModule - BlinkModuleMaster setup working before proceeding.
-2. Try to manually get settings from the database by inputting the following in the address field of a browser:
-   ```http://192.168.1.10/get_settings.php```
-   You must replace the above IP address with the name or the IP address of the computer where the web server is installed.
+1. Try to manually get settings from the database by inputting the following in the address field of a browser on the web server:
+   ```http://localhost/get_settings.php```
    You should see a JSON string with all available settings. If not, web server and database setup must be checked. You should get an error message in the browser. Try to use this to find out what is wrong. Check db_config.php.
-3. Try to manually get current values from the database by inputting the following in the address field of a browser:
-      ```http://192.168.1.10/get_currentvalues.php```
+2. Try to manually get current values from the database by inputting the following in the address field of a browser:
+      ```http://localhost/get_currentvalues.php```
    You should see a JSON string with all current values. If not, use another tool like HeidiSql for checking if rows have been created in the currentvalues table.
-4. If manual test succeeds but no action from master, re-check the master device IP settings and try again.
+3. If manual test succeeds but no action from master, re-check the master device IP settings and try pørogramming the master again, and check all connections.
+4. Run a scan and see if the ModuleMasterHttp is present in your network. A simple way to do this is to run the free app "Fing" on an Android phone or tablet. You should see the IP address you assigned to your master present in the Fing list.

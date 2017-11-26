@@ -8,7 +8,7 @@ if(!empty($_POST)) {
 	// database settings
 	include "db_config.php";
 	
-	$sql = "INSERT INTO currentvalues (id, value) VALUES ";
+	$sql = "INSERT INTO currentvalues (id, value, modified) VALUES ";
 
 	$first = true;
 	foreach($_POST as $field_name => $val)
@@ -20,10 +20,10 @@ if(!empty($_POST)) {
 		{
 			// update the values
 			if ($first) $first = false;	else $sql = $sql . ",";
-			$sql = $sql . "(\"" . $field_id . "\",\"" . $val . "\")";
+			$sql = $sql . "(\"" . $field_id . "\",\"" . $val . "\",UNIX_TIMESTAMP())";
 		}
 	}
-	$sql = $sql . " ON DUPLICATE KEY UPDATE value = VALUES(value);";
+	$sql = $sql . " ON DUPLICATE KEY UPDATE value = VALUES(value), modified = UNIX_TIMESTAMP();";
 	try {
 		$conn = new PDO("mysql:host=$server;dbname=$database", $username, $password);
 		$conn ->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

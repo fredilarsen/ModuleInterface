@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<head>
+<link rel="import" href="homecontrol_head.html">
+</head>
+<body>
+  <script>insertElementHere('.navbar');insertNavBarHere('.navbar-collapse', 'LightController');</script>
+  <div id="main-wrapper">
+    <div class="template-page-wrapper">
+      <div class="templatemo-content-wrapper">
+        <div class="templatemo-content">
+          <ol class="breadcrumb">
+            <li>Trend</li>
+            <li><a href="#Inputs">Inputs</a></li>
+            <li><a href="#Outputs">Outputs</a></li>
+            <li><a href="#Settings">Settings</a></li>
+          </ol>
+          <h1>Light controller</h1>
+          <p>Administer the lighting control system. In auto mode, lights are turned on within a given interval each day, if the ambient light is below a configurable limit.</p>
+		  <div class="templatemo-panels">
+ 		    <div class="row">
+		  	  <div class="panel panel-info">
+                <div class="panel-heading">Trend</div>
+                <div class="panel-body">
+				<div id="trendrow" style="width:100%; height: 400px"></div>
+				</div>
+                </div>
+			  </div>
+	  	    </div>
+			
+<script src="js/d3.min.js"></script>		
+<script src="js/dygraph.min.js"></script>						
+<script>
+function highlightModeTab(tablink) {
+    // Get all elements with class="tablinks" and remove the class "active"
+    var i, tablinks;
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+	
+    // Highlight the tab for the selected mode
+    if (tablink != null) tablink.className += " active";
+};
+function highlightModeTabFromModeName(mode) {
+	// Find tab link name to highlight
+	var tabName;
+	if (mode == '0') tabName = "modeOff";
+	else if (mode == '1') tabName = "modeOn";
+	else if (mode == '2') tabName = "modeAuto";
+	
+	// Activate tab
+	if (tabName != null) {
+  	  var activeTab = document.getElementById(tabName);
+	  if (activeTab != null) highlightModeTab(activeTab);
+	}
+};
+function highlightModeTabFromSelectedMode() {
+	var cell = document.getElementById('lcMode');
+	highlightModeTabFromModeName(cell.innerText);
+};	
+function setMode(tablink, mode) {
+	// Highlight selected tab
+	highlightModeTab(tablink);
+
+	// Change table cell content and trigger writing to db
+	var cell = document.getElementById('lcMode');
+	cell.focus();
+	cell.textContent = mode;
+	cell.blur();
+};
+
+// Update the associated info cell after user has left off-time cell
+function updateOffTimeInfo() {
+	var valuecell = document.getElementById('lcTEndM'),
+	    infocell = document.getElementById('lcOffTimeInfo');
+	var t = valuecell.innerText == null ? null : getMinutesOfDayAsInfo(valuecell.innerText);
+	infocell.textContent = (t == null ? "" : t + " GMT");
+}
+
+// Update the associated info cell after user has left on-time cell
+function updateOnTimeInfo() {
+	var valuecell = document.getElementById('lcTStartM'),
+	    infocell = document.getElementById('lcOnTimeInfo');
+	var t = valuecell.innerText == null ? null : getMinutesOfDayAsInfo(valuecell.innerText);
+	infocell.textContent = (t == null ? "" : t + " GMT");
+}
+
+function getModeName(number) {
+  if (number == '0') return 'Off';
+  if (number == '1') return 'On';
+  if (number == '2') return 'Auto';  
+  return 'Unknown';
+}
+
+function updateModeInfo() {
+	var valuecell = document.getElementById('lcMode'),
+	    infocell = document.getElementById('lcModeInfo');
+	var t = valuecell.innerText == null ? null : getModeName(valuecell.innerText);
+	infocell.textContent = (t == null ? "" : t);
+}
+
+function postValueChangeAction(id, cell) {
+  if (id == 'lcMode') { highlightModeTabFromSelectedMode(); updateModeInfo(); }
+  if (id == 'lcTEndM') updateOffTimeInfo();
+  else if (id == 'lcTStartM') updateOnTimeInfo();
+};
+
+// Trigger on settings change
+$(function(){
+    $("td[contenteditable=true]").blur(function(){
+        var field_id = $(this).attr("id");
+		postValueChangeAction(field_id, $(this));
+        });
+    });
+	
+$(document).ready(function () {  
+  // Use "get_plotdata.php?resolution=scan1m&..." to plot a longer time range
+  d3.json('get_plotdata.php?maxvalues=10000&tags=smLight,lcLightOn', function(jsondata) { 
+    var t = new Date();
+	plotdata = [];
+	  
+	// Since its a csv file we need to format the data a bit. 
+	var dateFormatIn = d3.time.format('%Y-%m-%d %H:%M:%S');
+    var numberFormat = d3.format('.2f');
+
+    jsondata.forEach(function (d) {
+	   plotdata.push([new Date(dateFormatIn.parse(d.time)), d.smLight, d.lcLightOn]);
+    });
+    g = new Dygraph(
+	  document.getElementById("trendrow"),
+	  plotdata,
+ 	  {
+		valueRange: [0.0, 1100],
+		legend: 'follow',
+		drawGapEdgePoints: true,
+		labelsDivStyles: { 'textAlign': 'right' },
+		showRangeSelector: true,
+		width: document.getElementById('trendrow').clientWidth,
+        ylabel: 'Light (0-1023)',
+        y2label: 'Power',
+		labels: ['Time','Ambient light','Power'],
+        series: {
+		  'Power': { axis: 'y2' },
+		},
+		axes: {
+		  y : {
+		    axisLabelWidth: 60,
+		  },
+		  y2: {
+			labelsKMB: true,
+			valueRange: [0.0, 1.1],
+		  }
+        },
+		
+		// For series highlighting:
+        stackedGraph: false,
+		highlightCircleSize: 2,
+		strokeWidth: 1,
+        strokeBorderWidth: 1,
+        highlightSeriesOpts: {
+          strokeWidth: 3,
+          strokeBorderWidth: 1,
+          highlightCircleSize: 5,
+        },
+	  }
+    );
+  });
+});
+</script>	
+			
+            <div class="row">
+		  	  <div class="panel panel-info">
+                <div class="panel-heading" id="Inputs">Inputs</div>
+                <div class="panel-body">
+              <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                  <thead>
+                    <tr>
+                      <th>Sensor</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hhInputs">
+                    <tr>
+                      <td>Ambient light (0-1023)</td>
+                      <td id="smLight"></td>
+                    </tr>			
+                  </tbody>
+                </table>
+              </div>
+			  </div>
+			  </div>
+			  </div>
+			  
+            <div class="row">
+		  	  <div class="panel panel-info">
+                <div class="panel-heading" id="Outputs">Outputs</div>
+                <div class="panel-body">
+			  <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                  <thead>
+                    <tr>
+                      <th>Output</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>				  
+                  <tbody id="hhOutputs">
+                    <tr>
+                      <td>Light power (0-1)</td>
+                      <td id="lcLightOn"></td>
+                    </tr>
+                    <tr>
+                      <td>Last life (s)</td>
+                      <td id="lcLastLife"></td>
+                    </tr>
+                    <tr>
+                      <td>Uptime (s)</td>
+                      <td id="lcUptime"></td>
+                    </tr>
+                    <tr>
+                      <td>Memory status (0=OK / 1=Error)</td>
+                      <td id="lcMemErr"></td>
+                    </tr>					
+		          </tbody>
+                </table>
+              </div>
+			  </div>
+			  </div>
+			  </div>
+			  
+			  <div class="row">
+		  	  <div class="panel panel-primary">
+                <div class="panel-heading" id="Settings">Settings
+			<ul class="tab" style="float: right;">
+			  <li><a href="javascript:void(0)" class="tablinks" onclick="setMode(event.currentTarget, '0')" id="modeOff">Off</a></li>
+			  <li><a href="javascript:void(0)" class="tablinks" onclick="setMode(event.currentTarget, '1')" id="modeOn">On</a></li>
+			  <li><a href="javascript:void(0)" class="tablinks" onclick="setMode(event.currentTarget, '2')" id="modeAuto">Auto</a></li>
+			</ul>
+			</div>	
+           <div class="panel-body">
+              <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                  <thead>
+                    <tr>
+                      <th>Parameter</th>
+                      <th>Value</th>
+					  <th>Info</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hhSettings">
+                    <tr data-toggle="tooltip" title="The operation mode, 0=lights off, 1=lights on, 2=auto">
+                      <td>Mode (0=off/1=on/2=auto)</td>
+                      <td id="lcMode" contenteditable="true" class="single-line">2</td>
+					  <td id="lcModeInfo"></td>
+                    </tr>
+                    <tr data-toggle="tooltip" title="Measured light level (0-1023) required for turning lights on">
+                      <td>Ambient light threshold (0-1023)</td>
+                      <td id="lcLimit" contenteditable="true" class="single-line">150</td>
+					  <td></td>
+                    </tr>
+                    <tr data-toggle="tooltip" title="When to turn lights on (minutes of day)">
+                      <td>Start of night (minute of day)</td>
+                      <td id="lcTStartM" contenteditable="true" class="single-line">1080</td>
+					  <td id="lcOnTimeInfo"></td>
+                    </tr>
+                    </tr>
+                    <tr data-toggle="tooltip" title="When to turn lights off (minutes of day)">
+                      <td>End of night (minute of day)</td>
+                      <td id="lcTEndM" contenteditable="true" class="single-line">600</td>
+					  <td id="lcOffTimeInfo"></td>
+                    </tr>
+                   </tbody>
+                </table>
+              </div>
+			  </div>
+			  </div>
+			  </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="templatemo-footer">
+        <div class="templatemo-copyright">
+          <p>ModuleInterface demo - 2017<!-- Credit: www.templatemo.com --></p>
+        </div>
+      </footer>
+    </div>
+</div>
+  </body>
+</html>

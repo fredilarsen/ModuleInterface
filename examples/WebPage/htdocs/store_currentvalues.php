@@ -1,10 +1,10 @@
 <?php
 // Take a snapshot of values in the currentvalues table and insert it as a new row in the timeseries table.
 
-// database settings
+// Database settings
 include "db_config.php";
 
-// open database connection
+// Open database connection
 $conn = new PDO("mysql:host=$server;dbname=$database", $username, $password);
 
 // Get existing columns from timeseries table
@@ -18,9 +18,9 @@ while ($row = $query->fetch()) {
 $query->closeCursor();
 $query = null;
 
-// Build the statement for inserting values into the timeseries table
+// Build the statement for inserting recent values into the timeseries table
 $sql = "INSERT INTO timeseries SET ";
-$query = $conn->prepare("SELECT id, value FROM currentvalues;");
+$query = $conn->prepare("SELECT id, value FROM currentvalues;"); // WHERE UNIX_TIMESTAMP(modified) + 60 > UNIX_TIMESTAMP()
 $query->execute();
 $query->setFetchMode(PDO::FETCH_NUM);
 $first = true;

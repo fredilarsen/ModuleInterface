@@ -1,0 +1,104 @@
+  <meta charset="utf-8">
+  <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"><![endif]-->
+  <title>Home control</title>
+  <meta name="keywords" content="" />
+  <meta name="description" content="" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <meta name="viewport" content="width=device-width">        
+  <link rel="stylesheet" href="css/templatemo_main.css">
+  <link rel="stylesheet" type="text/css" href="css/dygraph.css"/>
+  <link rel="stylesheet" href="css/homecontrol.css">
+
+<!--- style for buttons in section headers: -->  
+<style>
+        #monthly-volume-chart g.y {
+            display: none;
+        }
+        #logo {
+            margin-right: 2em;
+            margin-top: 2em;
+        }
+		
+/* Style the list */
+ul.tab {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+}
+
+/* Float the list items side by side */
+ul.tab li {float: left;}
+
+/* Style the links inside the list items */
+ul.tab li a {
+    display: inline-block;
+    color: black;
+    text-align: center;
+    padding: 0px 16px;
+    text-decoration: none;
+    transition: 0.3s;
+    font-size: 14px;
+}
+
+/* Change background color of links on hover */
+ul.tab li a:hover {background-color: #ddd;}
+
+/* Create an active/current tablink class */
+ul.tab li a:focus, .active {background-color: #ccc;}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-top: none;
+}		
+</style>  
+<!-- 
+Dashboard Template 
+http://www.templatemo.com/preview/templatemo_415_dashboard
+-->
+  <!--- The top navigation bar -->
+  <div class="navbar navbar-inverse" role="navigation">
+      <div class="navbar-header">
+        <div class="logo"><h1>Home control</h1></div>
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button> 
+      </div>   
+    </div>
+
+	<!--- The side bar -->
+	  <div class="navbar-collapse collapse templatemo-sidebar">
+        <ul class="templatemo-sidebar-menu">  
+          <li id="Dashboard"><a href="index.html"><i class="fa fa-home"></i>Dashboard</a></li>	
+		  <li id="SensorMonitor"><a href="sensormonitor.html"><i class="fa fa-eye"></i><span class="badge pull-right"></span>Sensor monitor</a></li>  
+		  <li id="LightController"><a href="lightcontroller.html"><i class="fa fa-lightbulb-o"></i><span class="badge pull-right"></span>Light controller</a></li>
+        </ul>
+      </div><!--/.navbar-collapse -->
+
+	  <script>
+	     function insertElementHere(navbarClass) { // '.navbar' or '.navbar-collapse'
+		   var content = document.querySelector('link[rel="import"]').import;
+		   // Grab DOM from warning.html's document.
+		   var el = content.querySelector(navbarClass).cloneNode(true);
+           document.body.appendChild(el);
+		   return el;
+		 };
+		 function insertNavBarHere(navbarClass, activeId) {
+		    var bar = insertElementHere(navbarClass);
+			document.getElementById(activeId).classList.add("active");
+		 };
+	  </script>
+	  
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/Chart.bundle.min.js"></script>
+    <script src="js/templatemo_script.js"></script>
+	<script src="js/homecontrol.js"></script>
