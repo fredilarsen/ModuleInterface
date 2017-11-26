@@ -108,8 +108,7 @@ The included HTTP client retrieves settings from a database behind a web server 
 
 PHP scripts and a database scheme plus instructions are included, making it easy to get the transfer of settings and values up and running in a standard, free LAMP or WAMP setup (Linux/Windows + Apache + MySQL/MariaDb + PHP) on your computer.
 
-Web pages are not included so far, but the included PHP scripts make it trivial to transfer settings and values between web pages and the database as JSON using jquery or what you like best.
-A working web page template controlling and visualizing output from one or more example modules is planned to be included.
+A sample web page is included in the examples, controlling a light controller module that subscribes to an ambient light measurement from another module. Measured ambient light is shown as current value and in trend plots along with the power output from the light controller. The settings used by the controller, a time interval and a ambient light limit, can be edited in the web page and is synced to the light controller.
 
 Here is a snapshot of my own responsive home automation web page, running on a server on my own LAN, with access from the outside and mobile phone through VPN:
 
