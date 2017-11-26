@@ -8,6 +8,10 @@
 #ifndef PJON_PACKET_MAX_LENGTH
   #define PJON_PACKET_MAX_LENGTH 250
 #endif
+// Increase SWBB timeout to handle long packets
+#ifndef SWBB_RESPONSE_TIMEOUT
+  #define SWBB_RESPONSE_TIMEOUT 2000
+#endif
 
 #include <MI_PJON/Link.h>
 
