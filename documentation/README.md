@@ -1,9 +1,12 @@
 ## Design principles
 
 ModuleInterface makes it easy to focus on the automation tasks at hand, and let communication take care of itself.
+Each module declares its settings, inputs and outputs and registers these with a ModuleInterface object. This object will then make sure that they are automatically synchronized.
 
 * _Settings_ are the configuration parameters needed for a module to do its work. The idea is that these are configured
 outside of the module and synchronized to the module when changed. Typically, configuration is done in a web page.
+* _Inputs_ are measurements or results from other modules that may be used instead of a local measurement. For example, a module requiring a measured outdoor temperature can subscribe to receiving this from another module.
+* _Outputs_ are measurements and results that the device measures or produces, that are delivered so that other modules may subscribe to them, and so that they may be archived in a database and shown in a web page or plot.
 
 ### The Master
 
