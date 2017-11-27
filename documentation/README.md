@@ -1,14 +1,9 @@
 ## Design principles
 
 ModuleInterface makes it easy to focus on the automation tasks at hand, and let communication take care of itself.
-Each module declares its settings, inputs and outputs and registers these with a ModuleInterface object. Both input and output values will be synchronized automatically.
 
 * _Settings_ are the configuration parameters needed for a module to do its work. The idea is that these are configured
 outside of the module and synchronized to the module when changed. Typically, configuration is done in a web page.
-* _Inputs_ are measurements from other modules that may be used instead of a local measurement. For example, a module requiring
-a measured outdoor temperature can subscribe to receiving this from another module.
-* _Outputs_ are measurements and states that the device measures or produces, that are delivered so that other modules may
-subscribe to them, and so that they may be archived in a database and shown in a web page or plot.
 
 ### The Master
 
@@ -43,8 +38,8 @@ it will mean full operation without a master.
 
 ### Persistence
 
-To make autonomous modules creation easier, for example an exterior light controller that has settings for movement
-and light intensity, ModuleInterface keeps settings stored to EEPROM so that the
+To make it easier to create autonomous modules, for example an exterior light controller that has settings for movement
+and light intensity, ModuleInterface keeps settings stored in EEPROM so that the
 latest registered settings are immediately available after reboot. It can then continue working as it did before the reboot
 even if communication is down.
 Saving of settings to EEPROM is done in a way that minimizes the wear on the EEPROM.
