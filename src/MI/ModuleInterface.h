@@ -139,9 +139,9 @@ public:
   // Specify contracts to constructor by providing PROGMEM constants...
   ModuleInterface(const char *module_name,
                   const bool use_progmem, // Must be true, this is a requirement
-                  const PROGMEM char *settingnames,
-                  const PROGMEM char *inputnames,
-                  const PROGMEM char *outputnames) {
+                  const char * PROGMEM settingnames,
+                  const char * PROGMEM inputnames,
+                  const char * PROGMEM outputnames) {
     init();
     if (use_progmem) set_contracts_P(module_name, settingnames, inputnames, outputnames);
   }
@@ -172,9 +172,9 @@ public:
     set_contracts(module_name, settings_callback, inputs_callback, outputs_callback);
   }
   void set_contracts_P(const char *module_name,
-                       const PROGMEM char *settingnames,
-                       const PROGMEM char *inputnames,
-                       const PROGMEM char *outputnames) {
+                       const char * PROGMEM settingnames,
+                       const char * PROGMEM inputnames,
+                       const char * PROGMEM outputnames) {
     // Remember pointers to the strings
     settings_contract = settingnames;
     inputs_contract   = inputnames;

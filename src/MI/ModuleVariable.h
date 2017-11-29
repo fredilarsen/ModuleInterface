@@ -56,8 +56,8 @@ public:
   void set_variable(const uint8_t *name_and_type, const uint8_t length) {
     // Read name length byte
     type = (ModuleVariableType) name_and_type[0];
-    uint8_t len = min(name_and_type[1], MVAR_MAX_NAME_LENGTH);
     #ifdef IS_MASTER
+    uint8_t len = min(name_and_type[1], MVAR_MAX_NAME_LENGTH);
     memcpy(name, &name_and_type[2], len);
     name[len] = 0; // Null-terminator
     #endif
@@ -68,8 +68,8 @@ public:
     // Read name length byte
     const char *pos1 = strchr(s, ':'), *pos2 = strchr(s, ' ');
     if (pos1 == NULL || (pos2 != NULL && pos2 < pos1)) { // No colon in this variable declaration, use float as default
-      uint8_t len = min(pos2 == NULL ? strlen(s) : pos2-s, MVAR_MAX_NAME_LENGTH);
       #ifdef IS_MASTER
+      uint8_t len = min(pos2 == NULL ? strlen(s) : pos2-s, MVAR_MAX_NAME_LENGTH);
       memcpy(name, s, len);
       name[len] = 0; // Null-terminator
       #endif
