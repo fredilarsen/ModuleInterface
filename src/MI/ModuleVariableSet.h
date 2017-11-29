@@ -91,7 +91,7 @@ public:
   #endif
 
   #ifndef IS_MASTER
-  bool get_next_word_from_contract(uint16_t &source_pos, uint8_t  &word_len, char *name_buf, uint8_t buf_size) {
+  bool get_next_word_from_contract(uint16_t &source_pos, uint8_t  &word_len, char *name_buf, uint8_t buf_size) const {
     word_len = 0;
     if (get_contract_callback == NULL) return false;
     uint8_t cnt = 0;
