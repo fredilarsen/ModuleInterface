@@ -26,7 +26,7 @@ void setup() {
 void loop() { read_sensors(); interface.update(); }
 
 void read_sensors() {
-  interface.outputs.set_value(o_light_ix, analogRead(PIN_LIGHTSENSOR));
+  interface.outputs.set_value(o_light_ix, 1023 - analogRead(PIN_LIGHTSENSOR));
   interface.outputs.set_value(o_motion_ix, digitalRead(PIN_MOTIONSENSOR));
   interface.outputs.set_updated(); // Flag as completely updated, all values are set
 }
