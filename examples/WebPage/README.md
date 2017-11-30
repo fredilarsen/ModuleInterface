@@ -9,6 +9,18 @@ A "module" is simply a device like Arduino Nano equipped with necessary equipmen
 3. A ModuleMasterHttp module running on an Arduino Mega (because of memory requirements) with an Ethernet shield. This will transfer settings from the database and outputs to the database using JSON and HTTP requests.
 4. A computer with a LAMP/WAMP setup. For example ![XAMPP](https://www.apachefriends.org/download.html) or ![WampServer](http://www.wampserver.com/en/).
 
+### Pages
+The web page example consists of a Dashboard that is meant to show key information from all modules in one place, plus one page per module. This is how it is meant to look:
+
+![Dashboard](pictures/Dashboard.jpg)
+
+![SensorMonitor](pictures/SensorMonitor.jpg)
+
+![LightController](pictures/LightController.jpg)
+
+This is how it will look when viewed on a narrow screen like a mobile phone:
+![DashboardNarrow](pictures/DashboardNarrow.jpg)
+
 ### Configuration of SensorMonitor
 Program a device with the SensorMonitor sketch. Connect the analog pin of a light sensor to pin A0 (plus ground and voltage to sensor, of course). Connect pin 7 to the PJON bus on pin 7 of the master. Connect device ground to ground on the master.
 
