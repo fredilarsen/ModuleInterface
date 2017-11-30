@@ -25,7 +25,7 @@ PJONLink<SoftwareBitBang> bus(20); // PJON device id 20
 PJONModuleInterface interface("LightCon",                             // Module name
                               bus,                                    // PJON bus
                               "Mode:u1 Limit:u2 TStartM:u2 TEndM:u2", // Settings
-                              "smLight:u2",                           // Inputs                       
+                              "smLightLP:f4",                         // Inputs                       
                               "LightOn:u1 UTC:u4");                   // Outputs (measurements)                         
 
 void setup() {
@@ -54,7 +54,7 @@ void lightcontrol() {
       || (start_minute_of_day <= minute_of_day && minute_of_day <= end_minute_of_day);
     
     // Check light level
-    bool below_limit = interface.inputs.get_uint16(i_ambientlight_ix) <= 
+    bool below_limit = interface.inputs.get_float(i_ambientlight_ix) <= 
                        interface.settings.get_uint16(s_light_limit_ix);
                        
     // Turn light on or off

@@ -78,6 +78,11 @@
 						  <td>0-1023</td>
                         </tr>
                         <tr>
+                          <td>Ambient light, low pass</td>
+                          <td id="smLightLP"></td>
+						  <td>0-1023</td>
+                        </tr>
+                        <tr>
                           <td>Light power</td>
                           <td id="lcLightOn"></td>
 						  <td>0-1</td>
@@ -129,6 +134,14 @@
 		fill: false,
         backgroundColor : "rgba(180,147,205,0.2)",
         borderColor : "rgba(180,147,205,1)",
+        data : []
+      },
+      {
+        label: 'Ambient light, low pass (0-1023)',
+		tension: 0,
+		fill: false,
+        backgroundColor : "rgba(220,120,205,0.2)",
+        borderColor : "rgba(220,120,205,1)",
         data : []
       },
       {
@@ -187,7 +200,7 @@
 	  if (res == "-") res = ""; else res = "resolution=scan" + res + "&";
 	  
 	  // Get trend values from database for the selected resolution
-	$.ajax({url:"get_plotdata.php?" + res + "tags=m1UTC,smLight,lcLightOn",dataType:"json"})
+	$.ajax({url:"get_plotdata.php?" + res + "tags=m1UTC,smLight,smLightLP,lcLightOn",dataType:"json"})
 	  .fail(function(){ 
 	    var d = document.getElementById("alertDanger"); d.innerHTML = "Lost connection to web server. Could not retrieve trend data."; d.hidden = false; 
 		var s = document.getElementById("alertSuccess"); s.hidden = true;
@@ -201,8 +214,9 @@
 	  
 		  // Feed new data to light plot and update		  
 		  lineChartDataLight.datasets[0].data = myData.mapProperty('smLight');
-		  lineChartDataLight.datasets[1].data = myData.mapProperty('lcLightOn');
-		  for ($i=0; $i<lineChartDataLight.datasets[1].data.length; $i++) lineChartDataLight.datasets[1].data[$i] *= 100.0;
+		  lineChartDataLight.datasets[1].data = myData.mapProperty('smLightLP');
+		  lineChartDataLight.datasets[2].data = myData.mapProperty('lcLightOn');
+		  for ($i=0; $i<lineChartDataLight.datasets[2].data.length; $i++) lineChartDataLight.datasets[2].data[$i] *= 100.0;
 		  lineChartDataLight.labels = labels;
 		  window.lightTrend.update();
 	  });
@@ -409,7 +423,8 @@
 	  setInterval(getTrendData, 5000);
 	
 	  // Start a timer for updating all bar charts and tables with current values
-	  getBarAndTableData(); setInterval(getBarAndTableData, 5000);
+	  getBarAndTableData(); 
+	  setInterval(getBarAndTableData, 5000);
     };
 	  
     $('#myTab a').click(function (e) {

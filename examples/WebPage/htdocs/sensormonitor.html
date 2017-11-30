@@ -42,7 +42,7 @@ $(function(){
 });
 
 $(document).ready(function () {
-  d3.json('get_plotdata.php?resolution=scan1m&maxvalues=10000&tags=smLight', function(jsondata) {
+  d3.json('get_plotdata.php?resolution=scan1m&maxvalues=10000&tags=smLight,smLightLP', function(jsondata) {
     var t = new Date();
 	plotdata = [];
 	  
@@ -51,7 +51,7 @@ $(document).ready(function () {
     var numberFormat = d3.format('.2f');
 
     jsondata.forEach(function (d) {
-	   plotdata.push([new Date(dateFormatIn.parse(d.time)), d.smLight]);
+	   plotdata.push([new Date(dateFormatIn.parse(d.time)), d.smLight, d.smLightLP]);
     });
 	
     g = new Dygraph(
@@ -65,7 +65,7 @@ $(document).ready(function () {
 		labelsDivStyles: { 'textAlign': 'right' },
 		showRangeSelector: true,
 		width: document.getElementById('trendrow').clientWidth,
-		labels: ['Time', 'Ambient light'],
+		labels: ['Time', 'Ambient light', 'Ambient light, low pass'],
         highlightSeriesOpts: {
           strokeWidth: 3,
           strokeBorderWidth: 1,
@@ -91,8 +91,12 @@ $(document).ready(function () {
                   </thead>
                   <tbody id="hhOutputs">
                     <tr>
-                      <td>Ambient light (0-1023))</td>
+                      <td>Ambient light (0-1023)</td>
                       <td id="smLight"></td>
+                    </tr>
+                    <tr>
+                      <td>Ambient light, low pass (0-1023)</td>
+                      <td id="smLightLP"></td>
                     </tr>
                     <tr>
                       <td>Last life (s)</td>
