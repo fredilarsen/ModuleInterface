@@ -60,12 +60,13 @@ private:
   uint32_t calculate_contract_id() const { // A contract id that can be used to detect a changed contract
     uint32_t id = 0x33333333; // Non-zero to be able to accept a contract with no variables
     char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
-    uint16_t source_pos = 0;
     uint8_t len;
     for (uint8_t i = 0; i < num_variables; i++) {
       #ifdef IS_MASTER
       strncpy(name_buf, variables[i].name, MVAR_MAX_NAME_LENGTH);
+      len = strlen(name_buf);
       #else
+      uint16_t source_pos = 0;
       if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) return 0;
       remove_type(name_buf, len);
       #endif
@@ -392,9 +393,10 @@ public:
   const void get_value(const uint8_t ix, void *value, const uint8_t size) const {
     if (ix < num_variables) variables[ix].get_value(value, size);
   }
+  
   const void *get_value_pointer(const uint8_t ix) const {
     static uint32_t zero_buffer = 0; // Used for returning a safe (zero) value when index out of range in get_value
-    return ix < num_variables ? (void*)variables[ix].value : (void*)&zero_buffer;
+    return ix < num_variables ? (void*)variables[ix].get_value_pointer() : (void*)&zero_buffer;
   }
 
   // Change-tolerant higher-level setter and getter. Use these on master side to handle changing contracts
@@ -467,7 +469,7 @@ public:
     if (var.ix < num_variables) return variables[var.ix].is_event();
     return false;
   }
-  bool set_event(MIVariable &var, const bool event = true) const {
+  void set_event(MIVariable &var, const bool event = true) const {
     verify_mivariable(var);
     if (var.ix < num_variables) variables[var.ix].set_event(event);
   }
@@ -582,14 +584,14 @@ public:
           if (i > 0) Serial.print(" ");
           Serial.print(name_buf); Serial.print("=");
           switch(variables[i].get_type()) {
-          case mvtBoolean: Serial.print(*((bool*)variables[i].value)); break;
-          case mvtUint8: Serial.print(*((uint8_t*)variables[i].value)); break;
-          case mvtInt8: Serial.print(*((int8_t*)variables[i].value)); break;
-          case mvtUint16: Serial.print(*((uint16_t*)variables[i].value)); break;
-          case mvtInt16: Serial.print(*((int16_t*)variables[i].value)); break;
-          case mvtUint32: Serial.print(*((uint32_t*)variables[i].value)); break;
-          case mvtInt32: Serial.print(*((int32_t*)variables[i].value)); break;
-          case mvtFloat32: Serial.print(*((float*)variables[i].value)); break;
+          case mvtBoolean: Serial.print(*((bool*)variables[i].get_value_pointer())); break;
+          case mvtUint8: Serial.print(*((uint8_t*)variables[i].get_value_pointer())); break;
+          case mvtInt8: Serial.print(*((int8_t*)variables[i].get_value_pointer())); break;
+          case mvtUint16: Serial.print(*((uint16_t*)variables[i].get_value_pointer())); break;
+          case mvtInt16: Serial.print(*((int16_t*)variables[i].get_value_pointer())); break;
+          case mvtUint32: Serial.print(*((uint32_t*)variables[i].get_value_pointer())); break;
+          case mvtInt32: Serial.print(*((int32_t*)variables[i].get_value_pointer())); break;
+          case mvtFloat32: Serial.print(*((float*)variables[i].get_value_pointer())); break;
           default: Serial.print(F("Unrecognized type ")); Serial.print(variables[i].get_type()); break;
           }
         }

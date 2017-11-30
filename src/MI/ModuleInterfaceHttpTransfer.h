@@ -33,6 +33,7 @@ bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
     case mvtUint32: v.set_value((uint32_t) root[name]); return true;
     case mvtInt32: v.set_value((int32_t) root[name]); return true;
     case mvtFloat32: v.set_value((float) root[name]); return true;
+    case mvtUnknown: return false;
   }
   return false;
 }
@@ -52,6 +53,7 @@ bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) 
       if (v.get_float() != SYS_ZERO && !isnan(v.get_float()) && !isinf(v.get_float())) {
         root[name] = v.get_float(); return true;
       } else return false;
+    case mvtUnknown: return false;
   }
   return false;
 }
@@ -95,7 +97,7 @@ bool read_json_settings(ModuleInterface &interface, EthernetClient &client, cons
     #endif
     return false; // Out of memory at the moment
   }
-  int pos = 0;
+  uint16_t pos = 0;
   unsigned long start = millis();
   while (client.connected() && millis()-start < timeout_ms) {
     while (client.connected() && client.available() && pos < buffer_size -1) { buf[pos] = client.read(); pos++; }
@@ -122,9 +124,9 @@ bool read_json_settings(ModuleInterface &interface, EthernetClient &client, cons
     char *jsonStart = strstr(buf, jsonDecl);
     if (jsonStart) jsonStart += strlen(jsonDecl) + 1;
     else jsonStart = buf;
-    {
+    {        
       DynamicJsonBuffer jsonBuffer;
-      JsonObject& root = jsonBuffer.parseObject(jsonStart);
+      JsonObject& root = jsonBuffer.parseObject(jsonStart);  
       if (root.success()) {
         // Set system time if UTC was returned from server, exclude parsing time and half of retrieval time
         #ifdef DEBUG_PRINT

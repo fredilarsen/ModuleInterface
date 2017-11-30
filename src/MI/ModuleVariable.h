@@ -39,8 +39,11 @@ enum ModuleVariableType {
 struct ModuleVariable {
 private:
   ModuleVariableType type = mvtUnknown; // To save memory we use the uppermost bits for change detection, therefore do not allow direct access
+  union {
+    uint32_t uint32; // To make sure it is properly aligned
+    char array[4];   // A 4 byte buffer covers all supported value types, better than using a pointer and allocating memory
+  } value;
 public:
-  uint8_t value[4];  // A 4 byte buffer covers all supported value types, better than using a pointer and allocating memory
   #ifdef IS_MASTER
   char name[MVAR_MAX_NAME_LENGTH + 1];
   #endif
@@ -49,7 +52,7 @@ public:
     #ifdef IS_MASTER
     name[0] = 0;
     #endif
-    memset(value, 0, 4);
+    memset(value.array, 0, 4);
   }
 
   // Setters and getters for serializing (type,length,name)
@@ -119,12 +122,15 @@ public:
   // Value setters and getters
   void set_value(const void *v, const uint8_t size) {
     if (get_size() == size) {
-      if (memcmp(value, v, size) != 0) set_changed(true); // Detect changes
-      memcpy(value, v, size);
+      if (memcmp(value.array, v, size) != 0) set_changed(true); // Detect changes
+      memcpy(value.array, v, size);
     }
   }
-  void get_value(void *v, const uint8_t size) const { if (get_size() == size) memcpy(v, value, size); }
+  void get_value(void *v, const uint8_t size) const { if (get_size() == size) memcpy(v, value.array, size); }
 
+  const void *get_value_pointer() const { return value.array; }
+  void *get_value_pointer() { return value.array; }
+  
   // Specialized convenience setters (these do not cost memory because of inlining)
   void set_value(const bool v) { set_value(&v, 1); }
   void set_value(const uint8_t v) { set_value(&v, 1); }
@@ -146,14 +152,14 @@ public:
   void get_value(float &v) const { get_value(&v, 1); }
 
   // More specialized convenience getters (these do not cost memory because of inlining)
-  bool get_bool() const { return *(bool*)value; }
-  uint8_t get_uint8() const { return *(uint8_t*)value; }
-  uint16_t get_uint16() const { return *(uint16_t*)value; }
-  uint32_t get_uint32() const { return *(uint32_t*)value; }
-  int8_t get_int8() const { return *(int8_t*)value; }
-  int16_t get_int16() const { return *(int16_t*)value; }
-  int32_t get_int32() const { return *(int32_t*)value; }
-  float get_float() const { return *(float*)value; }
+  bool get_bool() const { return *(bool*) get_value_pointer(); }
+  uint8_t get_uint8() const {  return *(uint8_t*) get_value_pointer(); }
+  uint16_t get_uint16() const {  return *(uint16_t*) get_value_pointer(); }
+  uint32_t get_uint32() const { return value.uint32; }
+  int8_t get_int8() const {  return *(int8_t*) get_value_pointer(); }
+  int16_t get_int16() const {  return *(int16_t*) get_value_pointer(); }
+  int32_t get_int32() const {  return *(int32_t*) get_value_pointer(); }
+  float get_float() const {  return *(float*) get_value_pointer(); }
 
   // Memory management
   uint8_t get_size() const {
@@ -166,6 +172,7 @@ public:
     case mvtUint32:
     case mvtInt32:
     case mvtFloat32: return 4;
+    case mvtUnknown: return 0;
     }
     return 0;
   }

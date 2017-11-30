@@ -27,7 +27,7 @@ uint16_t eeprom_update_bytes(const void *buf, uint16_t length, uint16_t eeprom_p
   uint16_t i;
   for (i = 0; i < length; i++) {
     if (*p != EEPROM.read(eeprom_pos)) { EEPROM.write(eeprom_pos, *p); modified = true; }
-    *p++;
+    p++;
     eeprom_pos++;
   }
   return i;

@@ -99,7 +99,7 @@ public:
         uint32_t t = miGetTime();
         memcpy(&buf[1], &t, 4);
         uint32_t dummy_bus_id = 0;
-        uint16_t packet = pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, MI_REDUCED_SEND_TIMEOUT, 
+        pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, MI_REDUCED_SEND_TIMEOUT, 
           pjon->get_header() | PJON_EXT_HEAD_BIT | MI_PJON_BIT);
         
         // Clear time-missing bit to avoid this triggering continuous broadcasts.
