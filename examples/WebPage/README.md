@@ -9,7 +9,7 @@ A "module" is simply a device like Arduino Nano equipped with necessary equipmen
 3. A ModuleMasterHttp module running on an Arduino Mega (because of memory requirements) with an Ethernet shield. This will transfer settings from the database and outputs to the database using JSON and HTTP requests.
 4. A computer with a LAMP/WAMP setup. For example ![XAMPP](https://www.apachefriends.org/download.html) or ![WampServer](http://www.wampserver.com/en/).
 
-![Hardware](ARDUINO/WebPage demo hardware setup_bb.png)
+![Hardware](ARDUINO/WebPage_hardware_setup_bb.png)
 
 ### Pages
 The web page example consists of a Dashboard that is meant to show key information from all modules in one place, plus one page per module. This is how it is meant to look:
