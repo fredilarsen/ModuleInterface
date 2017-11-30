@@ -1,23 +1,25 @@
 {
   "name": "ModuleInterface",
   "description": "ModuleInterface is an open-source library for simplifying data exchange between devices",
-  "keywords": "communication, protocol, synchronization",
+  "keywords": "communication, protocol, synchronization, database, web page, network",
+  "license": "Apache-2.0",
   "authors":
   {
     "name": "Fred Larsen",
-    "email": "fredilarsen@hotmail.com"
+    "email": "fredilarsen@hotmail.com",
+    "maintainer": true
   },
   "repository":
   {
     "type": "git",
     "url": "https://github.com/fredilarsen/ModuleInterface.git"
   },
-  "version": "0.8.4",
-  "downloadUrl": "https://github.com/fredilarsen/ModuleInterface/archive/v0.8.4.tar.gz",
+  "version": "1.1.0",
+  "downloadUrl": "https://github.com/fredilarsen/ModuleInterface/archive/v1.1.0.tar.gz",
   "examples": "examples/*/*/*/*.ino",
   "frameworks": "arduino",
   "dependencies": {
-      "PJON" : "~8.0.0"
+      "PJON" : "~8.2.0"
   },
   "platforms":
   [
@@ -25,5 +27,8 @@
     "atmelsam",
     "espressif",
     "teensy"
-  ]
+  ],
+  "build" : {
+    "flags": "-std=c++11"
+  }
 }

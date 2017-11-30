@@ -41,12 +41,12 @@ After modifying the network and IP addresses in the ModuleMasterHttp sketch, pro
 Then add an Ethernet shield to the Mega, connect a CAT5 cable between the shield and your network switch or router, then power on.
 
 ### Installation of web server and database
-1. Run the XAMPP or WampServer installation package.
+Run the XAMPP or WampServer installation package.
 
 ### Configuration of database
-Start Apache and MySQL/MariaDb and open the phpMyAdmin page. OR use a similar tool, like HeidiSQL if you want to keep your htdocs directory clean from other stuff.
+1. Start Apache and MySQL/MariaDb and open the phpMyAdmin page. Or use a similar tool, like HeidiSQL if you want to keep your htdocs directory clean from other stuff.
 2. Go to the Import tab and run the "database setup/home_control.sql" file to create the required tables. The character set must be set to UTF-8.
-3. You now have the home_control database running. Data should be updated in the curentvalues table after a short while.
+3. You now have the home_control database running. Data should be updated in the currentvalues table after a short while, and you can inspect this (in phpMyAdmin by clicking on the table name to refresh the data).
 
 ### Configuration of web server
 1. The files from the "htdocs" folder are copied into the "C:/xampp/htdocs" folder (depending on installation). Unfortunately, XAMPP has a lot of files present here to supply phpMyAdmin etc, so it will be a mix. Some Other WAMP/LAMP distros keep the htdocs directory empty and supply database management tools like the native program HeidiSQL.
@@ -55,9 +55,9 @@ Start Apache and MySQL/MariaDb and open the phpMyAdmin page. OR use a similar to
 ### Testing
 When all is up and running, check this:
 1, Are values updated in the currentvalues table?
-2. Are new rows being created in the time_series table? You can inspect the table with HeidiSQL or phpMyAdmin.
+2. Are new rows being created in the timeseries table? You can inspect the table with HeidiSQL or phpMyAdmin.
 3. Are you getting the values shown in the plot in the web page?
-4. Can you change the LightController mode (on/off/auto) and see the on-board LED reflect this?
+4. Can you change the LightController mode (on/off/auto) and see the on-board LED reflect this after maximum 10 seconds?
 
 ### Debugging
 If it does not work right away, you can try the following steps.
@@ -66,8 +66,8 @@ If it does not work right away, you can try the following steps.
    You should see a JSON string with all available settings. If not, web server and database setup must be checked. You should get an error message in the browser. Try to use this to find out what is wrong. Check db_config.php.
 2. Try to manually get current values from the database by inputting the following in the address field of a browser:
       ```http://localhost/get_currentvalues.php```
-   You should see a JSON string with all current values. If not, use another tool like HeidiSql for checking if rows have been created in the currentvalues table.
-3. If manual test succeeds but no action from master, re-check the master device IP settings and try pørogramming the master again, and check all connections.
+   You should see a JSON string with all current values. If not, use another tool like HeidiSql for checking if rows have been created in the currentvalues table (most relevant if you have added new modules or more variables). But you should get a nice JSON response with names and values.
+3. If manual tests succeed but there are no values delivered from the master, re-check the master device IP settings and try programming the master again, and check all connections.
 4. Run a scan and see if the ModuleMasterHttp is present in your network. A simple way to do this is to run the free app "Fing" on an Android phone or tablet. You should see the IP address you assigned to your master present in the Fing list.
 
 ### Credits
