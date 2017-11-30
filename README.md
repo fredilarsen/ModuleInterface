@@ -103,7 +103,6 @@ Variable names for settings and outputs within a module can be specified without
 Variable names for inputs must contain the module prefix for the module where they are expected to come from. For example, a GreenHouse monitoring module can specify an input with name "omTemp" to subscribe to an output with the name "Temp" in an "OutsideMonitor" module with prefix "om".
 
 #### Web pages
-
 The included HTTP client retrieves settings from a database behind a web server and synchronizes them to all modules that have any settings. It also logs all outputs (measurements and states) from all modules to a database behind the web server.
 
 PHP scripts and a database scheme plus instructions are included, making it easy to get the transfer of settings and values up and running in a standard, free LAMP or WAMP setup (Linux/Windows + Apache + MySQL/MariaDb + PHP) on your computer.
@@ -114,8 +113,14 @@ Here is a snapshot of my own responsive home automation web page, running on a s
 
 ![Web Page Example](/images/WebPageExample.png)
 
-#### License
 
+#### Dependencies and credits
+This library depends on the following libraries in addition to the Arduino standard libraries:
+
+* [PJON](https://github.com/gioblu/PJON) for communication between modules
+* [ArduinoJSON](https://github.com/bblanchon/ArduinoJson) for communication between master and web server
+
+#### License
 ```cpp
 /* Copyright 2016-2017 Fred Larsen
 
