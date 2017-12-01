@@ -5,6 +5,8 @@ This is ideal for quickly creating a master-slave based collection of devices (m
 
 A typical setup can consist of multiple Arduino Nano devices connected to a master on an Arduino Mega with an Ethernet shield.
 
+![UseCase1](images/useCase1.png)
+
 #### Why?
 There is a lot of interest in IoT nowadays, and there are several alternatives that let small devices exchange data with the cloud. And some like MQTT let the user have the broker on a private computer and exchange values between modules in that way without exposing data in the cloud.
 
@@ -111,7 +113,7 @@ A sample web page is included in the examples, controlling a light controller mo
 
 Here is a snapshot of my own responsive home automation web page, running on a server on my own LAN, with access from the outside and mobile phone through VPN:
 
-![Web Page Example](/images/WebPageExample.png)
+![Web Page Example](images/WebPageExample.png)
 
 
 #### Dependencies and credits
