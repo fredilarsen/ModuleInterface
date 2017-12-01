@@ -74,10 +74,10 @@ If it does not work right away, you can try the following steps.
 
 ### Credits
 The web page example is based on the following:
-* [Bootstrap](https://getbootstrap.com/)
-* [Chart.js](http://www.chartjs.org/) for live plots on the dashboard page
-* [d3](https://github.com/d3/d3/wiki/gallery)
-* [dygraphs](http://dygraphs.com/) for charts on the module pages
-* [jQuery](https://jquery.com/)
-* [font-awesome](http://fontawesome.io/)
-* [templatemo](http://www.templatemo.com/) for the starting point
+* [Bootstrap](https://getbootstrap.com/) (MIT license)
+* [Chart.js](http://www.chartjs.org/) for live plots on the dashboard page (MIT license)
+* [d3](https://github.com/d3/d3/wiki/gallery) (BSD-3 license)
+* [dygraphs](http://dygraphs.com/) for charts on the module pages (MIT license)
+* [jQuery](https://jquery.com/) (MIT license plus referencing ```https://jquery.org/license```)
+* [font-awesome](http://fontawesome.io/) (SIL OFL 1.1 license)
+* [templatemo](http://www.templatemo.com/) for the starting point (Creative Commons 4.0 International license)
