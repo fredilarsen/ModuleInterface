@@ -104,14 +104,7 @@ bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_
     #endif
     return false; // Out of memory at the moment
   }
-  
- /*
-  while(client.available()){
-    String line = client.readStringUntil('\r');
-    Serial.print(line);
-  }
-*/  
-  
+   
   uint16_t pos = 0;
   unsigned long start = millis();
   while (client.connected() && millis()-start < timeout_ms) {
@@ -163,9 +156,6 @@ bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_
       }
     }
   }
-  #ifdef DEBUG_PRINT
-  //Serial.println();
-  #endif
 
   // Deallocate buffer
   delete[] buf;
