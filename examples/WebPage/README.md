@@ -9,7 +9,13 @@ A "module" is simply a device like Arduino Nano equipped with necessary equipmen
 3. A ModuleMasterHttp module running on an Arduino Mega (because of memory requirements) with an Ethernet shield. This will transfer settings from the database and outputs to the database using JSON and HTTP requests.
 4. A computer with a LAMP/WAMP setup. For example ![XAMPP](https://www.apachefriends.org/download.html) or ![WampServer](http://www.wampserver.com/en/).
 
-![Hardware](ARDUINO/WebPage_hardware_setup_bb.png)
+There are two sets of modules available in this example, in the ARDUINO_SWBB and ESP8266_GUDP directories. You should run one set at a time, unless you change one of the masters to avoid conflict of IP, master prefix and module prefixes. Running multiple setups or a mixed setup is possible, but keep it simple to start with.
+
+![Arduino](ARDUINO_SWBB/WebPage_hardware_setup_bb.png)
+Arduino-based setup using PJON SWBB (SoftwareBitBang) on a single wire
+
+![ESP8266](ESP8266_GUDP/WebPage_hardware_setup_bb.png)
+ESP8266-based setup using PJON GUDP (GlobalUDP) over WiFi
 
 ### Pages
 The web page example consists of a Dashboard that is meant to show key information from all modules in one place, plus one page per module. This is how it is meant to look:

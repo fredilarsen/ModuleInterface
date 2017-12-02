@@ -32,6 +32,7 @@ void setup() {
   bus.bus.strategy.set_pin(7);
   bus.bus.begin();
   interfaces.sampling_time_outputs = 1000;
+  interfaces.sampling_time_settings = 1000;
   
   // Init on-board LED
   pinMode(13, OUTPUT);
@@ -45,7 +46,7 @@ void loop() {
     
   // Get settings for each module from the database via the web server
   static uint32_t last_s = 0;
-  if (mi_interval_elapsed(last_s, 10000))
+  if (mi_interval_elapsed(last_s, 1000))
     get_settings_from_web_server(interfaces, web_client, web_server_ip);
 
   // Store all measurements to the database via the web server

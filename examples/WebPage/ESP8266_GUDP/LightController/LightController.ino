@@ -6,6 +6,26 @@
 #include <MiModule.h>
 #include <utils/MITime.h>
 
+// Ethernet configuration for this device
+IPAddress gateway = { 192, 1, 1, 1 };
+IPAddress subnet = { 255, 255, 255, 0 };
+IPAddress local_ip = { 192, 1, 1, 188 };
+
+// Address of master
+uint8_t remote_ip[] = { 192, 1, 1, 186 };
+
+// WiFi settings
+const char* ssid     = "MyNetworkSSID";
+const char* password = "MyPassword";
+
+PJONLink<GlobalUDP> link(20); // PJON device id 20
+
+PJONModuleInterface interface("LightCon",                             // Module name
+                              link,                                   // PJON bus
+                              "Mode:u1 Limit:u2 TStartM:u2 TEndM:u2", // Settings
+                              "smLightLP:f4",                         // Inputs                       
+                              "LightOn:u1 UTC:u4");                   // Outputs (measurements)                         
+
 // Settings
 #define s_mode_ix                0
 #define s_light_limit_ix         1
@@ -19,26 +39,27 @@
 #define o_lighton_ix 0
 #define o_utc_ix     1
 
-// PJON related
-PJONLink<SoftwareBitBang> bus(20); // PJON device id 20
+void setup() {    
+  Serial.begin(115200);
+  Serial.println("LightController started.");
+  
+  WiFi.mode(WIFI_STA); // Be a client and not an access point
+  WiFi.config(local_ip, gateway, subnet);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.printf("Now listening at IP %s\n", WiFi.localIP().toString().c_str());
 
-PJONModuleInterface interface("LightCon",                             // Module name
-                              bus,                                    // PJON bus
-                              "Mode:u1 Limit:u2 TStartM:u2 TEndM:u2", // Settings
-                              "smLightLP:f4",                         // Inputs                       
-                              "LightOn:u1 UTC:u4");                   // Outputs (measurements)                         
+  link.bus.strategy.add_node(1, remote_ip);
+  link.bus.begin();
 
-void setup() {
-  bus.bus.strategy.set_pin(7);
-    
-  pinMode(13, OUTPUT);
-  digitalWrite(13, LOW);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);  
 }
 
-void loop() {
-  interface.update();
-  lightcontrol();
-}
+void loop() { interface.update(); lightcontrol(); }
 
 void lightcontrol() {
   // Require that all settings, inputs and time sync are updated before starting
@@ -60,7 +81,7 @@ void lightcontrol() {
     // Turn light on or off
     uint8_t mode = interface.settings.get_uint16(s_mode_ix);  // Get the controller mode (on/off/auto)
     bool light_on = mode == 1 || (mode==2 && within_interval && below_limit);
-    digitalWrite(13, light_on ? HIGH : LOW);
+    digitalWrite(LED_BUILTIN, light_on ? LOW : HIGH);
     
     // Report status back
     interface.outputs.set_value(o_lighton_ix, light_on);
