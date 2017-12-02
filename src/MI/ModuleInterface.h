@@ -139,9 +139,10 @@ public:
   // Specify contracts to constructor by providing PROGMEM constants...
   ModuleInterface(const char *module_name,
                   const bool use_progmem, // Must be true, this is a requirement
-                  const char * PROGMEM settingnames,
-                  const char * PROGMEM inputnames,
-                  const char * PROGMEM outputnames) {
+                  const char *settingnames, // Must be PROGMEM
+                  const char *inputnames,   // Must be PROGMEM
+                  const char *outputnames)  // Must be PROGMEM
+  {
     init();
     if (use_progmem) set_contracts_P(module_name, settingnames, inputnames, outputnames);
   }
@@ -172,9 +173,10 @@ public:
     set_contracts(module_name, settings_callback, inputs_callback, outputs_callback);
   }
   void set_contracts_P(const char *module_name,
-                       const char * PROGMEM settingnames,
-                       const char * PROGMEM inputnames,
-                       const char * PROGMEM outputnames) {
+                       const char *settingnames, // Must be PROGMEM
+                       const char *inputnames,   // Must be PROGMEM
+                       const char *outputnames)  // Must be PROGMEM
+  {
     // Remember pointers to the strings
     settings_contract = settingnames;
     inputs_contract   = inputnames;
@@ -275,7 +277,7 @@ public:
         outputs.set_variables(&message[1], length-1);
         notify(ntNewOutputContract, this);
         break;
-      case mcSetOutputs:
+      case mcSetOutputs:      
         outputs.set_values(&message[1], length-1);
         if (outputs.is_updated()) notify(ntNewOutputs, this);
         break;
@@ -520,18 +522,22 @@ friend class ModuleInterfaceSet;
   // Receiving time sync from master
   void set_time(const uint8_t *message, const uint8_t length) {
     #ifndef NO_TIME_SYNC
-    if (length == 4 && *(uint32_t*)message > TIME_UTC_2017) {
-      #ifdef DEBUG_PRINT
-        uint32_t initial_time = get_time_utc_s();
-      #endif
-      time_utc_incremented_ms = millis(); // Remember when it was received so it can be auto-incremented
-      time_utc_s = *(uint32_t*)message;
-      time_utc_received_s = time_utc_s; // Remember what time was received last
-      status_bits &= ~MISSING_TIME; // Clear the missing-time bit
-      #ifdef DEBUG_PRINT
-        dname(); Serial.print(F("Time adjusted by ")); Serial.print((uint32_t) (time_utc_s - initial_time));
-        Serial.print(F("s to UTC ")); Serial.println(time_utc_s);
-      #endif
+    if (length == 4) {
+      uint32_t t;
+      memcpy(&t, message, sizeof t);
+      if (t > TIME_UTC_2017) {
+        #ifdef DEBUG_PRINT
+          uint32_t initial_time = get_time_utc_s();
+        #endif
+        time_utc_incremented_ms = millis(); // Remember when it was received so it can be auto-incremented
+        time_utc_s = t;
+        time_utc_received_s = time_utc_s; // Remember what time was received last
+        status_bits &= ~MISSING_TIME; // Clear the missing-time bit
+        #ifdef DEBUG_PRINT
+          dname(); Serial.print(F("Time adjusted by ")); Serial.print((uint32_t) (time_utc_s - initial_time));
+          Serial.print(F("s to UTC ")); Serial.println(time_utc_s);
+        #endif
+      }
     }
     #endif
   }

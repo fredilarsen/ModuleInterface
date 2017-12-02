@@ -260,10 +260,12 @@ public:
     uint8_t numvar = *(p+4);
     bool event = (numvar & 0b10000000) != 0;
     if (event) numvar = (uint8_t) (numvar & 0b01111111); // Remove event bit
-    if ((*(uint32_t*)p) != contract_id || (numvar > num_variables)) {
+    uint32_t c_id;
+    memcpy(&c_id, p, sizeof c_id);    
+    if (c_id != contract_id || (numvar > num_variables)) {
       invalidate_contract();
       #ifdef DEBUG_PRINT
-        Serial.print(F("Values received with mismatched contract id ")); Serial.println(*(uint32_t*)p);
+        Serial.print(F("Values received with mismatched contract id ")); Serial.println(c_id);
       #endif
       return false;
     }

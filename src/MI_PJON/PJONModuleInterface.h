@@ -53,9 +53,10 @@ public:
   #ifndef IS_MASTER  
   #ifdef MI_NO_DYNAMIC_MEM
   PJONModuleInterface(const char *module_name, Link &pjon,
-    const uint8_t num_settings, ModuleVariable *setting_variables, const char * PROGMEM settingnames,
-    const uint8_t num_inputs,   ModuleVariable *input_variables,   const char * PROGMEM inputnames,
-    const uint8_t num_outputs,  ModuleVariable *output_variables,  const char * PROGMEM outputnames) {
+    const uint8_t num_settings, ModuleVariable *setting_variables, const char *settingnames, // This string must be PROGMEM
+    const uint8_t num_inputs,   ModuleVariable *input_variables,   const char *inputnames,   // This string must be PROGMEM
+    const uint8_t num_outputs,  ModuleVariable *output_variables,  const char *outputnames)  // This string must be PROGMEM
+  {
     set_variables(num_settings, setting_variables,
                   num_inputs,   input_variables,
                   num_outputs,  output_variables);
@@ -80,7 +81,7 @@ public:
   }
   PJONModuleInterface(const char *module_name, Link &pjon, 
                       bool use_progmem, // Required to be true, just used to distinguish this function from the standard
-                      const char * PROGMEM settingnames, const char * PROGMEM inputnames, const char * PROGMEM outputnames) :
+                      const char * settingnames, const char *inputnames, const char *outputnames) :  // These strings must be PROGMEM
     ModuleInterface(module_name, use_progmem, settingnames, inputnames, outputnames) {
     set_link(pjon);
   }
