@@ -10,13 +10,13 @@ $prefix = null;
 if (!empty($_GET)) $prefix = array_key_exists('prefix', $_GET) ? $_GET['prefix'] : null;
 
 // Open database connection
-$conn = new PDO("mysql:host=$server;dbname=$database", $username, $password);
+$conn = new PDO("mysql:host=$server;dbname=$database;charset=utf8", $username, $password);
 
 // Use prepared statements!
 $sql = "select id, value from settings";
-if ($prefix != null) $sql = $sql . " where id like '$prefix%'";
+if ($prefix != null) $sql = $sql . " where id like :prefix";
 $query = $conn->prepare($sql);
-$query->execute();
+$query->execute( array(':prefix' => "$prefix%"));
 
 $result = $query->setFetchMode(PDO::FETCH_NUM);
 print "{\"UTC\":\"" . time(0) . "\"";

@@ -1,32 +1,45 @@
 <?php
-//database settings
+// Database settings
 include "db_config.php";
 
-// check for AJAX request
-if (isset($_GET['tags'])) {
-	$tags = $_GET['tags'];
+// Quoting of identifiers (http://php.net/manual/en/pdo.quote.php#112169)
+function quoteIdent($field) {
+    return "`".str_replace("`","``",$field)."`";
+}
 
-	// Get the requested resolution (if not requested then return lowest resolution)
+// Check for AJAX request
+if (isset($_GET['tags'])) {
+	// Open database connection
+	$conn = new PDO("mysql:host=$server;dbname=$database;charset=utf8", $username, $password);
+		
+	// Get and sanitize tag name list
+	$tags = $_GET['tags'];
+	$tagArray = explode(",", $tags);
+	foreach ($tagArray as $value) 
+		$cleanTagArray [] = quoteIdent(str_replace("'", "", $conn->quote($value)));
+	$tags = implode(",", $cleanTagArray);
+
+	// Get the requested resolution (if not requested then return most detailed resolution)
 	$res_clause = '';
 	if (isset($_GET['resolution'])) {
 		$resolution = $_GET['resolution'];
-		$res_clause = "where $resolution = 1";
+		// Sanitize resolution column name
+		if (in_array($resolution, ['scan1m','scan10m','scan1h','scan1d']))
+		  $res_clause = "where $resolution = 1";
 	}
 
 	// Get the max number of values
 	$maxvalues = 60;
 	if (isset($_GET['maxvalues'])) {
-		$maxvalues = $_GET['maxvalues'];
+		$maxvalues = intval($_GET['maxvalues']);
 	}
 
-	// tell the browser what's coming
+	// Tell the browser what's coming
 	header('Content-type: application/json');
 
-	// open database connection
-	$conn = new PDO("mysql:host=$server;dbname=$database", $username, $password);
-
-	// use prepared statements!
-	$query = $conn->prepare("select time, $tags from timeseries $res_clause order by time desc limit $maxvalues;");
+	// Use prepared statements!
+	$query = $conn->prepare("select time, $tags from timeseries $res_clause order by time desc limit :maxvalues;");
+	$query->bindValue(':maxvalues', $maxvalues, PDO::PARAM_INT);
 	$select = $query->execute();
 	
 	$i = 0;

@@ -10,23 +10,24 @@ if(!empty($_POST)) {
 	
 	$sql = "INSERT INTO currentvalues (id, value, modified) VALUES ";
 
-	$first = true;
-	foreach($_POST as $field_name => $val)
-	{
-		// clean post values
-		$field_id = strip_tags(trim($field_name));
-		$val = strip_tags(trim($val));
-		if(!empty($field_id))
-		{
-			// update the values
-			if ($first) $first = false;	else $sql = $sql . ",";
-			$sql = $sql . "(\"" . $field_id . "\",\"" . $val . "\",UNIX_TIMESTAMP())";
-		}
-	}
-	$sql = $sql . " ON DUPLICATE KEY UPDATE value = VALUES(value), modified = UNIX_TIMESTAMP();";
 	try {
-		$conn = new PDO("mysql:host=$server;dbname=$database", $username, $password);
+		$conn = new PDO("mysql:host=$server;dbname=$database;charset=utf8", $username, $password);
 		$conn ->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		
+		$first = true;
+		foreach($_POST as $field_name => $val)
+		{
+			// clean post values
+			$field_id = $conn->quote(strip_tags(trim($field_name)));
+			$val = $conn->quote(strip_tags(trim($val)));
+			if(!empty($field_id))
+			{
+				// update the values
+				if ($first) $first = false;	else $sql = $sql . ",";
+				$sql = $sql . "(" . $field_id . "," . $val . ",UNIX_TIMESTAMP())";
+			}
+		}
+		$sql = $sql . " ON DUPLICATE KEY UPDATE value = VALUES(value), modified = UNIX_TIMESTAMP();";
 		
 		// Prepare statement
 		$stmt = $conn->prepare($sql);

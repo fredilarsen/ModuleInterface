@@ -8,21 +8,22 @@ if(!empty($_POST))
 	foreach($_POST as $field_name => $val)
 	{
 		// Clean post values
-		$conn = new PDO("mysql:host=$server;dbname=$database", $username, $password);
+		$conn = new PDO("mysql:host=$server;dbname=$database;charset=utf8", $username, $password);
 		$field_id = strip_tags(trim($field_name));
-		$val = strip_tags(trim($conn->quote($val)));
-		if(!empty($field_id) && !empty($val))
+		$val = strip_tags(trim($val));
+
+		if(!empty($field_id) && isset($val) && $val != "")
 		{
 			// Update the values
-			$sql = "INSERT INTO settings (id, value) VALUES('$field_id', $val) ON DUPLICATE KEY UPDATE value=$val";
+			$sql = "INSERT INTO settings (id, value) VALUES(:field_id, :valA) ON DUPLICATE KEY UPDATE value=:valB";
 			try {			
 				$conn ->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 				
 				// Prepare statement
 				$stmt = $conn->prepare($sql);
-		
+	
 				// Execute the query
-				$stmt->execute();
+				$stmt->execute( array(':field_id' => $field_id, ':valA' => $val, ':valB' => $val));
 
 				// Echo a message to say the UPDATE succeeded
 				echo $stmt->rowCount() . " records UPDATED successfully";

@@ -8,7 +8,7 @@ include "db_config.php";
 header('Content-type: application/json');
 
 // open database connection
-$conn = new PDO("mysql:host=$server;dbname=$database", $username, $password);
+$conn = new PDO("mysql:host=$server;dbname=$database;charset=utf8", $username, $password);
 
 // use prepared statements!
 $query = $conn->prepare('SELECT id, value, FLOOR(UNIX_TIMESTAMP(modified)) as UTC FROM currentvalues ORDER BY id;');

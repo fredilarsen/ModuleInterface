@@ -5,7 +5,7 @@
 include "db_config.php";
 
 // Open database connection
-$conn = new PDO("mysql:host=$server;dbname=$database", $username, $password);
+$conn = new PDO("mysql:host=$server;dbname=$database;charset=utf8", $username, $password);
 
 // Get existing columns from timeseries table
 $query = $conn->prepare("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'timeseries';");
