@@ -14,7 +14,7 @@
     "type": "git",
     "url": "https://github.com/fredilarsen/ModuleInterface.git"
   },
-  "version": "1.1.0",
+  "version": "1.2.0",
   "examples": [
     "examples/*/*.ino", 
     "examples/*/*/*.ino",

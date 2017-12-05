@@ -1,9 +1,9 @@
-## ModuleInterface v1.1
+## ModuleInterface v1.2
 ModuleInterface is an Arduino compatible library for automatic transfer of settings and values between devices, with very little programming needed for each device. It has been tested with PJON v8.2 and v9.1.
 
 This is ideal for quickly creating a master-slave based collection of devices (modules) doing things like measuring temperatures and other sensors, turning things on and off, regulating heating and so on. With synchronization between the modules, and between the modules and a database if using the HTTP client that is available for the master module.
 
-A typical setup can consist of multiple Arduino Nano devices connected to a master on an Arduino Mega with an Ethernet shield.
+A typical setup can consist of multiple Arduino Nano devices connected to a master on an Arduino Mega with an Ethernet shield. Or a collection of devices like ESP8266.
 
 ![UseCase1](images/UseCase1.png)
 
