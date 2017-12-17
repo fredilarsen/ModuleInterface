@@ -188,6 +188,13 @@ public:
     }
   }
 
+  void update_settings(const uint32_t interval_ms) {
+    if (((status_bits & MODIFIED_SETTINGS) != 0) && settings.got_contract() && settings.get_num_variables() != 0 &&
+      (settings.requested_time == 0 || ((uint32_t)(millis()-settings.requested_time) >= interval_ms))) {    
+      if (send_settings_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetSettings); else pjon->receive();
+    }
+  }
+
   void update_status(const uint32_t interval_ms) {
     if (got_contract() && (status_requested_time == 0 || ((uint32_t)(millis()-status_requested_time) >= interval_ms))) {
       if (send_status_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetStatus); else pjon->receive();

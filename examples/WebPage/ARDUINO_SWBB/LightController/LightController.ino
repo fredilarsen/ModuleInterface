@@ -28,23 +28,32 @@ PJONModuleInterface interface("LightCon",                             // Module 
                               "smLightLP:f4",                         // Inputs                       
                               "LightOn:u1 UTC:u4");                   // Outputs (measurements)                         
 
+// Allow user to change the mode with a button locally on this module, this will be synced back to web page
+const uint8_t MODESWITCH_PIN = 4;                              
+                        
 void setup() {
+  Serial.begin(115200);
+  Serial.println("LighController example v1.1");
+    
   link.bus.strategy.set_pin(7);
     
-  pinMode(13, OUTPUT);
-  digitalWrite(13, LOW);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+  
+  pinMode(MODESWITCH_PIN, INPUT_PULLUP);
 }
 
 void loop() {
   interface.update();
   lightcontrol();
+  check_user_input();
 }
 
 void lightcontrol() {
   // Require that all settings, inputs and time sync are updated before starting
   if (interface.settings.is_updated() && interface.inputs.is_updated() && interface.is_time_set()) {
 
-  // Check if within configured time-of-day interval (or if no interval is defined)
+    // Check if within configured time-of-day interval (or if no interval is defined)
     uint16_t minute_of_day = miGetMinuteOfDay(interface.get_time_utc_s()),
              start_minute_of_day = interface.settings.get_uint16(s_time_interval_start_ix),
              end_minute_of_day = interface.settings.get_uint16(s_time_interval_end_ix);
@@ -60,11 +69,24 @@ void lightcontrol() {
     // Turn light on or off
     uint8_t mode = interface.settings.get_uint16(s_mode_ix);  // Get the controller mode (on/off/auto)
     bool light_on = mode == 1 || (mode==2 && within_interval && below_limit);
-    digitalWrite(13, light_on ? HIGH : LOW);
+    digitalWrite(LED_BUILTIN, light_on ? HIGH : LOW);
     
     // Report status back
     interface.outputs.set_value(o_lighton_ix, light_on);
     interface.outputs.set_value(o_utc_ix, interface.get_time_utc_s());
     interface.outputs.set_updated();  
   }
+}
+
+void check_user_input() {
+  // Check if user changes mode locally (connect pin MODESWITCH_PIN to ground momentarily)
+  static bool modePinLowLast = false;
+  bool modePinLow = digitalRead(MODESWITCH_PIN) == LOW;
+  if (modePinLow && !modePinLowLast) {
+    uint8_t mode = interface.settings.get_uint16(s_mode_ix);
+    mode = ++mode % 3;
+    interface.settings.set_value(s_mode_ix, (uint8_t)mode);
+    Serial.print("Mode set to "); Serial.println(mode);
+  }
+  modePinLowLast = modePinLow;
 }

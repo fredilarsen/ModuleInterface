@@ -38,11 +38,11 @@ enum ModuleVariableType {
 
 struct ModuleVariable {
 private:
-  ModuleVariableType type = mvtUnknown; // To save memory we use the uppermost bits for change detection, therefore do not allow direct access
   union {
     uint32_t uint32; // To make sure it is properly aligned
     char array[4];   // A 4 byte buffer covers all supported value types, better than using a pointer and allocating memory
   } value;
+  ModuleVariableType type = mvtUnknown; // To save memory we use the uppermost bits for change detection, therefore do not allow direct access
 public:
   #ifdef IS_MASTER
   char name[MVAR_MAX_NAME_LENGTH + 1];
@@ -122,12 +122,22 @@ public:
   // Value setters and getters
   void set_value(const void *v, const uint8_t size) {
     if (get_size() == size) {
-      if (memcmp(value.array, v, size) != 0) set_changed(true); // Detect changes
+      if (memcmp(value.array, v, size) != 0) set_changed(true);
       memcpy(value.array, v, size);
     }
   }
   void get_value(void *v, const uint8_t size) const { if (get_size() == size) memcpy(v, value.array, size); }
 
+  bool is_equal(const void *v, const uint8_t size) { 
+    if (get_size() == size) {
+      if (get_type() == mvtFloat32 && isfinite(*(const float*)value.array) && isfinite(*(const float*)v)) {
+        float val = *(const float*)value.array;
+        return (fabs(val - *(const float*)v) < 1e-5*fabs(val));
+      } else return (memcmp(value.array, v, size) == 0); 
+    }
+    return false;
+  }
+  
   const void *get_value_pointer() const { return value.array; }
   void *get_value_pointer() { return value.array; }
   

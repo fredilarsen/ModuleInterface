@@ -43,16 +43,10 @@ bool write_settings_to_eeprom(const ModuleInterface &mi, uint16_t eeprom_start_p
   p += eeprom_update_bytes(&MAGICNUMBER_MI_EEPROM, sizeof MAGICNUMBER_MI_EEPROM, p, modified); // Magic number
   uint32_t contract_id = mi.settings.get_contract_id(); 
   p += eeprom_update_bytes(&contract_id, sizeof contract_id, p, modified); // Store contract id early, it is essential when reading back
-  
-  // Get serialized settings contract and store it (EDIT: Is it needed? If contract id is present values can be checked against it)
+    
+  // Get serialized settings values and store it
   BinaryBuffer buf;
   uint8_t length = 0;
-//  mi.settings.get_variables(BinaryBuffer &buf, uint8_t &length, mcSetSettingContract);
-//  eeprom_update_bytes(length, sizeof length); p += sizeof length; // Store length explicitly
-//  eeprom_update_bytes(buf.get(), length); p+= length;
-  
-  // Get serialized settings values and store it
-  length = 0;
   mi.settings.get_values(buf, length, mcSetSettings);
   p += eeprom_update_bytes(&length, sizeof length, p, modified); // Store length explicitly  
   p += eeprom_update_bytes(buf.get(), length, p, modified);
@@ -85,9 +79,6 @@ bool read_settings_from_eeprom(ModuleInterface &mi, uint16_t eeprom_start_pos = 
   uint32_t contract_id = 0;
   p += eeprom_read_bytes(&contract_id, sizeof contract_id, p); // Magic number
   if (contract_id != mi.settings.get_contract_id() || contract_id == 0) return false; // Not the correct contract, so return
- 
-  // Read and deserialize settings contract
-  // (EDIT: Is there any need?)
   
   // Read and deserialize settings values
   uint8_t length = 0;
@@ -98,6 +89,7 @@ bool read_settings_from_eeprom(ModuleInterface &mi, uint16_t eeprom_start_pos = 
     Serial.print("Read bytes from EEPROM: "); Serial.println(p-eeprom_start_pos); 
   #endif  
   bool status = mi.settings.set_values(buf+1, length-1); // Skip header byte
+  mi.settings.clear_changed();
   return status;
 }
 

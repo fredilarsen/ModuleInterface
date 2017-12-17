@@ -293,9 +293,27 @@ public:
         return false; // Corrupted message
       }
       uint8_t len = variables[varpos].get_size();
-      variables[varpos].set_value(p, len);
-      p += len;
-      if (event) variables[varpos].set_event(); // Set event flag on receiving side
+      bool set_value = true;
+      #ifdef IS_MASTER
+      // In the master, this function is only called when receiving values from a module,
+      // so always set the value.
+      #else
+      // In a module, this function only is called when receiving values from a master or reading from EEPROM.
+      // Disallow different values from master as long as the changed-flag is set, and clear the changed-flag
+      // when the same value is received from master, indicating that the master has received it.
+      if (variables[varpos].is_changed()) {
+        if (variables[varpos].is_equal(p, len)) variables[varpos].set_changed(false);
+        else set_value = false; // Ignore new values from master as long as changed-flag on module side is set
+      } // else // Not changed on module side, so update with new value from master
+      #endif
+      if (set_value) {
+        variables[varpos].set_value(p, len);
+        #ifndef IS_MASTER
+        variables[varpos].set_changed(false); // Normal flow of values shall not set changed-flag
+        #endif
+        p += len;
+        if (event) variables[varpos].set_event(); // Set event flag on receiving side
+      }
     }
     // Flag as updated / ready for use only after we have got a full set
     if (numvar == num_variables) set_updated();

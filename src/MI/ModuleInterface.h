@@ -65,7 +65,28 @@ class ModuleInterface;
 typedef void (*notify_function)(NotificationType notification_type, const ModuleInterface *module_interface);
 extern void dummy_notification_function(NotificationType notification_type, const ModuleInterface *module_interface);
 
-#define TIME_UTC_2017 1483228800ul
+#define UTC_FIRST_ACCEPTED 1483228800ul
+
+/* Description of principle for bidirectional sync of settings:
+1. All modules get new settings from the master which retrieves them from a database regularly.
+   This is the normal flow of settings.
+2. Each module variable has a "changed" flag that is set when the value is changed by the module itself but
+   not when set from the master.
+3. If the module variable changed-flag is set:
+   A. A different value from the master for that variable will be ignored.
+   B. If the same value is received from master, the changed-flag will be reset, knowing that the master has 
+      received the value.
+   C. The MODIFIED_SETTINGS status bit will be set if there any locally modified settings, and this will trigger 
+      the master to request changed settings to be delivered.
+4. The module variable changed-flag is used in the same way for settings in the master. Getting a modified value from a
+   module will set the flag. Getting values from the database will not set it, as this is the normal data flow direction.
+5. If the master's module variable change-flag is set:
+   A. A different value from the database for that variable will be ignored.
+   B. If the same value is received from the database, the changed-flag will be reset, knowing that the database has 
+      received the value.
+6. The web pages will show the value in the database, so the modified value from the module shall be shown after some seconds.
+*/
+
 
 class ModuleInterface {
   #ifndef IS_MASTER
@@ -201,7 +222,7 @@ public:
   }
   #ifndef MI_NO_DYNAMIC_MEM
   // This function can be called early on to pre-allocate module variables to avoid memory fragmentation.
-  // Either specificy variables to constructor in a global declaration, or call this function before allocating strings to send
+  // Either specify variables to constructor in a global declaration, or call this function before allocating strings to send
   // to set_contracts from within a function.
   // If this function returns false, there is a fatal memory problem and the program should be aborted
   bool preallocate_variables(const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) {
@@ -237,6 +258,14 @@ public:
   }
   #endif
 
+  bool is_master() {
+    #ifdef IS_MASTER
+    return true;
+    #else
+    return false;
+    #endif
+  }
+  
   // Return the time passed since the last life sign was received from module, or -1 if no life sign received after startup
   int32_t get_last_alive_age() const { return last_alive ? (uint32_t) ((millis() - last_alive))/1000ul : -1; }
 
@@ -286,13 +315,15 @@ public:
       case mcSetSettings:
         if (!settings.set_values(&message[1], length-1)) // Set or clear contract mismatch bit depending on success
            status_bits |= CONTRACT_MISMATCH_SETTINGS;
-         else {
-           status_bits &= ~CONTRACT_MISMATCH_SETTINGS; // Clear "missing settings contract" flag
-           if (settings.is_updated()) {
-             status_bits &= ~MISSING_SETTINGS; // Clear "missing settings" flag
-             notify(ntNewSettings, this);
-           }
-         }
+        #ifndef IS_MASTER     
+        else {
+          status_bits &= ~CONTRACT_MISMATCH_SETTINGS; // Clear "missing settings contract" flag
+          if (settings.is_updated()) {
+            status_bits &= ~MISSING_SETTINGS; // Clear "missing settings" flag
+            notify(ntNewSettings, this);
+          }
+        }
+        #endif
          break;
       #ifndef IS_MASTER
       case mcSetInputs:
@@ -380,7 +411,7 @@ public:
       #endif
       case mcSendSettings:
         notify(ntSampleSettings, this);
-        settings.get_values(response, response_length, mcSetSettings);  // TODO: use MODIFIED_SETTINGS bit for modules with a GUI
+        settings.get_values(response, response_length, mcSetSettings, false, !is_master());
         break;
       #ifdef IS_MASTER
       case mcSendInputs:
@@ -446,7 +477,7 @@ public:
   // Has time been set in the not too far past?
   bool is_time_set() {
     update_time();
-    return (time_utc_received_s != 0 && time_utc_s != 0 && time_utc_s > TIME_UTC_2017
+    return (time_utc_received_s != 0 && time_utc_s != 0 && time_utc_s > UTC_FIRST_ACCEPTED
            && ((uint32_t)(time_utc_s - time_utc_received_s) < 48ul*3600ul)); // Synced not more than 2 days ago
   }
 
@@ -490,6 +521,9 @@ friend class ModuleInterfaceSet;
 
   #ifndef IS_MASTER
   void get_status(BinaryBuffer &message, uint8_t &length) {
+    // Show in status bits if settings have been changed on module side. This will trigger master to ask for them.
+    if (settings.is_updated() && settings.is_changed()) status_bits |= MODIFIED_SETTINGS; else status_bits &= ~MODIFIED_SETTINGS;
+    
     if (message.allocate(7)) {
       message.get()[0] = mcSetStatus;
       message.get()[1] = (uint8_t) status_bits;
@@ -525,7 +559,7 @@ friend class ModuleInterfaceSet;
     if (length == 4) {
       uint32_t t;
       memcpy(&t, message, sizeof t);
-      if (t > TIME_UTC_2017) {
+      if (t > UTC_FIRST_ACCEPTED) {
         #ifdef DEBUG_PRINT
           uint32_t initial_time = get_time_utc_s();
         #endif

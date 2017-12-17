@@ -57,6 +57,7 @@ public:
     
   void update_contracts() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_contract(sampling_time_outputs); }
   void update_values() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_values(sampling_time_outputs); }
+  void update_settings() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_settings(sampling_time_settings); }
   void update_statuses() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_status(sampling_time_outputs); }
   void send_settings() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_settings(); }
   void send_inputs() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_inputs(); }
@@ -131,6 +132,9 @@ public:
       last_settings_sent = millis();
       send_settings();
     }
+
+    // Get potential modified settings from each module
+    update_settings();
     
     // Get fresh output values from each module
     update_values();

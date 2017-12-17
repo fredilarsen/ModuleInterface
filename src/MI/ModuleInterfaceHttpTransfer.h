@@ -30,16 +30,37 @@ void write_http_settings_request(const char *module_prefix, Client &client) {
   // NOTE: On ESP8266 a client.flush() seems to close the connection, so avoid it
 }
 
+template <class T> void val_to_buf(uint32_t *buf, T value) { memcpy(buf, &value, sizeof value); }
+
+bool buf_to_mvar(ModuleVariable &v, const uint32_t *value, const uint8_t size) {
+  if (v.is_changed()) {
+    // Discard changes from database if changes from module are present and not registered yet.
+    // Reset changed-flag if value from database matches the current value, meaning that the change
+    // from the module has been transported to the database and back.
+    #ifdef DEBUG_PRINT
+    Serial.print("Changed, equal="); Serial.print(v.is_equal(value, size)); Serial.print(", val="); Serial.println(*(const float*)value);   
+    #endif
+    if (v.is_equal(value, size)) v.set_changed(false);
+  } else {
+    v.set_value(value, size);
+    v.set_changed(false); // Do not set changed-flag when set from database, only in the opposite direction
+  }
+}
+
+// NOTE: The change management makes this function specific to settings.
 bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
+  uint32_t b;
   switch(v.get_type()) {
-    case mvtBoolean: v.set_value((bool) root[name]); return true;
-    case mvtUint8: v.set_value((uint8_t) root[name]); return true;
-    case mvtInt8: v.set_value((int8_t) root[name]); return true;
-    case mvtUint16: v.set_value((uint16_t) root[name]); return true;
-    case mvtInt16: v.set_value((int16_t) root[name]); return true;
-    case mvtUint32: v.set_value((uint32_t) root[name]); return true;
-    case mvtInt32: v.set_value((int32_t) root[name]); return true;
-    case mvtFloat32: v.set_value((float) root[name]); return true;
+    // NOTE: boolean is transferred as 0/1 instead of true/false to enable plotting
+    case mvtBoolean: val_to_buf(&b, (uint8_t) root[name]); 
+                     *(bool*)&b = *(uint8_t*)&b != 0; buf_to_mvar(v, &b, sizeof(bool)); return true;
+    case mvtUint8: { val_to_buf(&b, (uint8_t) root[name]); buf_to_mvar(v, &b, sizeof(uint8_t)); return true; }
+    case mvtInt8: val_to_buf(&b, (int8_t) root[name]); buf_to_mvar(v, &b, sizeof(int8_t)); return true;
+    case mvtUint16: val_to_buf(&b, (uint16_t) root[name]); buf_to_mvar(v, &b, sizeof(uint16_t)); return true;
+    case mvtInt16: val_to_buf(&b, (int16_t) root[name]); buf_to_mvar(v, &b, sizeof(int16_t)); return true;
+    case mvtUint32: val_to_buf(&b, (uint32_t) root[name]); buf_to_mvar(v, &b, sizeof(uint32_t));return true;
+    case mvtInt32: val_to_buf(&b, (int32_t) root[name]); buf_to_mvar(v, &b, sizeof(int32_t));return true;
+    case mvtFloat32: val_to_buf(&b, (float) root[name]); buf_to_mvar(v, &b, sizeof(float)); return true;
     case mvtUnknown: return false;
   }
   return false;
@@ -49,7 +70,7 @@ bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) 
   String name = name_in; // For some reason a char* will succeed but be forgotten. Probably added as a pointer in JSON enocder
   const float SYS_ZERO = -999.25; // Marker for missing value used in some proprietary systems
   switch(v.get_type()) {
-    case mvtBoolean: root[name] = v.get_bool();return true;
+    case mvtBoolean: root[name] = (uint8_t) (v.get_bool() ? 1 : 0); return true;
     case mvtUint8: root[name] = v.get_uint8(); return true;
     case mvtInt8: root[name] = v.get_int8(); return true;
     case mvtUint16: root[name] = v.get_uint16(); return true;
@@ -187,20 +208,21 @@ bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, Client &client
   return cnt > 0;
 }
 
-void post_json_to_server(Client &client, String &buf) {
+void post_json_to_server(Client &client, const String &buf, const String &request) {
 #ifdef MI_SMALLMEM
   // This is to minimize memory usage on the Arduinos
-  client.print(F("POST /set_currentvalues.php HTTP/1.0\r\n"
+  String head = String(F("POST /")) + request + String(F(" HTTP/1.0\r\n"
     "Content-Type: application/json\r\n"
     "Connection: close\r\n"
     "Content-Length: "));
+  client.print(head);
   client.println(buf.length());
   client.println();
   client.println(buf);
   client.println();
 #else
   // If we have more memory available, speed up the transfer by doing one write only
-  String s = F("POST /set_currentvalues.php HTTP/1.0\r\n"
+  String s = F("POST /") + request + F(" HTTP/1.0\r\n"
     "Content-Type: application/json\r\n"
     "Connection: close\r\n"
     "Content-Length: ") + String(buf.length())
@@ -237,6 +259,20 @@ void add_json_values(ModuleInterface *interface, JsonObject &root) {
 
   // Add status values
   add_module_status(interface, root);
+}
+
+void add_json_settings(ModuleInterface *interface, JsonObject &root) {
+  
+  if (!interface->settings.got_contract() || !interface->settings.is_updated()) return; // Values not available yet
+
+  // Add output values
+  char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
+  for (int i=0; i<interface->settings.get_num_variables(); i++) {
+    if (interface->settings.get_module_variable(i).is_changed()) {
+      interface->settings.get_module_variable(i).get_prefixed_name(interface->get_prefix(), prefixed_name, sizeof prefixed_name);
+      mv_to_json(interface->settings.get_module_variable(i), root, prefixed_name);
+    }
+  }
 }
 
 void set_scan_columns(JsonObject &root,
@@ -343,7 +379,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
     // Post JSON to web server
     int8_t code = client.connect(server, port);
     if (code == 1) { // 1=CONNECTED
-      post_json_to_server(client, buf);
+      post_json_to_server(client, buf, String(F("set_currentvalues.php")));
     }
     #ifdef DEBUG_PRINT
     else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
@@ -393,8 +429,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
     add_master_status(interfaces, root);
     
     // Add values from all modules
-    for (int i=0; i<interfaces.num_interfaces; i++)
-      add_json_values(interfaces[i], root);
+    for (int i=0; i<interfaces.num_interfaces; i++) add_json_values(interfaces[i], root);
     
     // Encode all settings to a JSON string
     root.printTo(buf);
@@ -408,7 +443,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
   // Post JSON to web server
   int8_t code = client.connect(server, port);
   if (code == 1) { // 1=CONNECTED
-    post_json_to_server(client, buf);
+    post_json_to_server(client, buf, String(F("set_currentvalues.php")));
   }
   #ifdef DEBUG_PRINT
   else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
@@ -436,3 +471,84 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
 }
 
 #endif
+
+bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client, IPAddress &server,
+                               uint8_t port = 80, uint16_t json_buffer_size = 3000) {
+  // Quick check if there is anything to do                               
+  bool changes = false;
+  for (int i=0; i<interfaces.num_interfaces; i++) changes = changes || interfaces[i]->settings.is_changed();
+  if (!changes) return false;  
+
+  int successCnt = 0;
+  #ifdef DEBUG_PRINT
+  uint32_t start_time = millis();
+  #endif
+  String buf;  
+  { // Separate block to release JSON buffer as soon as possible
+    DynamicJsonBuffer jsonBuffer(json_buffer_size);
+    JsonObject& root = jsonBuffer.createObject();
+    
+    // Add values from all modules
+    for (int i=0; i<interfaces.num_interfaces; i++) add_json_settings(interfaces[i], root);
+    
+    // Encode all settings to a JSON string
+    root.printTo(buf);
+  }
+  
+  #ifdef DEBUG_PRINT
+  Serial.println(buf);
+  Serial.print(F("REVERSE writing ")); Serial.print(buf.length()); Serial.println(F(" bytes (settings) to web server"));
+  #endif
+  if (buf.length() == 0) return false; // No changed settings
+  
+  // Post JSON to web server
+  int8_t code = client.connect(server, port);
+  if (code == 1) { // 1=CONNECTED
+    post_json_to_server(client, buf, String(F("set_settings.php")));
+  }
+  #ifdef DEBUG_PRINT
+  else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
+  #endif
+  client.stop();
+  if (code == 1) successCnt++;   
+  return successCnt > 0;
+}
+
+class MIHttpTransfer {
+  // Configuration
+  uint32_t settings_interval,
+           outputs_interval;
+  ModuleInterfaceSet &interfaces;
+  IPAddress web_server_ip;
+  
+  // State
+  uint32_t last_settings = 0, last_outputs = millis();
+  MILastScanTimes last_scan_times;
+  EthernetClient web_client;
+
+public:
+  MIHttpTransfer(ModuleInterfaceSet &module_interface_set,
+                 const IPAddress &web_server_address,
+                 const uint32_t settings_transfer_interval_ms = 10000, 
+                 const uint32_t outputs_transfer_interval_ms  = 10000) : interfaces(module_interface_set) {
+    web_server_ip = web_server_address;
+    settings_interval = settings_transfer_interval_ms;
+    outputs_interval = outputs_transfer_interval_ms;                   
+  }
+  
+  void set_web_server_address(IPAddress &server_address) { web_server_ip = server_address; }
+ 
+  void update() {
+    // Get settings for each module from the database via the web server
+    if (mi_interval_elapsed(last_settings, settings_interval)) {
+      send_settings_to_web_server(interfaces, web_client, web_server_ip);
+      get_settings_from_web_server(interfaces, web_client, web_server_ip);
+    }
+
+    // Store all measurements to the database via the web server
+    if (mi_interval_elapsed(last_outputs, outputs_interval)) {
+      // (set primary_master=false on all masters but one if there are more than one)
+      send_values_to_web_server(interfaces, web_client, web_server_ip, &last_scan_times); 
+    }    
+  }                   
+};
