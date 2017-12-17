@@ -30,7 +30,7 @@ PJONLink<GlobalUDP> link(1); // PJON device id 1
 
 // Module interfaces
 PJONModuleInterfaceSet interfaces(link, "SensMon:sm:10 LightCon:lc:20", "m1");
-MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 1000);
+MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 10000);
 
 void setup() {
   Serial.begin(115200);
