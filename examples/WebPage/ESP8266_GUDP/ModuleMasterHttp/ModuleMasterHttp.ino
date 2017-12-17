@@ -30,6 +30,7 @@ PJONLink<GlobalUDP> link(1); // PJON device id 1
 
 // Module interfaces
 PJONModuleInterfaceSet interfaces(link, "SensMon:sm:10 LightCon:lc:20", "m1");
+MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 1000);
 
 void setup() {
   Serial.begin(115200);
@@ -56,22 +57,12 @@ void setup() {
 }
 
 void loop() {
-  // Do data exchange to and from and between the modules
-  interfaces.update();
+  interfaces.update();    // Data exchange to and from and between the modules
+  http_transfer.update(); // Data exchange to and from web server    
+  flash_status_led();     // Show module status by flashing LED
+}
 
-  // Get settings for each module from the database via the web server
-  static uint32_t last_s = 0;
-  if (mi_interval_elapsed(last_s, 1000))
-    get_settings_from_web_server(interfaces, web_client, web_server_ip);
-
-  // Store all measurements to the database via the web server
-  static uint32_t last_v = millis();
-  if (mi_interval_elapsed(last_v, 10000)) {
-    static MILastScanTimes last_scan_times;
-    // (set primary_master=false on all masters but one if there are more than one)
-    send_values_to_web_server(interfaces, web_client, web_server_ip, &last_scan_times); 
-  }
-  
+void flash_status_led() {  
   // Let activity flash go to rapid if one or more modules are inactive, faster if low mem
   static uint32_t last_led_change = millis();
   uint16_t intervalms = interfaces.get_inactive_module_count() > 0 ? 300 : 1000;

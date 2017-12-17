@@ -14,20 +14,19 @@ PJONLink<SoftwareBitBang> bus(1); // PJON device id 1
 
 // Web server related
 IPAddress web_server_ip(192,1,1,143);
+EthernetClient web_client;
 
 // Ethernet configuration for this device
-const uint8_t gateway[] = { 192, 1, 1, 1 };
-const uint8_t subnet[] = { 255, 255, 255, 0 };
-const uint8_t mac[] = {0xDE, 0xCD, 0x4E, 0xEE, 0xEE, 0xED};
-const uint8_t ip[] = { 192, 1, 1, 181 };
+uint8_t gateway[] = { 192, 1, 1, 1 };
+uint8_t subnet[] = { 255, 255, 255, 0 };
+uint8_t mac[] = {0xDE, 0xCD, 0x4E, 0xEE, 0xEE, 0xED};
+uint8_t ip[] = { 192, 1, 1, 181 };
 
 // Module interfaces
 PJONModuleInterfaceSet interfaces(bus, "SensMon:sm:10 LightCon:lc:20", "m1");
-MIHttpTransfer http_transfer(interfaces, web_server_ip, 1000, 1000);
+MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 1000);
 
 void setup() {
-Serial.begin(9600);
-  
   Ethernet.begin(mac, ip, gateway, gateway, subnet);
   
   bus.bus.strategy.set_pin(7);
@@ -43,9 +42,9 @@ Serial.begin(9600);
 }
 
 void loop() {  
-  interfaces.update(); // Data exchange to and from and between the modules
+  interfaces.update();    // Data exchange to and from and between the modules
   http_transfer.update(); // Data exchange to and from web server    
-  flash_status_led(); // Show module status by flashing LED
+  flash_status_led();     // Show module status by flashing LED
 }
 
 void flash_status_led() {

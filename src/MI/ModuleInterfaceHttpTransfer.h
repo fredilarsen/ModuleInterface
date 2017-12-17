@@ -524,13 +524,15 @@ class MIHttpTransfer {
   // State
   uint32_t last_settings = 0, last_outputs = millis();
   MILastScanTimes last_scan_times;
-  EthernetClient web_client;
+  Client &client;
 
 public:
   MIHttpTransfer(ModuleInterfaceSet &module_interface_set,
+                 Client &web_client,
                  const IPAddress &web_server_address,
                  const uint32_t settings_transfer_interval_ms = 10000, 
-                 const uint32_t outputs_transfer_interval_ms  = 10000) : interfaces(module_interface_set) {
+                 const uint32_t outputs_transfer_interval_ms  = 10000) : 
+                 interfaces(module_interface_set), client(web_client) {
     web_server_ip = web_server_address;
     settings_interval = settings_transfer_interval_ms;
     outputs_interval = outputs_transfer_interval_ms;                   
@@ -541,14 +543,14 @@ public:
   void update() {
     // Get settings for each module from the database via the web server
     if (mi_interval_elapsed(last_settings, settings_interval)) {
-      send_settings_to_web_server(interfaces, web_client, web_server_ip);
-      get_settings_from_web_server(interfaces, web_client, web_server_ip);
+      send_settings_to_web_server(interfaces, client, web_server_ip);
+      get_settings_from_web_server(interfaces, client, web_server_ip);
     }
 
     // Store all measurements to the database via the web server
     if (mi_interval_elapsed(last_outputs, outputs_interval)) {
       // (set primary_master=false on all masters but one if there are more than one)
-      send_values_to_web_server(interfaces, web_client, web_server_ip, &last_scan_times); 
+      send_values_to_web_server(interfaces, client, web_server_ip, &last_scan_times); 
     }    
   }                   
 };
