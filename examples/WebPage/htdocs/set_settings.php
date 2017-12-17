@@ -8,7 +8,7 @@ if(!empty($_POST)) {
 	// database settings
 	include "db_config.php";
 	
-	$sql = "INSERT INTO settings (id, value, modified) VALUES ";
+	$sql = "INSERT INTO settings (id, value) VALUES ";
 
 	try {
 		$conn = new PDO("mysql:host=$server;dbname=$database;charset=utf8", $username, $password);
@@ -24,10 +24,10 @@ if(!empty($_POST)) {
 			{
 				// update the values
 				if ($first) $first = false;	else $sql = $sql . ",";
-				$sql = $sql . "(" . $field_id . "," . $val . ",UNIX_TIMESTAMP())";
+				$sql = $sql . "(" . $field_id . "," . $val . ")";
 			}
 		}
-		$sql = $sql . " ON DUPLICATE KEY UPDATE value = VALUES(value), modified = UNIX_TIMESTAMP();";
+		$sql = $sql . " ON DUPLICATE KEY UPDATE value = VALUES(value);";
 		
 		// Prepare statement
 		$stmt = $conn->prepare($sql);
