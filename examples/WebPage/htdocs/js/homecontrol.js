@@ -6,19 +6,27 @@ $(function(){
         var value = $(this).text() ;
 		console.log("Storing to db " + field_id + " value " + value);
         $.post('set_setting.php' , field_id + "=" + value, function(data){
-//            if(data != '')
-//			{
-//				message_status.show();
-//				message_status.text("Setting " + field_id + ", " + data);
+/*            if(data != '')
+			{
+				message_status.show();
+				message_status.text("Setting " + field_id + ", " + data);
 				//hide the message
-//				setTimeout(function(){message_status.hide()},15000);
-//			}
+				setTimeout(function(){message_status.hide()},15000);
+			}
+*/			
         });
     });
 });
 
 // This function fills values from the database into the fields
 $( document ).ready(function() {
+	updateTablesWithMeasurements();
+    updateTablesWithSettings();
+	setInterval(updateTablesWithMeasurements, 5000);
+	setInterval(updateTablesWithSettings, 5000);
+  });
+  
+  function updateTablesWithMeasurements() {
     var table_meas = $( "#hhMeasurements" );
     var table_outputs = $( "#hhOutputs" );
     var table_inputs = $( "#hhInputs" );
@@ -46,9 +54,11 @@ $( document ).ready(function() {
 	      }
 	    }      
 	  });
-	});
-
-    var table_settings = $( "#hhSettings" );
+	});	  
+  }
+  
+  function updateTablesWithSettings() {
+	var table_settings = $( "#hhSettings" );
     if (table_settings != null) {
 	  $.getJSON("get_settings.php", "hh", function ( data ) {
 		$.each( data, function( i, item ) {
@@ -61,7 +71,8 @@ $( document ).ready(function() {
 		});
 	  });
     }
-  });
+  }
+  
   // Load error handlers (for import statements)
   function handleLoad(e) {
     console.log('Loaded import: ' + e.target.href);
