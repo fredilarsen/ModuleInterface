@@ -52,7 +52,7 @@ byte ip[] = { 192, 1, 1, 180 };
 PJONModuleInterfaceSet interfaces(bus, "Blink:b1:4", "m1");
 // TODO: This could even be retrieved from the web server at startup, to make it possible to
 // configure and activate new modules in a web page :-)
-
+MIHttpTransfer http_transfer(interfaces, web_client, web_server);
 
 void setup() {
   Ethernet.begin(mac, ip, gateway, gateway, subnet);
@@ -62,33 +62,18 @@ void setup() {
 
   bus.bus.strategy.set_pin(7);
   bus.bus.begin();
-  interfaces.set_receiver(receive_function);
 
-  pinMode(13, OUTPUT);
-  digitalWrite(13, LOW);  
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);  
 }
 
-
 void loop() {
-  // Do data exchange to and from and between the modules
-  interfaces.update();
-  
-  // Get settings for each module from the database via the web server
-  static uint32_t last_s = 0;
-  if (millis() - last_s >= 10000) {
-    last_s = millis();
-    get_settings_from_web_server(interfaces, web_client, web_server);
-  }
-  
-  // Store all measurements to the database via the web server
-  static uint32_t last_v = millis();
-  if (millis() - last_v >= 10000) {
-    last_v = millis();
-    static MILastScanTimes last_scan_times;
-    // (set primary_master=false on all masters but one if there are more than one)
-    send_values_to_web_server(interfaces, web_client, web_server, &last_scan_times); 
-  }
-  
+  interfaces.update();    // Data exchange to and from and between the modules
+  http_transfer.update(); // Data exchange to and from web server    
+  flash_status_led();     // Show module status by flashing LED
+}
+
+void flash_status_led() {  
   // Let activity flash go to rapid if one or more modules are inactive, faster if low mem
   static uint32_t last_led_change = millis();
   uint16_t intervalms = interfaces.get_inactive_module_count() > 0 ? 300 : 1000;
@@ -96,20 +81,11 @@ void loop() {
   if (millis() - last_led_change >= intervalms) {
     last_led_change = millis();
     static bool led_on = false;
-    digitalWrite(13, led_on ? HIGH : LOW);
+    digitalWrite(LED_BUILTIN, led_on ? HIGH : LOW);
     led_on = !led_on;
   }
 }
 
-
-void receive_function(const uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info, const ModuleInterface *module_interface){
-  // Handle specialized messages to this module
-  Serial.print(F("NON-ModuleInterface message from "));
-  Serial.print(module_interface ? module_interface->module_name : "unregistered device");
-  Serial.print(", len "); Serial.print(length); Serial.print(":");
-  for (int i=0; i<length; i++) { Serial.print(payload[i]); Serial.print(" "); }
-  Serial.println();
-}
 
 
 
