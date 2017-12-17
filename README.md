@@ -19,8 +19,8 @@ This library has the following focus:
 
 #### Features
 - Transport of values (measured and calculated) between modules according to their contracts
-- Transport of settings to modules from master
-- HTTP client lets the master transfer settings between a database and the modules, for configuration in web pages
+- Transport of settings between master and modules in both directions.
+- HTTP client lets the master transfer settings between a database and the modules, for configuration in web pages and/or in the modules themselves.
 - HTTP client lets the master save output values from the modules into a database, for time series trending and inspection in web pages
 - Optional persistence lets each module remember its last received settings at startup, for autonomous operation even if it has been disconnected from the master
 - Coarse clock synchronization of all modules (within a few seconds)
@@ -32,7 +32,7 @@ Each module does not know about any other device. The master contacts each modul
 
 Output values from one module will be delivered to all other modules that have an input value with the same name.
 
-Depending on the type of master used, the settings for all modules can be configured on a GUI (LCD+buttons or similar) belonging to the master, and/or retrieved from a database using the HTTP client. The settings in the database are then typically displayed and modified from web pages.
+Depending on the type of master used, the settings for all modules can be configured on a GUI (LCD+buttons or similar) belonging to the master or the modules, and/or retrieved from a database using the HTTP client. The settings in the database are then typically displayed and modified from web pages.
 
 When polling for settings from the database, the time from the database server is also retrieved, and distributed to modules as a coarse clock synchronization.
 

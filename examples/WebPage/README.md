@@ -6,7 +6,7 @@ A "module" is simply a device like Arduino Nano equipped with necessary equipmen
 ### Components
 1. A SensorMonitor module, for example running on an Arduino Uno or Nano. This module simply reads a light sensor and reports it to the master.
 2. A LightController module, for example running on an Arduino Uno or Nano. This module subscribes to the light sensor reading from the SensorMonitor, and gets settings like time interval and light limit from the Master for controlling the light. In this example it only controls the on-board LED. It reports the current light state (or or off) to the master.
-3. A ModuleMasterHttp module running on an Arduino Mega (because of memory requirements) with an Ethernet shield. This will transfer settings from the database and outputs to the database using JSON and HTTP requests.
+3. A ModuleMasterHttp module running on an Arduino Mega (because of memory requirements) with an Ethernet shield. This will transfer settings to and from the database and outputs to the database using JSON and HTTP requests.
 4. A computer with a LAMP/WAMP setup. For example ![XAMPP](https://www.apachefriends.org/download.html) or ![WampServer](http://www.wampserver.com/en/).
 
 There are two sets of modules available in this example, in the ARDUINO_SWBB and ESP8266_GUDP directories. You should run one set at a time, unless you change one of the masters to avoid conflict of IP, master prefix and module prefixes. Running multiple setups or a mixed setup is possible, but keep it simple to start with.
@@ -33,7 +33,8 @@ This is how it will look when viewed on a narrow screen like a mobile phone:
 Program a device with the SensorMonitor sketch. Connect the analog pin of a light sensor to pin A0 (plus ground and voltage to sensor, of course). Connect pin 7 to the PJON bus on pin 7 of the master. Connect device ground to ground on the master.
 
 ### Configuration of LightController
-Program a device with the LightController sketch. Connect pin 7 to the PJON bus on pin 7 of the master. Connect device ground to ground on the master.
+Program a device with the LightController sketch. Connect pin 7 to the PJON bus on pin 7 of the master. Connect device ground to ground on the master. If you want to test setting the controller mode with a local control and not only from the web page,
+add a temporary push button between pin 4 and ground.
 
 ### Configuration of ModuleMasterHttp
  The master must have a correct network configuration for the network to which it is connected. This includes:
@@ -65,7 +66,9 @@ When all is up and running, check this:
 1, Are values updated in the currentvalues table?
 2. Are new rows being created in the timeseries table? You can inspect the table with HeidiSQL or phpMyAdmin.
 3. Are you getting the values shown in the plot in the web page?
-4. Can you change the LightController mode (on/off/auto) and see the on-board LED reflect this after maximum 10 seconds?
+4. Can you change the LightController mode (on/off/auto) and see the on-board LED reflect this after a few seconds?
+5. Can you push the mode switch button of the LightController module and see this reflected in the on-board LED,
+and also see it updated in the web page after some seconds? (The web page updates values every 5 seconds.)
 
 ### Debugging
 If it does not work right away, you can try the following steps.
