@@ -5,16 +5,24 @@ $(function(){
         var field_id = $(this).attr("id");
         var value = $(this).text() ;
 		console.log("Storing to db " + field_id + " value " + value);
+		$(this).removeClass("userEditing");
         $.post('set_setting.php' , field_id + "=" + value, function(data){
-/*            if(data != '')
-			{
-				message_status.show();
-				message_status.text("Setting " + field_id + ", " + data);
+
+//            if(data != '')
+//			{
+//				message_status.show();
+//				message_status.text("Setting " + field_id + ", " + data);
 				//hide the message
-				setTimeout(function(){message_status.hide()},15000);
-			}
-*/			
+//				setTimeout(function(){message_status.hide()},15000);
+//			}
         });
+    });
+});
+
+// This function marks editable fields when focused	
+$(function(){
+    $("td[contenteditable=true]").focus(function(){
+		$(this).addClass("userEditing");
     });
 });
 
@@ -63,7 +71,7 @@ $( document ).ready(function() {
 	  $.getJSON("get_settings.php", "hh", function ( data ) {
 		$.each( data, function( i, item ) {
 			var cell = table_settings.find('[id="' + i + '"]');
-			if (cell.length > 0) {
+			if (cell.length > 0 && !cell.hasClass("userEditing")) { // Do not change if user is editing
 	//		    console.log("Setting i=" + i + ", item=" + item);
 			  cell.text(item);
 			  postValueChangeAction(i, cell);
