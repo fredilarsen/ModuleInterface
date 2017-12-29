@@ -20,11 +20,11 @@
 #define MI_SEND_TIMEOUT 5000000       // (us) How long to wait for an active device to PJON_ACK
 #define MI_REDUCED_SEND_TIMEOUT 10000 // (us) How long to try to contact a module that is marked as inactive
 
-// A status bit for the PJON extended header byte, used to quickly separate ModuleInterface related messages from others
-#define MI_PJON_BIT PJON_SESSION_BIT
+// The well-known PJON port number for ModuleInterface packets, used to quickly separate ModuleInterface related messages from others
+#define MI_PJON_MODULE_INTERFACE_PORT 100
 
 class PJONModuleInterface : public ModuleInterface {
-friend class PJONModuleInterfaceSet;  
+friend class PJONModuleInterfaceSet;
 protected:
   Link *pjon = NULL;
   #ifdef IS_MASTER
@@ -32,14 +32,13 @@ protected:
   uint8_t remote_bus_id[4];
   uint32_t status_requested_time = 0;
   #else
-  static PJONModuleInterface *singleton;
-  void set_link(Link &pjon) { this->pjon = &pjon; singleton = this; pjon.set_receiver(default_receiver_function); }
+  void set_link(Link &pjon) { this->pjon = &pjon; pjon.set_receiver(default_receiver_function, this); }
   #endif
 public:
   // Constructors for Master side
   #ifdef IS_MASTER
   PJONModuleInterface() { init(); }
-  PJONModuleInterface(const char *module_name_prefix_and_address) { 
+  PJONModuleInterface(const char *module_name_prefix_and_address) {
     init();
     set_name_prefix_and_address(module_name_prefix_and_address);
   }
@@ -50,7 +49,7 @@ public:
   #endif
 
   // Constructors for Module side
-  #ifndef IS_MASTER  
+  #ifndef IS_MASTER
   #ifdef MI_NO_DYNAMIC_MEM
   PJONModuleInterface(const char *module_name, Link &pjon,
     const uint8_t num_settings, ModuleVariable *setting_variables, const char *settingnames, // This string must be PROGMEM
@@ -74,22 +73,22 @@ public:
     set_link(pjon);
   }
   #else
-  PJONModuleInterface(const char *module_name, Link &pjon, 
+  PJONModuleInterface(const char *module_name, Link &pjon,
                       const char *settingnames, const char *inputnames, const char *outputnames) :
     ModuleInterface(module_name, settingnames, inputnames, outputnames) {
     set_link(pjon);
   }
-  PJONModuleInterface(const char *module_name, Link &pjon, 
+  PJONModuleInterface(const char *module_name, Link &pjon,
                       bool use_progmem, // Required to be true, just used to distinguish this function from the standard
                       const char * settingnames, const char *inputnames, const char *outputnames) :  // These strings must be PROGMEM
     ModuleInterface(module_name, use_progmem, settingnames, inputnames, outputnames) {
     set_link(pjon);
   }
-  PJONModuleInterface(const char *module_name, Link &pjon, 
+  PJONModuleInterface(const char *module_name, Link &pjon,
                       MVS_getContractChar settingnames, MVS_getContractChar inputnames, MVS_getContractChar outputnames) :
     ModuleInterface(module_name, settingnames, inputnames, outputnames) {
     set_link(pjon);
-  }  
+  }
   // This constructor is available only because the F() macro can only be used in a function.
   // So if RAM is tight, use this constructor and call set_contracts from setup()
   PJONModuleInterface(Link &pjon, const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) :
@@ -98,8 +97,6 @@ public:
   }
   #endif
   PJONModuleInterface(Link &pjon) : ModuleInterface() { set_link(pjon); }
-  
-  static PJONModuleInterface *get_singleton() { return singleton; }
 
   void update() {
     // Listen for packets for 1ms
@@ -111,18 +108,18 @@ public:
     // If user sketch is posting packets to be sent, send them
     pjon->update();
   }
-  #endif 
-  
+  #endif
+
   void init() {
-    ModuleInterface::init();    
+    ModuleInterface::init();
     #ifdef IS_MASTER
     memset(remote_bus_id, 0, 4);
     #endif
   }
 
   void set_bus(Link &bus) { pjon = &bus; }
-      
-  #ifdef IS_MASTER  
+
+  #ifdef IS_MASTER
   void set_remote_device(Link &pjon, uint8_t remote_id, uint8_t remote_bus_id[]) {
     this->pjon = &pjon; this->remote_id = remote_id; memcpy(this->remote_bus_id, remote_bus_id, 4);
   }
@@ -130,7 +127,7 @@ public:
   void set_name_prefix_and_address(const char *name_and_address) { // Format like "device1:d1:44" or "device1:d1:44:0.0.0.1"
     // Split input string into name, device id and bus id
     const char *end = strchr(name_and_address, ' ');
-    if (!end) end = name_and_address + strlen(name_and_address);           
+    if (!end) end = name_and_address + strlen(name_and_address);
     uint8_t len = end - name_and_address;
     char *buf = new char[len + 1];
     if (buf == NULL) { ModuleVariableSet::out_of_memory = true; return; }
@@ -140,11 +137,11 @@ public:
     char *p2 = p1 != NULL ? strchr(p1 + 1, ':') : NULL;
     if (p2) { *p2 = 0; p2++; } // p2 now pointing to device id
     char *p3 = p2 != NULL ? strchr(p2 + 1, ':') : NULL;
-    if (p3) { *p3 = 0; p3++; } // p3 now pointing to bus id        
+    if (p3) { *p3 = 0; p3++; } // p3 now pointing to bus id
     // Set the values
     set_name(buf);
     if (p1) set_prefix(p1);
-    if (p2) remote_id = atoi(p2); 
+    if (p2) remote_id = atoi(p2);
     if (p3) {
       for (int i=0; i<4; i++) {
         remote_bus_id[i] = atoi(p3);
@@ -155,7 +152,7 @@ public:
     }
     delete buf;
   }
-   
+
    // This function will wait up to the given timeout for a packet of the given type to arrive.
    // Other packet types may be received and handled but will not cause this function to return.
   uint16_t receive_packet(uint32_t timeout, ModuleCommand cmd) {
@@ -167,8 +164,8 @@ public:
       if ((status == PJON_ACK || status == PJON_NAK) && cmd == last_incoming_cmd) break;
     } while (timeout > (uint32_t)(micros()-start));
     return status;
-  }    
-    
+  }
+
   void update_contract(const uint32_t interval_ms) {
     if (!settings.got_contract() && (settings.contract_requested_time == 0 || ((uint32_t)(millis()-settings.contract_requested_time) >= interval_ms))) {
       if (send_setting_contract_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetSettingContract); else pjon->receive();
@@ -178,11 +175,11 @@ public:
     }
     if (!outputs.got_contract() && (outputs.contract_requested_time == 0 || ((uint32_t)(millis()-outputs.contract_requested_time) >= interval_ms))) {
       if (send_output_contract_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetOutputContract);  else pjon->receive();
-    }    
+    }
   }
-  
+
   void update_values(const uint32_t interval_ms) {
-    if (outputs.got_contract() && outputs.get_num_variables() != 0 && 
+    if (outputs.got_contract() && outputs.get_num_variables() != 0 &&
       (outputs.requested_time == 0 || ((uint32_t)(millis()-outputs.requested_time) >= interval_ms))) {
       if (send_outputs_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetOutputs); else pjon->receive();
     }
@@ -190,7 +187,7 @@ public:
 
   void update_settings(const uint32_t interval_ms) {
     if (((status_bits & MODIFIED_SETTINGS) != 0) && settings.got_contract() && settings.get_num_variables() != 0 &&
-      (settings.requested_time == 0 || ((uint32_t)(millis()-settings.requested_time) >= interval_ms))) {    
+      (settings.requested_time == 0 || ((uint32_t)(millis()-settings.requested_time) >= interval_ms))) {
       if (send_settings_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetSettings); else pjon->receive();
     }
   }
@@ -200,7 +197,7 @@ public:
       if (send_status_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetStatus); else pjon->receive();
     }
   }
-  
+
   // Sending of data from master to remote module
   void send_settings() {
     #ifdef DEBUG_PRINT
@@ -212,12 +209,12 @@ public:
     notify(ntSampleSettings, this);
     BinaryBuffer response;
     uint8_t response_length = 0;
-    settings.get_values(response, response_length, mcSetSettings);    
+    settings.get_values(response, response_length, mcSetSettings);
     send(remote_id, remote_bus_id, response.get(), response_length);
     status_bits &= ~MISSING_SETTINGS; // Assume they were received until next status saying they were not
   }
-  
-  void send_inputs() { 
+
+  void send_inputs() {
     #ifdef DEBUG_PRINT
     if (inputs.got_contract() && !inputs.is_updated() && inputs.get_num_variables()>0) {
       dname(); Serial.println(F("Inputs not sent because not updated yet."));
@@ -228,15 +225,15 @@ public:
     BinaryBuffer response;
     uint8_t response_length = 0;
     inputs.get_values(response, response_length, mcSetInputs);
-    send(remote_id, remote_bus_id, response.get(), response_length); 
+    send(remote_id, remote_bus_id, response.get(), response_length);
     status_bits &= ~MISSING_INPUTS; // Assume they were received until next status saying they were not
   }
-    
-  // Sending of requests  
+
+  // Sending of requests
   bool send_cmd(const uint8_t &value) {
     #ifdef DEBUG_PRINT
     dname(); Serial.print(F("SENT REQUEST ")); Serial.println(value);
-    #endif 
+    #endif
     return send(remote_id, remote_bus_id, &value, 1);
   }
   bool send_request(const uint8_t &value, uint32_t &requested_time) {
@@ -252,26 +249,25 @@ public:
   bool send_outputs_request() { return send_request(mcSendOutputs, outputs.requested_time); }
   bool send_status_request() { return send_request(mcSendStatus, status_requested_time); }
   #endif // IS_MASTER
-  
+
   bool send(uint8_t remote_id, const uint8_t *remote_bus, const uint8_t *message, uint16_t length) {
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-    dname(); Serial.print("S "); Serial.print(remote_id); Serial.print(" len "); Serial.print(length); 
+    dname(); Serial.print("S "); Serial.print(remote_id); Serial.print(" len "); Serial.print(length);
     Serial.print(" cmd "); Serial.print(message[0]); Serial.print(" active "); Serial.println(is_active());
-    #endif  
-    uint16_t status = pjon->send_packet(remote_id, remote_bus, (const char*)message, length, 
-      is_active() ? MI_SEND_TIMEOUT : MI_REDUCED_SEND_TIMEOUT, 
-      pjon->get_header() | MI_PJON_BIT | PJON_EXT_HEAD_BIT);
-      
+    #endif
+    uint16_t status = pjon->send_packet(remote_id, remote_bus, (const char*)message, length,
+      is_active() ? MI_SEND_TIMEOUT : MI_REDUCED_SEND_TIMEOUT);
+
     #ifdef DEBUG_PRINT
     if (status != PJON_ACK) { dname(); Serial.println(F("----> Failed sending.")); }
-    #endif    
+    #endif
     #ifdef IS_MASTER
     if (status == PJON_ACK) {
       //last_alive = millis();  // Disabled so that reply from extender does not flag module as alive
       // comm_failures = 0; // Disabled so that reply from extender does not flag module as alive
     } else if (comm_failures < 255) comm_failures++;
     #endif
-      
+
     return status == PJON_ACK;
   }
 
@@ -282,7 +278,7 @@ public:
       if (response.is_empty()) {
         #ifdef DEBUG_PRINT
         dname(); Serial.print(F("Out of memory replying to cmd ")); Serial.println(payload[0]);
-        #endif            
+        #endif
         return false;
       }
       // Send an unbuffered reply
@@ -290,14 +286,15 @@ public:
     }
     return false;
   }
-  
+
   bool handle_message(const uint8_t *payload, const uint16_t length, const PJON_Packet_Info &packet_info) {
-    // Handle only packets marked with the MI bit
-    if (!((packet_info.header & PJON_EXT_HEAD_BIT) && (packet_info.header & MI_PJON_BIT))) return false; // Message not meant for ModuleInterface use
-    
+    // Handle only packets marked with the MI port
+    if (!((packet_info.header & PJON_PORT_BIT) &&
+      (packet_info.port == MI_PJON_MODULE_INTERFACE_PORT))) return false; // Message not meant for ModuleInterface use
+
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-    dname(); Serial.print(F("R len ")); Serial.print(length); Serial.print(F(" cmd ")); Serial.println(payload[0]);   
-    #endif  
+    dname(); Serial.print(F("R len ")); Serial.print(length); Serial.print(F(" cmd ")); Serial.println(payload[0]);
+    #endif
     if (handle_input_message(payload, (uint8_t) length)) {
       #ifdef IS_MASTER
       last_alive = millis();
@@ -308,16 +305,16 @@ public:
     }
     if (handle_request_message(payload, (uint8_t) length)) {
       #ifdef IS_MASTER
-      last_alive = millis(); 
+      last_alive = millis();
       comm_failures = 0;
       if (length > 0) last_incoming_cmd = (ModuleCommand) payload[0];
       #endif
       return true;
-    }   
+    }
     return false;
   }
-  
-  #ifdef IS_MASTER  
+
+  #ifdef IS_MASTER
   // If any input is flagged as an event, send it immediately to the module from master
   void send_input_events() {
     BinaryBuffer response;
@@ -325,38 +322,35 @@ public:
     inputs.get_values(response, response_length, mcSetInputs, true);
     if (response_length > 0) {
       #ifdef DEBUG_PRINT
-      dname(); Serial.print("send_input_events, length "); Serial.print(response_length); Serial.print(", module id "); 
+      dname(); Serial.print("send_input_events, length "); Serial.print(response_length); Serial.print(", module id ");
       Serial.println(remote_id);
       #endif
       if (send(remote_id, remote_bus_id, response.get(), response_length)) inputs.clear_events();
     }
   }
   #endif
-  
-  #ifndef IS_MASTER  
+
+  #ifndef IS_MASTER
   // If any output is flagged as an event, send it immediately to the master (breaking the master-slave pattern)
-  void send_output_events() {    
+  void send_output_events() {
     BinaryBuffer response;
     uint8_t response_length;
     outputs.get_values(response, response_length, mcSetOutputs, true);
     // TODO: Do not assume that the latest packet is from master!
     if (response_length > 0 && pjon->get_last_packet_info().sender_id != PJON_NOT_ASSIGNED && pjon->get_last_packet_info().sender_id != 0) {
       #ifdef DEBUG_PRINT
-      dname(); Serial.print("send_output_events, length "); Serial.print(response_length); Serial.print(", master id "); 
+      dname(); Serial.print("send_output_events, length "); Serial.print(response_length); Serial.print(", master id ");
       Serial.println(pjon->get_last_packet_info().sender_id);
       #endif
       if (send(pjon->get_last_packet_info().sender_id, pjon->get_last_packet_info().sender_bus_id, response.get(), response_length))
         outputs.clear_events();
     }
   }
-  
+
   // Make sure that the user does not have to register a receiver callback function for things to work
   static void default_receiver_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info) {
-    get_singleton()->handle_message(payload, length, packet_info);
+    if (packet_info.custom_pointer)
+      ((PJONModuleInterface*) packet_info.custom_pointer)->handle_message(payload, length, packet_info);
   }
-  #endif  
+  #endif
 };
-
-#ifndef IS_MASTER
-PJONModuleInterface *PJONModuleInterface::singleton = NULL;
-#endif
