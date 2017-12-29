@@ -1,7 +1,7 @@
-**Please note that compatibility with PJON v10.0 has not been added yet. So please use PJON v9.1 or v8.2 for now. A new version compatible with PJON v10.0 is in progress.**
+**Please note that master now requires PJON v10.0 or PJON master from 2017-12-29 or later. A new version 2.0 is soon to be released.**
 
-## ModuleInterface v1.3
-ModuleInterface is an Arduino compatible library for automatic transfer of settings and values between devices, with very little programming needed for each device. It has been tested with PJON v8.2 and v9.1.
+## ModuleInterface v2.0
+ModuleInterface is an Arduino compatible library for automatic transfer of settings and values between devices, with very little programming needed for each device. Version 2.0 has been tested with PJON v10.0, please use v1.3 for PJON v9.1 or v8.2.
 
 This is ideal for quickly creating a master-slave based collection of devices (modules) doing things like measuring temperatures and other sensors, turning things on and off, regulating heating and so on. With synchronization between the modules, and between the modules and a database if using the HTTP client that is available for the master module.
 

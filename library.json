@@ -6,7 +6,7 @@
   "authors":
   {
     "name": "Fred Larsen",
-    "email": "fredilarsen@hotmail.com",
+    "email": "fredilarsen+github@hotmail.com",
     "maintainer": true
   },
   "repository":
@@ -14,15 +14,15 @@
     "type": "git",
     "url": "https://github.com/fredilarsen/ModuleInterface.git"
   },
-  "version": "1.3.0",
+  "version": "2.0.0",
   "examples": [
-    "examples/*/*.ino", 
+    "examples/*/*.ino",
     "examples/*/*/*.ino",
     "examples/*/*/*/*.ino"
     ],
   "frameworks": "arduino",
   "dependencies": {
-      "PJON" : "~8.2.0,~9.1.0",
+      "PJON" : "~10.0.0",
       "ArduinoJson" : ">=5.0.0"
   },
   "platforms":
