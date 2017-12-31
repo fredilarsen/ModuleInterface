@@ -119,7 +119,7 @@
 	
 	var randomScalingFactor = function(){ return Math.round(Math.random()*100)};
 	
-	$.getJSON("get_settings.php", "wpix", function ( data ) {
+	$.getJSON("get_settings.php?prefix=wpix", function ( data ) {
 	     var v = data["wpixResolution"];
 		 resolutionList.value = v;
 	});	
@@ -188,7 +188,7 @@
     }
 
 	function setSelectedResolution() {
-	  $.getJSON("get_settings.php", "wpix", function ( data ) {
+	  $.getJSON("get_settings.php?prefix=wpix", function ( data ) {
 		 resolutionList.value = data["wpixResolution"];
 		 getTrendData();
 	  });

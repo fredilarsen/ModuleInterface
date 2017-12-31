@@ -101,7 +101,7 @@ function updateModeInfo() {
 
 function postValueChangeAction(id, cell) {
   if (id == 'lcMode') { highlightModeTabFromSelectedMode(); updateModeInfo(); }
-  if (id == 'lcTEndM') updateOffTimeInfo();
+  else if (id == 'lcTEndM') updateOffTimeInfo();
   else if (id == 'lcTStartM') updateOnTimeInfo();
 };
 
