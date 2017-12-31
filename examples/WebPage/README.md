@@ -7,7 +7,7 @@ A "module" is simply a device like Arduino Nano equipped with necessary equipmen
 1. A SensorMonitor module, for example running on an Arduino Uno or Nano. This module simply reads a light sensor and reports it to the master.
 2. A LightController module, for example running on an Arduino Uno or Nano. This module subscribes to the light sensor reading from the SensorMonitor, and gets settings like time interval and light limit from the Master for controlling the light. In this example it only controls the on-board LED. It reports the current light state (or or off) to the master.
 3. A ModuleMasterHttp module running on an Arduino Mega (because of memory requirements) with an Ethernet shield. This will transfer settings to and from the database and outputs to the database using JSON and HTTP requests.
-4. A computer with a LAMP/WAMP setup. For example ![XAMPP](https://www.apachefriends.org/download.html) or ![WampServer](http://www.wampserver.com/en/).
+4. A computer with a LAMP or WAMP setup. For example by following a tutorial like ![this](https://www.digitalocean.com/community/tutorials/how-to-install-linux-apache-mysql-php-lamp-stack-on-ubuntu-16-04) for Linux, or using  a distro like ![XAMPP](https://www.apachefriends.org/download.html) or ![WampServer](http://www.wampserver.com/en/) for Windows.
 
 There are two sets of modules available in this example, in the ARDUINO_SWBB and ESP8266_GUDP directories. You should run one set at a time, unless you change one of the masters to avoid conflict of IP, master prefix and module prefixes. Running multiple setups or a mixed setup is possible, but keep it simple to start with.
 
@@ -50,7 +50,7 @@ After modifying the network and IP addresses in the ModuleMasterHttp sketch, pro
 Then add an Ethernet shield to the Mega, connect a CAT5 cable between the shield and your network switch or router, then power on.
 
 ### Installation of web server and database
-Run the XAMPP or WampServer installation package.
+Follow the recipe, or run the XAMPP or WampServer installation package. If you want a stable and uninterrupted system, use Linux or a server version of Windows to avoid the frequent updates and reboots of the desktop versions of Windows.
 
 ### Configuration of database
 1. Start Apache and MySQL/MariaDb and open the phpMyAdmin page. Or use a similar tool, like HeidiSQL if you want to keep your htdocs directory clean from other stuff. If you use the XAMPP distro, you can start phpMyAdmin by opening ```http://localhost/applications.html``` in the browser and clicking phpMyAdmin on the top right.
@@ -58,8 +58,8 @@ Run the XAMPP or WampServer installation package.
 3. You now have the home_control database running. Data should be updated in the currentvalues table after a short while, and you can inspect this (in phpMyAdmin by clicking on the table name to refresh the data).
 
 ### Configuration of web server
-1. The files from the "htdocs" folder are copied into the "C:/xampp/htdocs" folder (depending on installation). Unfortunately, XAMPP has a lot of files present here to supply phpMyAdmin etc, so it will be a mix. Some Other WAMP/LAMP distros keep the htdocs directory empty and supply database management tools like the native program HeidiSQL.
-2. The db_config.php file edited to contain the selected database name, user name and password. Initially the password will be empty, so get it working before setting a password.
+1. The files from the "htdocs" folder are copied into the "C:/xampp/htdocs" folder (depending on installation). Unfortunately, XAMPP has a lot of files present here to supply phpMyAdmin etc, so it will be a mix. Some Other WAMP/LAMP distros keep the htdocs directory empty and supply database management tools like the native program HeidiSQL. A LAMP setup on Linux may use /var/www/html, so this is where you should put the files in this case.
+2. The db_config.php file edited to contain the selected database name, user name and password. Initially the password will be empty, so get it working before setting a password (unless you did set a password during installation).
 
 ### Testing
 When all is up and running, check this:
