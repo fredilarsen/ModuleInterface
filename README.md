@@ -32,15 +32,15 @@ Each module does not know about any other device. The master contacts each modul
 
 Output values from one module will be delivered to all other modules that have an input value with the same name.
 
-Depending on the type of master used, the settings for all modules can be configured on a GUI (LCD+buttons or similar) belonging to the master or the modules, and/or retrieved from a database using the HTTP client. The settings in the database are then typically displayed and modified from web pages.
+Depending on the type of master used, the settings for all modules can be configured on a GUI (LCD+buttons or similar) belonging to the master or the modules, and/or retrieved from a database using the HTTP client. The settings in the database are then typically displayed in and modified from web pages.
 
-When polling for settings from the database, the time from the database server is also retrieved, and distributed to modules as a coarse clock synchronization.
+When polling for settings from the database, the time from the database server is also retrieved, and distributed to modules as a coarse clock synchronization. This allows for modules to perform schedule based actions, working autonomously and therefore not depending on the master to be continuously available.
 
 The optional persistence functionality lets new settings be kept and automatically updated in EEPROOM for each module. Each module can the start in its previous state immediately, before gaining contact with the master. So each module can continue working after a restart even if the master or network is down.
 
 The ModuleInterface library consists of a collection of classes, and some files with functions for functionality like EEPROM based persistence and master HTTP transfer. The basic classes are ModuleVariable (keeping one setting or input or output value), ModuleVariableSet (keeping a set of settings or input or output values), ModuleInterface (keeping settings, input values, output values and functionality for a module), ModuleInterfaceSet (in the master -- a collection of ModuleInterface objects that are kept synchronized with the modules).
 
-The ModuleInterface code in a master typically uses more storage space and RAM than within a module. It is still fine to run on an Arduino Uno or Nano, but when adding the HTTP client (and implicitly the large required Ethernet and ArduinoJson libraries), it is necessary to step up to an Arduino Mega or similar for the master.
+The ModuleInterface code in a master typically uses more storage space and RAM than within a module. It is still fine to run on an Arduino Uno or Nano, but when adding the HTTP client (and implicitly the large required Ethernet and ArduinoJson libraries), it is necessary to step up to an Arduino Mega or similar for the master. An ESP8266 based setup is also an alternative.
 
 Also read the [design principles](documentation/README.md) document.
 
