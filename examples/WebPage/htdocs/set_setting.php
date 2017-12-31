@@ -1,6 +1,6 @@
 <?php
 // Insert or update the supplied JSON name:value pair in the settings table.
-if(!empty($_POST))
+if(isset($_POST))
 {
 	// Database settings
 	include "db_config.php";
@@ -10,7 +10,7 @@ if(!empty($_POST))
 		// Clean post values
 		$conn = new PDO("mysql:host=$server;dbname=$database;charset=utf8", $username, $password);
 		$field_id = strip_tags(trim($field_name));
-		$val = strip_tags(trim($val));
+		if (isset($val)) $val = strip_tags(trim($val));
 
 		if(!empty($field_id) && isset($val) && $val != "")
 		{
@@ -32,8 +32,6 @@ if(!empty($_POST))
 			{
 				echo $sql . "<br>" . $e->getMessage();
 			}
-
-			$conn = null;
 		} else {
 			echo "Invalid Requests";
 		}
