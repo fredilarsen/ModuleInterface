@@ -1,86 +1,80 @@
-<!DOCTYPE html>
-<head>
-<link rel="import" href="homecontrol_head.html">
-</head>
-<body>
-  <script>insertElementHere('.navbar');insertNavBarHere('.navbar-collapse', 'SensorMonitor');</script>
-  <div id="main-wrapper">
-    <div class="template-page-wrapper">
-      <div class="templatemo-content-wrapper">
-        <div class="templatemo-content">
-          <ol class="breadcrumb">
-		    <li>Trend</li>
-            <li><a href="#Outputs">Outputs</a></li>
-          </ol>
-          <h1>Sensor monitor</h1>
-          <p>Inspect the sensor monitoring module.</p>
-		  <div class="templatemo-panels">
- 		    <div class="row">
-		  	  <div class="panel panel-info">
-                <div class="panel-heading">Trend</div>
-                <div class="panel-body">
-				<div id="trendrow" style="width:100%; height: 400px">
-		</div>
-	  </div>
-	</div>
-  </div>
-</div>
+<script>highlightPage('SensorMonitor');</script>
+<div id="main-wrapper">
+  <div class="template-page-wrapper">
+    <div class="templatemo-content-wrapper">
+      <div class="templatemo-content">
+        <ol class="breadcrumb">
+          <li>Trend</li>
+          <li><a href="#Outputs">Outputs</a></li>
+        </ol>
+        <h1>Sensor monitor</h1>
+        <p>Inspect the sensor monitoring module.</p>
+        <div class="templatemo-panels">
+          <div class="row">
+            <div class="panel panel-info">
+              <div class="panel-heading">Trend</div>
+              <div class="panel-body">
+                <div id="trendrow" style="width:100%; height: 400px">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <script src="js/d3.min.js"></script>
+        <script src="js/dygraph.min.js"></script>
+        <script>
+          function postValueChangeAction(id, cell) {};
 
-<script src="js/d3.min.js"></script>		
-<script src="js/dygraph.min.js"></script>						
-<script>
-function postValueChangeAction(id, cell) {
-};
+          // Trigger on settings change
+          $(function() {
+            $("td[contenteditable=true]").blur(function() {
+              var field_id = $(this).attr("id");
+              postValueChangeAction(field_id, $(this));
+            });
+          });
 
-// Trigger on settings change
-$(function(){
-    $("td[contenteditable=true]").blur(function(){
-        var field_id = $(this).attr("id");
-		postValueChangeAction(field_id, $(this));
-    });
-});
+          $(document).ready(function() {
+            d3.json('get_plotdata.php?resolution=scan1m&maxvalues=10000&tags=smLight,smLightLP', function(jsondata) {
+              var t = new Date();
+              plotdata = [];
 
-$(document).ready(function () {
-  d3.json('get_plotdata.php?resolution=scan1m&maxvalues=10000&tags=smLight,smLightLP', function(jsondata) {
-    var t = new Date();
-	plotdata = [];
-	  
-	// We need to format the data a bit
-	var dateFormatIn = d3.time.format('%Y-%m-%d %H:%M:%S');
-    var numberFormat = d3.format('.2f');
+              // We need to format the data a bit
+              var dateFormatIn = d3.time.format('%Y-%m-%d %H:%M:%S');
+              var numberFormat = d3.format('.2f');
 
-    jsondata.forEach(function (d) {
-	   plotdata.push([new Date(dateFormatIn.parse(d.time)), d.smLight, d.smLightLP]);
-    });
-	
-    g = new Dygraph(
-	  document.getElementById("trendrow"),
-	  plotdata,
-	  {
-		ylabel: 'Light (0-1023)',
-		legend: 'follow',
-		drawGapEdgePoints: true,
-		fillGraph: false,
-		labelsDivStyles: { 'textAlign': 'right' },
-		showRangeSelector: true,
-		width: document.getElementById('trendrow').clientWidth,
-		labels: ['Time', 'Ambient light', 'Ambient light, low pass'],
-        highlightSeriesOpts: {
-          strokeWidth: 3,
-          strokeBorderWidth: 1,
-          highlightCircleSize: 5,
-        },
-	  }
-    );
-  });
-});
-</script>
+              jsondata.forEach(function(d) {
+                plotdata.push([new Date(dateFormatIn.parse(d.time)), d.smLight, d.smLightLP]);
+              });
 
-            <div class="row">
-		  	  <div class="panel panel-info">
-                <div class="panel-heading" id="Outputs">Outputs</div>
-                <div class="panel-body">
+              g = new Dygraph(
+                document.getElementById("trendrow"),
+                plotdata, {
+                  ylabel: 'Light (0-1023)',
+                  legend: 'follow',
+                  drawGapEdgePoints: true,
+                  fillGraph: false,
+                  labelsDivStyles: {
+                    'textAlign': 'right'
+                  },
+                  showRangeSelector: true,
+                  width: document.getElementById('trendrow').clientWidth,
+                  labels: ['Time', 'Ambient light', 'Ambient light, low pass'],
+                  highlightSeriesOpts: {
+                    strokeWidth: 3,
+                    strokeBorderWidth: 1,
+                    highlightCircleSize: 5,
+                  },
+                }
+              );
+            });
+          });
+        </script>
+
+        <div class="row">
+          <div class="panel panel-info">
+            <div class="panel-heading" id="Outputs">Outputs</div>
+            <div class="panel-body">
               <div class="table-responsive">
                 <table class="table table-striped table-hover">
                   <thead>
@@ -109,24 +103,23 @@ $(document).ready(function () {
                     <tr>
                       <td>Memory status (0=OK / 1=Error)</td>
                       <td id="smMemErr"></td>
-                    </tr>					
+                    </tr>
                   </tbody>
                 </table>
               </div>
-			  </div>
-			  </div>
-			  </div>
-			  
             </div>
           </div>
         </div>
+
       </div>
-      <footer class="templatemo-footer">
-        <div class="templatemo-copyright">
-          <p>ModuleInterface demo - 2017<!-- Credit: www.templatemo.com --></p>
-        </div>
-      </footer>
     </div>
+  </div>
 </div>
-  </body>
-</html>
+<footer class="templatemo-footer">
+  <div class="templatemo-copyright">
+    <p>ModuleInterface demo - 2017
+      <!-- Credit: www.templatemo.com -->
+    </p>
+  </div>
+</footer>
+</div>

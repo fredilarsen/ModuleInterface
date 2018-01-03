@@ -1,0 +1,451 @@
+<script>highlightPage('Dashboard');</script>
+<div class="template-page-wrapper">
+  <div class="templatemo-content-wrapper">
+    <div class="templatemo-content">
+      <ol class="breadcrumb">
+        <li>Bars</li>
+        <li><a href="#graphs">Trends</a></li>
+        <li><a href="#panelLightTable">Tables</a></li>
+      </ol>
+      <h1>Dashboard</h1>
+      <p>This page displays representative status information for all of the connected home automation subsystems.</p>
+      <div class="col-md-6">
+        <div class="templatemo-alerts">
+          <div id="alertSuccess" class="alert alert-success" role="alert">
+            <!--<button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>-->
+            <strong>Success!</strong> All systems are working as designed.
+          </div>
+          <div id="alertWarning" hidden class="alert alert-warning" role="alert">
+            <!--<button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>-->
+          </div>
+          <div id="alertDanger" hidden class="alert alert-danger" role="alert">
+            <!--<button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button> -->
+          </div>
+        </div>
+
+        <div class="templatemo-panels">
+          <div id="panelSystemAliveBars" class="panel panel-info">
+            <div class="panel-heading">System last alive (s)</div>
+            <canvas id="lastalive-bar-chart" height="130" width="500" style="margin-left: 3px; margin-top: 3px"></canvas>
+          </div>
+
+          <div class="panel panel-info">
+            <div id="uptime-heading" class="panel-heading">System uptime (days)</div>
+            <canvas id="uptime-bar-chart" height="130" width="500" style="margin-left: 3px; margin-top: 3px"></canvas>
+          </div>
+
+          <div class="panel panel-info" id="graphs">
+            <div class="panel-heading">
+              Light
+              <div style="float: right;">
+                <select id="resolutionList" name="Resolution" title="The resolution to use in the trend plots">
+                    <option value="-">10s</option>
+                    <option value="1m">1m</option>
+                    <option value="10m">10m</option>
+                    <option value="1h">1h</option>
+                    <option value="1d">1d</option>
+				    </select>
+              </div>
+            </div>
+            <canvas id="light-line-chart" height="300" width="500" style="margin-left: 3px"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="templatemo-panels">
+        <div class="col-md-6">
+          <div class="panel panel-info" id="panelLightTable">
+            <div class="panel-heading">Light</div>
+            <div class="panel-body">
+              <table class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th>Variable</th>
+                    <th>Value</th>
+                    <th>Unit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Ambient light, measured</td>
+                    <td id="smLight"></td>
+                    <td>0-1023</td>
+                  </tr>
+                  <tr>
+                    <td>Ambient light, low pass</td>
+                    <td id="smLightLP"></td>
+                    <td>0-1023</td>
+                  </tr>
+                  <tr>
+                    <td>Light power</td>
+                    <td id="lcLightOn"></td>
+                    <td>0-1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="templatemo-footer">
+      <div class="templatemo-copyright">
+        <p>ModuleInterface demo - 2017</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="js/Chart.bundle.min.js"></script>
+  <script type="text/javascript">
+    var randomScalingFactor = function() {
+      return Math.round(Math.random() * 100)
+    };
+
+    $.getJSON("get_settings.php?prefix=wpix", function(data) {
+      var v = data["wpixResolution"];
+      resolutionList.value = v;
+    });
+
+    // Line chart for light
+    var lineChartDataLight = {
+      labels: [],
+      datasets: [{
+          label: 'Ambient light (0-1023)',
+          tension: 0,
+          fill: false,
+          backgroundColor: "rgba(180,147,205,0.2)",
+          borderColor: "rgba(180,147,205,1)",
+          data: []
+        },
+        {
+          label: 'Ambient light, low pass (0-1023)',
+          tension: 0,
+          fill: false,
+          backgroundColor: "rgba(220,120,205,0.2)",
+          borderColor: "rgba(220,120,205,1)",
+          data: []
+        },
+        {
+          label: "Power (%)",
+          tension: 0,
+          fill: false,
+          backgroundColor: "rgba(220,220,220,0.2)",
+          borderColor: "rgba(220,220,220,1)",
+          data: []
+        },
+      ]
+    }
+
+    // Function for getting one of multiple tags from a data set
+    Array.prototype.mapProperty = function(property) {
+      return this.map(function(obj) {
+        return obj[property];
+      });
+    };
+
+    var ctx_line_light = document.getElementById("light-line-chart").getContext("2d");
+    window.lightTrend = new Chart(ctx_line_light, {
+      type: "line",
+      data: lineChartDataLight,
+      responsive: true,
+      options: {
+        scales: {
+          xAxes: [{
+            position: 'bottom',
+            display: false
+          }]
+        }
+      }
+
+    });
+
+    var resolutionList = document.getElementById("resolutionList");
+    resolutionList.onchange = function() {
+      getTrendData();
+      var res = resolutionList.value;
+      $.post('set_setting.php', "wpixResolution=" + res, null);
+    }
+
+    function setSelectedResolution() {
+      $.getJSON("get_settings.php?prefix=wpix", function(data) {
+        resolutionList.value = data["wpixResolution"];
+        getTrendData();
+      });
+    }
+
+    function getTrendData() {
+      // Get selected resolution from dropdown list
+      var res = resolutionList.value;
+      if (res == "-") res = "";
+      else res = "resolution=scan" + res + "&";
+
+      // Get trend values from database for the selected resolution
+      $.ajax({
+          url: "get_plotdata.php?" + res + "tags=m1UTC,smLight,smLightLP,lcLightOn",
+          dataType: "json"
+        })
+        .fail(function() {
+          var d = document.getElementById("alertDanger");
+          d.innerHTML = "Lost connection to web server. Could not retrieve trend data.";
+          d.hidden = false;
+          var s = document.getElementById("alertSuccess");
+          s.hidden = true;
+        })
+        .done(function(data) {
+          myData = (data);
+          // Create x labels where all are empty except start and end
+          //console.log(myData[0].smLight);
+          var labels = [myData[0].time]; // ["10h ago"];
+          for ($i = 1; $i < myData.length; $i++) labels.push(myData[$i].time);
+
+          // Feed new data to light plot and update
+          lineChartDataLight.datasets[0].data = myData.mapProperty('smLight');
+          lineChartDataLight.datasets[1].data = myData.mapProperty('smLightLP');
+          lineChartDataLight.datasets[2].data = myData.mapProperty('lcLightOn');
+          for ($i = 0; $i < lineChartDataLight.datasets[2].data.length; $i++) lineChartDataLight.datasets[2].data[$i] *= 100.0;
+          lineChartDataLight.labels = labels;
+          window.lightTrend.update();
+        });
+    }
+
+    var barChartDataLastAlive = {
+      labels: ["Master", "SensorMonitor", "LightController"],
+      datasets: [{
+        label: 'Last alive',
+        fill: true,
+        backgroundColor: "rgba(151,187,255,0.2)",
+        strokeColor: "rgba(151,187,255,1)",
+        borderWidth: 2,
+        pointStrokeColor: "#fff",
+        pointHighlightFill: "#fff",
+        pointHighlightStroke: "rgba(151,187,255,1)",
+        data: []
+      }]
+    }
+
+    Chart.defaults.global.legend.display = false;
+    var barChartDataUptime = {
+      labels: ["Master", "SensorMonitor", "LightController"],
+      datasets: [{
+        label: 'Uptime',
+        fill: true,
+        backgroundColor: "rgba(151,187,255,0.2)",
+        strokeColor: "rgba(101,107,205,1)",
+        borderWidth: 2,
+        pointBorderWidth: 2,
+        pointStrokeColor: "#666",
+        pointHighlightFill: "#888",
+        pointHighlightStroke: "rgba(151,187,255,1)",
+        data: []
+      }]
+    }
+
+    var ctx_bar_lastalive = document.getElementById("lastalive-bar-chart").getContext("2d");
+    window.barLastAlive = new Chart(ctx_bar_lastalive, {
+      type: "bar",
+      data: barChartDataLastAlive,
+      responsive: true,
+      options: {
+        scales: {
+          yAxes: [{
+            ticks: {
+              beginAtZero: true
+            }
+          }]
+        }
+      },
+    });
+
+    var ctx_bar_uptime = document.getElementById("uptime-bar-chart").getContext("2d");
+    window.barUptime = new Chart(ctx_bar_uptime, {
+      type: "bar",
+      data: barChartDataUptime,
+      responsive: true,
+    });
+
+    function age(val, serverCurrentTime) {
+      if (val == null) return val;
+      var a = Number(serverCurrentTime) - Number(val);
+      return a;
+    }
+
+    function diff(valA, valB) {
+      if (valA == null || valB == null) return 0;
+      var a = Number(valB) - Number(valA);
+      return a;
+    }
+
+    // Text to show in the alert boxes
+    var alertSuccessText = "";
+    var alertWarningText = "";
+    var alertDangerText = "";
+
+    function getBarAndTableData() {
+      $.ajax({
+          url: "get_currentvalues.php",
+          dataType: "json"
+        })
+        .fail(function() {
+          var d = document.getElementById("alertDanger");
+          d.innerHTML = "Lost connection to web server. Could not retrieve current data.";
+          d.hidden = false;
+          var s = document.getElementById("alertSuccess");
+          s.hidden = true;
+        })
+        .done(function(data) {
+          myData = (data);
+
+          // Last alive bar chart
+          val = [myData["m1UTC"], myData["smLastLife"], myData["lcLastLife"]];
+          var masterLife = (Number(myData["SERVERTIME"]) - Number(val[0])); // Calculate age of last update from master
+          val[0] = masterLife;
+          val[1] = Number(val[1]) + masterLife; // LastLife is measured by master, so add master LastLife
+          val[2] = Number(val[2]) + masterLife;
+          barChartDataLastAlive.datasets[0].data = val;
+          window.barLastAlive.update();
+
+          // Uptime bar chart
+          val = [myData["m1Uptime"], myData["smUptime"], myData["lcUptime"]];
+          var maxUptime = 0;
+          var i = 0;
+          for (i = 0; i < val.length; i++)
+            if (Number(val[i]) > Number(maxUptime)) maxUptime = val[i];
+          var unit = 24 * 3600;
+          if (Number(maxUptime) < 7 * 24 * 3600) {
+            unit = 3600; // Switch unit from days to hours
+            var heading = document.getElementById("uptime-heading");
+            if (heading != null) heading.innerText = "System uptime (h)";
+          };
+          val[0] = val[0] / unit;
+          val[1] = val[1] / unit;
+          val[2] = val[2] / unit;
+          barChartDataUptime.datasets[0].data = val;
+          window.barUptime.update();
+
+          // Update all text fields in tables
+          $.each(myData, function(i, val) {
+            var field = document.getElementById(i);
+            if (field != null) {
+              field.innerHTML = val;
+              // Set cell color if warning or error condition...
+            }
+          });
+
+          // Detect other conditions and update message panels
+          showStatusPanes(myData);
+        });
+    }
+
+    function checkIfOnlineAndSynced(lastLifeId, utcId, moduleName, myData, stat) {
+      // Check if online
+      var aliveAlert = 0;
+      if (myData[lastLifeId] != null && Number(myData[lastLifeId]) > 0) {
+        var lastLife = Number(myData[lastLifeId]);
+        if (lastLife > 120) {
+          stat.dTxt += "<p>Lost connection to " + moduleName + ".</p>";
+          statmalfunction = true;
+          aliveAlert |= 2;
+        } else if (lastLife > 40) {
+          stat.wTxt += "<p>Lost connection to " + moduleName + ".</p>";
+          aliveAlert |= 1;
+        }
+      }
+      // Check time sync
+      if (aliveAlert == 0 && utcId != null && myData[utcId] != null && Number(myData[utcId]) > 0) {
+        var err = Math.abs(age(myData[utcId], myData["m1UTC"]));
+        if (err > 120) {
+          stat.dTxt += "<p>" + moduleName + " system time is off by " + err + "s. Please fix time sync.</p>";
+          stat.malfunction = true;
+        } else if (err > 40) {
+          stat.wTxt += "<p>" + moduleName + " system time is off by " + err + "s.</p>";
+        }
+      }
+      return aliveAlert;
+    }
+
+    function showStatusPanes(myData) {
+      // Do attional tests
+      var malfunction = false;
+      var dTxt = "";
+      var wTxt = "";
+
+      // Check if master is reporting data
+      var aliveAlert = 0;
+      var ageSC = age(myData["m1UTC"], myData["SERVERTIME"]);
+      if (ageSC > 60) {
+        dTxt += "<p>Lost connection to all embedded systems.</p>";
+        malfunction = true;
+        aliveAlert |= 2;
+      } else if (ageSC > 30) {
+        wTxt += "<p>Lost connection to all embedded systems.</p>";
+        aliveAlert |= 1;
+      }
+
+      // Check time sync of web server
+      var wsSyncErr = false;
+      var clientTime = new Date().getTime() / 1000;
+      var errWS = Math.floor(Math.abs(Number(myData["SERVERTIME"] - clientTime)));
+      if (errWS > 120) {
+        dTxt += "<p>Web server or client system time is off by " + errWS + "s. Please fix time sync.</p>";
+        malfunction = true;
+        wsSyncErr = true;
+      } else if (errWS > 60) {
+        wTxt += "<p>Web server or client system time is off by " + errWS + "s.</p>";
+        wsSyncErr = true;
+      }
+
+      // Check if modules are online and time-synced
+      if (aliveAlert == 0) {
+        var stat = new Object();
+        stat.malfunction = malfunction;
+        stat.dTxt = dTxt;
+        stat.wTxt = wTxt;
+        aliveAlert |= checkIfOnlineAndSynced("smLastLife", null, "SensorMonitor", myData, stat);
+        aliveAlert |= checkIfOnlineAndSynced("lcLastLife", "lcUTC", "LightController", myData, stat);
+        malfunction = stat.malfunction;
+        dTxt = stat.dTxt;
+        wTxt = stat.wTxt;
+      }
+
+      // Set panel header color
+      document.getElementById("panelSystemAliveBars").className =
+        aliveAlert == 0 ? "panel panel-info" : (aliveAlert > 1 ? "panel panel-danger" : "panel panel-warning");
+
+      // Show or hide alert boxes
+
+      // Success alert box if no serious conditions
+      document.getElementById("alertSuccess").hidden = (malfunction || !(dTxt == ""));
+
+      // Warning alert box
+      var w = document.getElementById("alertWarning");
+      w.innerHTML = wTxt;
+      w.hidden = (wTxt == "");
+
+      // Danger alert box
+      var d = document.getElementById("alertDanger");
+      d.innerHTML = dTxt;
+      d.hidden = (dTxt == "");
+    }
+
+    window.onload = function() {
+      // Get resolution and select it in dropdown list
+      setSelectedResolution(); // Will call getTrendData() after gettingresolution from db
+
+      // Start a timer for updating all trend plots
+      setInterval(getTrendData, 5000);
+
+      // Start a timer for updating all bar charts and tables with current values
+      getBarAndTableData();
+      setInterval(getBarAndTableData, 5000);
+    };
+
+    $('#myTab a').click(function(e) {
+      e.preventDefault();
+      $(this).tab('show');
+    });
+
+    $('#loading-example-btn').click(function() {
+      var btn = $(this);
+      btn.button('loading');
+    });
+  </script>
