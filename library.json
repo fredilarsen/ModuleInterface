@@ -14,7 +14,7 @@
     "type": "git",
     "url": "https://github.com/fredilarsen/ModuleInterface.git"
   },
-  "version": "2.0.0",
+  "version": "2.1.0",
   "examples": [
     "examples/*/*.ino",
     "examples/*/*/*.ino",
@@ -22,15 +22,17 @@
     ],
   "frameworks": "arduino",
   "dependencies": {
-      "PJON" : "~10.0.0",
+      "PJON" : "~10.1.0",
       "ArduinoJson" : ">=5.0.0"
   },
   "platforms":
   [
     "atmelavr",
     "atmelsam",
-    "espressif",
-    "teensy"
+    "espressif8266",
+    "teensy",
+    "linux_x86_64",
+    "windows_x86"
   ],
   "build" : {
     "flags": "-std=c++11"
