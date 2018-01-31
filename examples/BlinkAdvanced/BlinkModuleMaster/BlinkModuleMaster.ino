@@ -17,7 +17,7 @@
  * determined by the sampling_time* members of PJONMOduleInterfaceSet.
  */
  
-#include <MiMaster.h>
+#include <MIMaster.h>
 
 // Modules
 #define BLINKMODULE 0 // index of the BlinkModule interface if we need to access it directly

@@ -10,7 +10,7 @@
  * of values between modules (through the master).
  */
 
-#include <MiMaster.h>
+#include <MIMaster.h>
 
 // Modules
 #define BLINKMODULE  0 // index of the BlinkModule interface if we need to access it directly

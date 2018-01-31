@@ -7,7 +7,7 @@
  *    and to view their output as instant values or in trend plots.
  */
 
-#include <MiMaster.h>
+#include <MIMaster.h>
 
 // Ethernet configuration for this device
 IPAddress gateway = { 192, 1, 1, 1 };

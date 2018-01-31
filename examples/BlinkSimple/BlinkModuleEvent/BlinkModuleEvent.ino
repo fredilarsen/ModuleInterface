@@ -9,7 +9,7 @@
  * The result is that the BlinkFollower module will change its blink interval immediately.
  */
 
-#include <MiModule.h>
+#include <MIModule.h>
 
 // Settings
 #define s_time_interval_ix 0

@@ -10,7 +10,7 @@
  * not used except in a setup with BlinkModuleMasterMultiple and BlinkModuleFollower.
  */
 
-#include <MiModule.h>
+#include <MIModule.h>
 
 // Settings
 #define s_time_interval_ix 0

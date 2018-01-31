@@ -25,7 +25,7 @@
 #define PJON_PACKET_MAX_LENGTH 50
 #define PJON_INCLUDE_SWBB
 
-#include <MiModule.h>
+#include <MIModule.h>
 
 // Settings
 #define s_time_interval_ix 0

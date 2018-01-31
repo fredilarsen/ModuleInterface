@@ -62,7 +62,7 @@ The SensorMonitor example shows the simplicity of creating a module that reads o
 The SensorMonitor example is simply reading a motion detector:
 
 ```cpp
-#include <MiModule.h>
+#include <MIModule.h>
 
 PJONLink<SoftwareBitBang> link(4); // PJON device id 4
 

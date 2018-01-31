@@ -7,7 +7,7 @@
  * same interval.
  */
 
-#include <MiModule.h>
+#include <MIModule.h>
 
 // Settings
 #define iTimeIntervalIx 0

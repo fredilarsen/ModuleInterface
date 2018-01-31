@@ -7,7 +7,7 @@
  *    and to view their output as instant values or in trend plots.
  */
 
-#include <MiMaster.h>
+#include <MIMaster.h>
 
 // PJON related
 PJONLink<SoftwareBitBang> bus(1); // PJON device id 1

@@ -1,6 +1,6 @@
 /* This ModuleInterface example sketch simply reads and reports some sensor values */
 
-#include <MiModule.h>
+#include <MIModule.h>
 
 // Ethernet configuration for this device
 IPAddress gateway = { 192, 1, 1, 1 };

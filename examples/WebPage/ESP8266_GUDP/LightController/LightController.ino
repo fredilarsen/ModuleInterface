@@ -3,7 +3,7 @@
     So if time is within the configured time-of-day interval _and_ the measured light is below the limit, light is kept on.
  */
 
-#include <MiModule.h>
+#include <MIModule.h>
 #include <utils/MITime.h>
 
 // Ethernet configuration for this device
