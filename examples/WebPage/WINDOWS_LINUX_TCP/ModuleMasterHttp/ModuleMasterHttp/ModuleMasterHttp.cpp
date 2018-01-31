@@ -7,8 +7,6 @@
 *    and to view their output as instant values or in trend plots.
 */
 
-//#define DEBUG_PRINT
-
 // Define one of these modes
 #define ETCP_SINGLE_DIRECTION
 //#define ETCP_SINGLE_SOCKET_WITH_ACK
@@ -21,7 +19,6 @@
 PJONLink<EthernetTCP> bus(45); // PJON device id 1
 
 // Web server related
-//IPAddress web_server_ip(192, 1, 1, 143);
 const uint8_t web_server_ip[4] = { 192, 1, 1, 169 };
 
 EthernetClient web_client;
