@@ -29,7 +29,7 @@ bool mi_after_or_equal(uint32_t A, uint32_t B){
 // This function should be called at regular intervals, depending on the specified factor.
 // Example: lowpass_value = mi_lowpass(new_value, lowpass_value, 0.001f);
 float mi_lowpass(float new_value, float previous_lowpass, float factor) {
-  if (isfinite(new_value)) return (factor*new_value) + (1.0-factor)*previous_lowpass;
+  if (isfinite(new_value)) return (factor*new_value) + (1.0f-factor)*previous_lowpass;
   return previous_lowpass;
 }
 
@@ -38,7 +38,7 @@ float mi_lowpass(float new_value, float previous_lowpass, float factor) {
 // Example: lowpass_value = mi_lowpass(new_value, lowpass_value, 0.001);
 float mi_lowpass(float new_value, float previous_lowpass, float factor, uint32_t &last_lowpass_millis, const uint32_t sample_interval) {
   if (isfinite(new_value) && mi_interval_elapsed(last_lowpass_millis, sample_interval)) {
-    return (factor*new_value) + (1.0-factor)*previous_lowpass;
+    return (factor*new_value) + (1.0f-factor)*previous_lowpass;
   }
   return previous_lowpass;
 }

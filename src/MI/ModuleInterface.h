@@ -253,7 +253,7 @@ public:
   // To ease prefixing all debug messages with module name
   void dname() {
     #ifdef IS_MASTER
-    Serial.print(module_name); Serial.print(": ");
+    DPRINT(module_name); DPRINT(": ");
     #endif
   }
   #endif
@@ -271,7 +271,7 @@ public:
 
   #ifdef IS_MASTER
   void set_prefix(const char *prefix) {
-    uint8_t len = prefix ? min(strlen(prefix), MVAR_PREFIX_LENGTH) : 0;
+    uint8_t len = (uint8_t) (prefix ? min(strlen(prefix), MVAR_PREFIX_LENGTH) : 0);
     strncpy(module_prefix, prefix, len);
     module_prefix[len] = 0; // Null-terminate
   }
@@ -284,7 +284,7 @@ public:
   bool handle_input_message(const uint8_t *message, const uint8_t length) {
     if (length < 1) return false;
     #ifdef DEBUG_PRINT
-      dname(); Serial.print(F("INPUT TYPE ")); Serial.print(message[0]); Serial.print(F(", len ")); Serial.println(length);
+      dname(); DPRINT(F("INPUT TYPE ")); DPRINT(message[0]); DPRINT(F(", len ")); DPRINTLN(length);
     #endif
     #ifdef IS_MASTER
       comm_failures = 0;
@@ -344,31 +344,31 @@ public:
 
     #ifdef DEBUG_PRINT
       if (message[0] == mcSetSettingContract) {
-        dname(); Serial.print(F("Settings contract: "));
+        dname(); DPRINT(F("Settings contract: "));
         settings.debug_print_contract();
       }
       else if (message[0] == mcSetInputContract) {
-        dname(); Serial.print(F("Inputs contract: "));
+        dname(); DPRINT(F("Inputs contract: "));
         inputs.debug_print_contract();
       }
       else if (message[0] == mcSetOutputContract) {
-        dname(); Serial.print(F("Outputs contract: "));
+        dname(); DPRINT(F("Outputs contract: "));
         outputs.debug_print_contract();
       }
       else if (message[0] == mcSetSettings) {
-        dname(); Serial.print(F("Settings: "));
+        dname(); DPRINT(F("Settings: "));
         settings.debug_print_values();
       }
       else if (message[0] == mcSetInputs) {
-        dname(); Serial.print(F("Inputs: "));
+        dname(); DPRINT(F("Inputs: "));
         inputs.debug_print_values();
       }
       else if (message[0] == mcSetOutputs) {
-        dname(); Serial.print(F("Outputs: "));
+        dname(); DPRINT(F("Outputs: "));
         outputs.debug_print_values();
       }
       else if (message[0] == mcSetStatus) {
-        dname(); Serial.print(F("Status: ")); Serial.println(message[1]);
+        dname(); DPRINT(F("Status: ")); DPRINTLN(message[1]);
       }
     #endif
     return true;
@@ -379,7 +379,7 @@ public:
     response_length = 0;
     if (length < 1) return false;
     #ifdef DEBUG_PRINT
-      dname(); Serial.print("REQUEST "); Serial.print(message[0]); Serial.print(", len "); Serial.println(length);
+      dname(); DPRINT("REQUEST "); DPRINT(message[0]); DPRINT(", len "); DPRINTLN(length);
     #endif
     #ifdef IS_MASTER
       comm_failures = 0;
@@ -424,33 +424,33 @@ public:
 
     #ifdef DEBUG_PRINT
     if (message[0] == mcSendSettings) { // Can be called for master, and for module if it has own GUI
-      dname(); Serial.print(F("Send Settings: "));
+      dname(); DPRINT(F("Send Settings: "));
       settings.debug_print_values();
     } else
     #ifdef IS_MASTER
     if (message[0] == mcSendInputs) {
-      dname(); Serial.print(F("Send Inputs: "));
+      dname(); DPRINT(F("Send Inputs: "));
       inputs.debug_print_values();
     }
     #else
     if (message[0] == mcSendSettingContract) {
-      dname(); Serial.print(F("Send Settings contract: "));
+      dname(); DPRINT(F("Send Settings contract: "));
       settings.debug_print_contract();
     } else
     if (message[0] == mcSendInputContract) {
-      dname(); Serial.print(F("Send Inputs contract: "));
+      dname(); DPRINT(F("Send Inputs contract: "));
       inputs.debug_print_contract();
     } else
     if (message[0] == mcSendOutputContract) {
-      dname(); Serial.print(F("Send Outputs contract: "));
+      dname(); DPRINT(F("Send Outputs contract: "));
       outputs.debug_print_contract();
     } else
     if (message[0] == mcSendOutputs) {
-      dname(); Serial.print(F("Send Outputs: "));
+      dname(); DPRINT(F("Send Outputs: "));
       outputs.debug_print_values();
     } else
     if (message[0] == mcSendStatus) {
-      dname(); Serial.print(F("Send Status: ")); Serial.println(status_bits);
+      dname(); DPRINT(F("Send Status: ")); DPRINTLN(status_bits);
     }
     #endif
     #endif
@@ -534,7 +534,7 @@ friend class ModuleInterfaceSet;
     } else {
       length = 0; ModuleVariableSet::out_of_memory = true;
       #ifdef DEBUG_PRINT
-      Serial.println(F("MI::get_status OUT OF MEMORY"));
+      DPRINTLN(F("MI::get_status OUT OF MEMORY"));
       #endif
     }
   }
@@ -568,8 +568,8 @@ friend class ModuleInterfaceSet;
         time_utc_received_s = time_utc_s; // Remember what time was received last
         status_bits &= ~MISSING_TIME; // Clear the missing-time bit
         #ifdef DEBUG_PRINT
-          dname(); Serial.print(F("Time adjusted by ")); Serial.print((uint32_t) (time_utc_s - initial_time));
-          Serial.print(F("s to UTC ")); Serial.println(time_utc_s);
+          dname(); DPRINT(F("Time adjusted by ")); DPRINT((uint32_t) (time_utc_s - initial_time));
+          DPRINT(F("s to UTC ")); DPRINTLN(time_utc_s);
         #endif
       }
     }
@@ -588,7 +588,7 @@ friend class ModuleInterfaceSet;
       if (got_contract() && (status_bits & (CONTRACT_MISMATCH_SETTINGS | CONTRACT_MISMATCH_INPUTS))) {
         // Module flags that it does not have the same contract, usually for settings or inputs. Invalidate relevant part.
         #ifdef DEBUG_PRINT
-          dname(); Serial.print(F("Module changed contract. Invalidating ")); Serial.println(status_bits);
+          dname(); DPRINT(F("Module changed contract. Invalidating ")); DPRINTLN(status_bits);
         #endif
         if (status_bits & CONTRACT_MISMATCH_SETTINGS) settings.invalidate_contract();
         if (status_bits & CONTRACT_MISMATCH_INPUTS) inputs.invalidate_contract();
@@ -608,7 +608,7 @@ friend class ModuleInterfaceSet;
     } else {
       ModuleVariableSet::out_of_memory = true;
       #ifdef DEBUG_PRINT
-      Serial.println(F("MI::allocate_source_arrays OUT OF MEMORY"));
+      DPRINTLN(F("MI::allocate_source_arrays OUT OF MEMORY"));
       #endif
     }
   }

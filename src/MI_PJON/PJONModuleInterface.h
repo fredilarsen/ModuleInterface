@@ -162,6 +162,9 @@ public:
     do {
       status = pjon->receive();
       if ((status == PJON_ACK || status == PJON_NAK) && cmd == last_incoming_cmd) break;
+#ifdef WIN32
+      delay(1);
+#endif
     } while (timeout > (uint32_t)(micros()-start));
     return status;
   }
@@ -202,7 +205,7 @@ public:
   void send_settings() {
     #ifdef DEBUG_PRINT
     if (settings.got_contract() && !settings.is_updated() && settings.get_num_variables() != 0) {
-      dname(); Serial.println(F("Settings not sent because not updated yet."));
+      dname(); DPRINTLN(F("Settings not sent because not updated yet."));
     }
     #endif
     if (!settings.got_contract() || !settings.is_updated() || settings.get_num_variables() == 0) return;
@@ -217,7 +220,7 @@ public:
   void send_inputs() {
     #ifdef DEBUG_PRINT
     if (inputs.got_contract() && !inputs.is_updated() && inputs.get_num_variables()>0) {
-      dname(); Serial.println(F("Inputs not sent because not updated yet."));
+      dname(); DPRINTLN(F("Inputs not sent because not updated yet."));
     }
     #endif
     if (!inputs.got_contract() || !inputs.is_updated()) return;
@@ -232,7 +235,7 @@ public:
   // Sending of requests
   bool send_cmd(const uint8_t &value) {
     #ifdef DEBUG_PRINT
-    dname(); Serial.print(F("SENT REQUEST ")); Serial.println(value);
+    dname(); DPRINT(F("SENT REQUEST ")); DPRINTLN(value);
     #endif
     return send(remote_id, remote_bus_id, &value, 1);
   }
@@ -252,14 +255,14 @@ public:
 
   bool send(uint8_t remote_id, const uint8_t *remote_bus, const uint8_t *message, uint16_t length) {
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-    dname(); Serial.print("S "); Serial.print(remote_id); Serial.print(" len "); Serial.print(length);
-    Serial.print(" cmd "); Serial.print(message[0]); Serial.print(" active "); Serial.println(is_active());
+    dname(); DPRINT("S "); DPRINT(remote_id); DPRINT(" len "); DPRINT(length);
+    DPRINT(" cmd "); DPRINT(message[0]); DPRINT(" active "); DPRINTLN(is_active());
     #endif
     uint16_t status = pjon->send_packet(remote_id, remote_bus, (const char*)message, length,
       is_active() ? MI_SEND_TIMEOUT : MI_REDUCED_SEND_TIMEOUT);
 
     #ifdef DEBUG_PRINT
-    if (status != PJON_ACK) { dname(); Serial.println(F("----> Failed sending.")); }
+    if (status != PJON_ACK) { dname(); DPRINTLN(F("----> Failed sending.")); }
     #endif
     #ifdef IS_MASTER
     if (status == PJON_ACK) {
@@ -277,7 +280,7 @@ public:
     if (ModuleInterface::handle_request_message(payload, length, response, response_length)) {
       if (response.is_empty()) {
         #ifdef DEBUG_PRINT
-        dname(); Serial.print(F("Out of memory replying to cmd ")); Serial.println(payload[0]);
+        dname(); DPRINT(F("Out of memory replying to cmd ")); DPRINTLN(payload[0]);
         #endif
         return false;
       }
@@ -293,7 +296,7 @@ public:
       (packet_info.port == MI_PJON_MODULE_INTERFACE_PORT))) return false; // Message not meant for ModuleInterface use
 
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-    dname(); Serial.print(F("R len ")); Serial.print(length); Serial.print(F(" cmd ")); Serial.println(payload[0]);
+    dname(); DPRINT(F("R len ")); DPRINT(length); DPRINT(F(" cmd ")); DPRINTLN(payload[0]);
     #endif
     if (handle_input_message(payload, (uint8_t) length)) {
       #ifdef IS_MASTER
@@ -322,8 +325,8 @@ public:
     inputs.get_values(response, response_length, mcSetInputs, true);
     if (response_length > 0) {
       #ifdef DEBUG_PRINT
-      dname(); Serial.print("send_input_events, length "); Serial.print(response_length); Serial.print(", module id ");
-      Serial.println(remote_id);
+      dname(); DPRINT("send_input_events, length "); DPRINT(response_length); DPRINT(", module id ");
+      DPRINTLN(remote_id);
       #endif
       if (send(remote_id, remote_bus_id, response.get(), response_length)) inputs.clear_events();
     }
@@ -339,8 +342,8 @@ public:
     // TODO: Do not assume that the latest packet is from master!
     if (response_length > 0 && pjon->get_last_packet_info().sender_id != PJON_NOT_ASSIGNED && pjon->get_last_packet_info().sender_id != 0) {
       #ifdef DEBUG_PRINT
-      dname(); Serial.print("send_output_events, length "); Serial.print(response_length); Serial.print(", master id ");
-      Serial.println(pjon->get_last_packet_info().sender_id);
+      dname(); DPRINT("send_output_events, length "); DPRINT(response_length); DPRINT(", master id ");
+      DPRINTLN(pjon->get_last_packet_info().sender_id);
       #endif
       if (send(pjon->get_last_packet_info().sender_id, pjon->get_last_packet_info().sender_bus_id, response.get(), response_length))
         outputs.clear_events();

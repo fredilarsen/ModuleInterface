@@ -77,14 +77,14 @@ public:
     if (miIsTimeSynced()) {
       bool do_sync = ((uint32_t)(millis() - last_time_sync) >= 60000); // Time for a scheduled broadcast?
       #ifdef DEBUG_PRINT
-        if (do_sync) {Serial.print(F("Scheduled broadcast of time sync: ")); Serial.println(miGetTime()); }
+        if (do_sync) {DPRINT(F("Scheduled broadcast of time sync: ")); DPRINTLN(miGetTime()); }
       #endif
       // Check if any module has reported that is it missing time
       if (!do_sync) {
         for (uint8_t i = 0; i < num_interfaces; i++) if (interfaces[i]->status_bits & MISSING_TIME) {
           #ifdef DEBUG_PRINT
-            Serial.print(F("Module ")); Serial.print(interfaces[i]->module_name);
-            Serial.print(F(" missing time, broadcasting: ")); Serial.println(miGetTime());
+            DPRINT(F("Module ")); DPRINT(interfaces[i]->module_name);
+            DPRINT(F(" missing time, broadcasting: ")); DPRINTLN(miGetTime());
           #endif
           do_sync = true;
           break;
@@ -124,10 +124,7 @@ public:
     update_contracts();
 
     // Send settings to each module
-    if (millis() - last_settings_sent >= sampling_time_settings) {
-      last_settings_sent = millis();
-      send_settings();
-    }
+    if (mi_interval_elapsed(last_settings_sent, sampling_time_settings)) send_settings();
 
     // Get potential modified settings from each module
     update_settings();
@@ -136,8 +133,7 @@ public:
     update_values();
 
     // Deliver inputs to each module
-    if (millis() - last_inputs_sent >= sampling_time_outputs) {
-      last_inputs_sent = millis();
+    if (mi_interval_elapsed(last_inputs_sent, sampling_time_outputs)) {
       // Transfer outputs from modules to inputs of other modules
       transfer_outputs_to_inputs();
 
@@ -149,7 +145,7 @@ public:
   }
 
   uint8_t locate_module(const uint8_t device_id, const uint8_t *bus_id) const {
-    int8_t ix = NO_MODULE;
+    int8_t ix = 0;
     for (uint8_t i=0; i<num_interfaces; i++) {
       if (((PJONModuleInterface*) interfaces[i])->remote_id == device_id &&
           (memcmp(((PJONModuleInterface*) interfaces[i])->remote_bus_id, bus_id, 4) == 0)) {

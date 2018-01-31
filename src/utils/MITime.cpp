@@ -1,5 +1,5 @@
-#include <Arduino.h>
-#include "MITime.h"
+#include <platforms/MIPlatforms.h>
+#include <utils/MITime.h>
 
 #define MI_SECONDS_PER_DAY 86400ul
 #define MI_SECONDS_YEAR_2017 1483228800ul
@@ -10,7 +10,7 @@ uint32_t miTimeS = 0,                 // current time in UTC seconds, maintained
  
 void miUpdateTime() {
   // Update current time
-  uint32_t msElapsed = millis() - miLastUpdatedTimeMs, sElapsed = msElapsed/1000ul;
+  uint32_t msElapsed = (uint32_t)(millis() - miLastUpdatedTimeMs), sElapsed = msElapsed/1000ul;
     miTimeS += sElapsed;
     miLastUpdatedTimeMs += sElapsed*1000ul;
   }

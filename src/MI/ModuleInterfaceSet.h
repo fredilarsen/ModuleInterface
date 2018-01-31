@@ -9,11 +9,13 @@
 
 #include <MI/ModuleInterface.h>
 #include <utils/MITime.h>
+#include <utils/MIUtilities.h>
 
 class ModuleInterfaceSet {
 protected:
   char moduleset_prefix[MVAR_PREFIX_LENGTH+1]; // A unique lower case prefix, usefule if there are multiple masters connected to same db
-  bool updated_intermodule_dependencies = false;  
+  bool updated_intermodule_dependencies = false; 
+  uint16_t active_contract_count = 0;
 public:
   uint8_t num_interfaces = 0;
   ModuleInterface **interfaces = NULL;
@@ -27,7 +29,7 @@ public:
       if (interfaces[i] == NULL) {
         ModuleVariableSet::out_of_memory = true;
         #ifdef DEBUG_PRINT
-        Serial.println(F("MIS::constr OUT OF MEMORY"));
+        DPRINTLN(F("MIS::constr OUT OF MEMORY"));
         #endif
       }
     }
@@ -51,7 +53,9 @@ public:
   ModuleInterface *operator [] (const uint8_t ix) { return (interfaces[ix]); }
   
   void update_intermodule_dependencies() {
-    if (!updated_intermodule_dependencies && got_all_contracts()) {
+	uint16_t count = count_active_contracts();
+	if (count != active_contract_count) updated_intermodule_dependencies = false;
+    if (!updated_intermodule_dependencies && count > 1) {
       for (uint8_t i = 0; i < num_interfaces; i++) {
         interfaces[i]->allocate_source_arrays();
         for (int j=0; j<interfaces[i]->inputs.get_num_variables(); j++) {
@@ -61,6 +65,7 @@ public:
         }
       }
       updated_intermodule_dependencies = true;
+	  active_contract_count = count;
     }
   }
   
@@ -68,13 +73,15 @@ public:
   void transfer_outputs_to_inputs() {
     if (!got_all_contracts()) {
       #ifdef DEBUG_PRINT
-      Serial.println(F("** ALL CONTRACTS NOT SET"));
+      DPRINTLN(F("** ALL CONTRACTS NOT SET"));
       #endif
       return;
     }
-    if (!updated_intermodule_dependencies) update_intermodule_dependencies();
+    update_intermodule_dependencies();	
+    if (!updated_intermodule_dependencies) return; // Not updated yet, wait for all contracts
     uint8_t buf[4]; // Largest value possibly encountered
     for (int i=0; i<num_interfaces; i++) {
+      if (interfaces[i]->input_source_module_ix.length()==0 || interfaces[i]->input_source_output_ix.length() == 0) continue;
       bool all_sources_updated = true, some_set = false;
       for (int j=0; j<interfaces[i]->inputs.get_num_variables(); j++) {
         uint8_t module_ix = interfaces[i]->input_source_module_ix[j], var_ix = interfaces[i]->input_source_output_ix[j];
@@ -95,7 +102,7 @@ public:
           static uint32_t last = 0;
           if (millis() - last >= 100) {
             last = millis();            
-            Serial.print(F("Inputs NOT UPDATED for interface ")); Serial.print(i); Serial.println(F(" because of old source outputs."));
+            DPRINT(F("Inputs NOT UPDATED for interface ")); DPRINT(i); DPRINTLN(F(" because of old source outputs."));
           }
         }
         #endif
@@ -105,8 +112,10 @@ public:
   
   // If any outputs have been flagged as events, also set value and the event flag on inputs that are using them.
   void transfer_events_from_outputs_to_inputs() {
+    if (!updated_intermodule_dependencies) return; // Not updated yet, wait for all contracts
     uint8_t buf[4]; // Largest value possibly encountered
     for (uint8_t i = 0; i < num_interfaces; i++) {
+      if (interfaces[i]->input_source_module_ix.length()==0 || interfaces[i]->input_source_output_ix.length() == 0) continue;
       for (uint8_t j = 0; j < interfaces[i]->inputs.get_num_variables(); j++) {
         uint8_t module_ix = interfaces[i]->input_source_module_ix[j], var_ix = interfaces[i]->input_source_output_ix[j];
         if (module_ix != NO_MODULE && var_ix != NO_VARIABLE) {
@@ -122,6 +131,14 @@ public:
         }
       }
     }    
+  }
+
+  uint16_t count_active_contracts() {
+	uint16_t count = 0;  
+    for (uint8_t i = 0; i < num_interfaces; i++) {
+      if (interfaces[i]->got_contract() && interfaces[i]->is_active()) count++;
+    }
+    return count;
   }
   
   bool got_all_contracts() {

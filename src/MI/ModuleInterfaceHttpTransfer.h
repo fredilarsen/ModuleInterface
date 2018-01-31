@@ -1,10 +1,11 @@
 #pragma once
 
-#include <ArduinoJson.h>
 #include <MI/ModuleInterface.h>
 #include <utils/MITime.h>
 #include <utils/MIUptime.h>
 #include <utils/MemFrag.h>
+
+#include <ArduinoJson.h>
 
 #define NUM_SCAN_INTERVALS 4
 
@@ -12,6 +13,7 @@
 #if defined(ARDUINO) && !defined(PJON_ESP)
 #define MI_SMALLMEM
 #endif
+
 #ifdef PJON_ESP
 #define F(x) (x)
 #endif
@@ -26,19 +28,19 @@ struct MILastScanTimes {
 void write_http_settings_request(const char *module_prefix, Client &client) {
   String request = F("GET /get_settings.php?prefix=");
   request += module_prefix;
-  client.print(request + "\r\n\r\n");
+  client.print((request + "\r\n\r\n").c_str());
   // NOTE: On ESP8266 a client.flush() seems to close the connection, so avoid it
 }
 
 template <class T> void val_to_buf(uint32_t *buf, T value) { memcpy(buf, &value, sizeof value); }
 
-bool buf_to_mvar(ModuleVariable &v, const uint32_t *value, const uint8_t size) {
+void buf_to_mvar(ModuleVariable &v, const uint32_t *value, const uint8_t size) {
   if (v.is_changed()) {
     // Discard changes from database if changes from module are present and not registered yet.
     // Reset changed-flag if value from database matches the current value, meaning that the change
     // from the module has been transported to the database and back.
     #ifdef DEBUG_PRINT
-    Serial.print("Changed, equal="); Serial.print(v.is_equal(value, size)); Serial.print(", val="); Serial.println(*(const float*)value);   
+    DPRINT("Changed, equal="); DPRINT(v.is_equal(value, size)); DPRINT(", val="); DPRINTLN(*(const float*)value);   
     #endif
     if (v.is_equal(value, size)) v.set_changed(false);
   } else {
@@ -89,18 +91,22 @@ bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) 
 void set_time_from_json(JsonObject& root, uint32_t delay_ms) {
  // Set time if received (as early as possible)
   uint32_t utc = (uint32_t)root["UTC"];
+static uint32_t last = utc;
+if ((uint32_t)(utc-last) > 1)  
+printf("TIME FROM WEB: %d change=%d delay=%d\n", utc, (utc-last), delay_ms/1000);
+last = utc;
   if (utc != 0) {
     if (abs((int32_t)(utc -miGetTime()) > 2)) {
     #ifndef NO_TIME_SYNC
-      #ifdef DEBUG_PRINT
-        Serial.print(F("--> Adjusted time from web by s: ")); Serial.println((int32_t) (utc - miGetTime() + delay_ms/1000ul));
-      #endif
+//      #ifdef DEBUG_PRINT
+        DPRINT(F("--> Adjusted time from web by s: ")); DPRINTLN((int32_t) (utc - miGetTime() + delay_ms/1000ul));
+//      #endif
       miSetTime(utc + delay_ms/1000ul); // Set system time
     #endif
     }
   }
   #ifdef DEBUG_PRINT
-  else Serial.println(F("Got no time from web server!"));
+  else DPRINTLN(F("Got no time from web server!"));
   #endif
 }
 
@@ -121,28 +127,34 @@ bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_
   if (buf == NULL) {
     ModuleVariableSet::out_of_memory = true;
     #ifdef DEBUG_PRINT
-    Serial.println(F("read_json_settings OUT OF MEMORY"));
+    DPRINTLN(F("read_json_settings OUT OF MEMORY"));
     #endif
     return false; // Out of memory at the moment
   }
-   
+//printf("CONNECTED=%d AVAIL=%d\n", client.connected(), client.available());   
   uint16_t pos = 0;
   unsigned long start = millis();
-  while (client.connected() && millis()-start < timeout_ms) {
-    while (client.connected() && client.available() && pos < buffer_size -1) { buf[pos] = client.read(); pos++; }
+  while (client.connected() && (millis()-start) < timeout_ms && pos==0) {
+//printf("OUTER LOOP CONNECTED=%d AVAIL=%d TIMEOUT=%d\n", client.connected(), client.available(), millis()-start);   
+    while (client.connected() && client.available()>0 && pos < buffer_size -1 && (millis()-start) < timeout_ms) { 
+      uint16_t len = client.read((uint8_t*) &buf[pos], buffer_size - pos -1); 
+//printf("INNER LOOP CONNECTED=%d AVAIL=%d TIMEOUT=%d pos=%d len=%d bufsize=%d\n", client.connected(), client.available(), millis()-start, pos,  len, buffer_size);   
+      if (len > 0) pos += len; else break;
+    }
+    if (pos == 0) delay(1);
   }
   buf[pos] = 0; // null-terminate
   client.stop();  // Finished using the socket, close it as soon as possible
   #ifdef DEBUG_PRINT
-  //Serial.print(F("Read ")); Serial.print(pos); Serial.print(F(" bytes (settings) from web server for "));
-  //Serial.println(interface.module_name);
-  //Serial.print(buf);
+  //DPRINT(F("Read ")); DPRINT(pos); DPRINT(F(" bytes (settings) from web server for "));
+  //DPRINTLN(interface.module_name);
+  //DPRINT(buf);
   #endif
   if (pos >= buffer_size - 1) {
     delete[] buf;
     ModuleVariableSet::out_of_memory = true;
     #ifdef DEBUG_PRINT
-    Serial.print(pos); Serial.println(F(" bytes, read_json_settings BUFFER TOO SMALL"));
+    DPRINT(pos); DPRINTLN(F(" bytes, read_json_settings BUFFER TOO SMALL"));
     #endif
     return false;
   }
@@ -165,14 +177,14 @@ bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_
         set_time_from_json(root, ((uint32_t)(millis()-before_parsing)) + ((uint32_t)(before_parsing-start))/2ul);
         decode_json_settings(interface, root);
         #ifdef DEBUG_PRINT
-//        Serial.print(": Get, parse, set in ms: "); Serial.print((uint32_t)(before_parsing-start)); Serial.print(" ");
-//        Serial.print((uint32_t)(before_set-before_parsing)); Serial.print(" ");
-//        Serial.print((uint32_t)(millis()-before_set));
+//        DPRINT(": Get, parse, set in ms: "); DPRINT((uint32_t)(before_parsing-start)); DPRINT(" ");
+//        DPRINT((uint32_t)(before_set-before_parsing)); DPRINT(" ");
+//        DPRINT((uint32_t)(millis()-before_set));
         #endif
         status = true;
       } else {
         #ifdef DEBUG_PRINT
-        Serial.println("Failed parsing settings JSON. Out of memory?");
+        DPRINTLN("Failed parsing settings JSON. Out of memory?");
         #endif
       }
     }
@@ -184,26 +196,26 @@ bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_
   return status;
 }
 
-bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, Client &client, IPAddress &server, uint8_t port = 80) {
+bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, Client &client, uint8_t *server, uint8_t port = 80) {
   #ifdef DEBUG_PRINT
   uint32_t start_time = millis();
   #endif
   uint8_t cnt = 0;
   for (int i=0; i < interfaces.num_interfaces; i++) {
-    int8_t code = client.connect(server, port);   
+    int8_t code = client.connect(server, port);
     bool success = false;
     if (code == 1) { // 1=CONNECTED
       write_http_settings_request(interfaces[i]->module_prefix, client);
       success = read_json_settings(*interfaces[i], client);
     }
     #ifdef DEBUG_PRINT
-    else { Serial.print("Connection to web server failed with code "); Serial.println(code); }
+    else { DPRINT("Connection to web server failed with code "); DPRINTLN(code); }
     #endif
     client.stop();
     if (success) cnt++;
   }
   #ifdef DEBUG_PRINT
-  Serial.print(F("Reading settings took ")); Serial.print((uint32_t)(millis() - start_time)); Serial.println("ms.");
+  DPRINT(F("Reading settings took ")); DPRINT((uint32_t)(millis() - start_time)); DPRINTLN("ms.");
   #endif
   return cnt > 0;
 }
@@ -222,12 +234,14 @@ void post_json_to_server(Client &client, const String &buf, const String &reques
   client.println();
 #else
   // If we have more memory available, speed up the transfer by doing one write only
+  char buflen[10];
+  _itoa(buf.length(), buflen, 10);
   String s = F("POST /") + request + F(" HTTP/1.0\r\n"
     "Content-Type: application/json\r\n"
     "Connection: close\r\n"
-    "Content-Length: ") + String(buf.length())
+    "Content-Length: ") + buflen
     + "\r\n\r\n" + buf + "\r\n\r\n";  
-  client.print(s);
+  client.print(s.c_str());
 #endif  
 }
 
@@ -315,8 +329,8 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
   uint16_t num_fragments = 0;
   size_t total_free = 0, largest_free = largest_free_block(num_fragments, total_free);
   #ifdef DEBUG_PRINT
-  Serial.print(F("MEM Free=")); Serial.print(total_free); Serial.print(F(", #frag=")); Serial.print(num_fragments);
-  Serial.print(", bigfrag="); Serial.println(largest_free);
+  DPRINT(F("MEM Free=")); DPRINT(total_free); DPRINT(F(", #frag=")); DPRINT(num_fragments);
+  DPRINT(", bigfrag="); DPRINTLN(largest_free);
   #endif
   
   // Add total free memory
@@ -371,9 +385,9 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
     }
     if (buf.length() <= 2) continue; // Empty buffer, nothing to send, so not a failure
     #ifdef DEBUG_PRINT
-    //Serial.println(buf);
-    Serial.print(F("Writing ")); Serial.print(buf.length()); Serial.print(F(" bytes (outputs) to web server for "));
-    Serial.println(interfaces[i]->module_name);
+    //DPRINTLN(buf);
+    DPRINT(F("Writing ")); DPRINT(buf.length()); DPRINT(F(" bytes (outputs) to web server for "));
+    DPRINTLN(interfaces[i]->module_name);
     #endif
 
     // Post JSON to web server
@@ -382,7 +396,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
       post_json_to_server(client, buf, String(F("set_currentvalues.php")));
     }
     #ifdef DEBUG_PRINT
-    else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
+    else { DPRINT(F("Connection to web server failed with code ")); DPRINTLN(code); }
     #endif
     client.stop();
     if (code == 1) successCnt++;
@@ -395,21 +409,21 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
       client.println(F("GET /store_currentvalues.php"));
     }
     #ifdef DEBUG_PRINT
-    else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
+    else { DPRINT(F("Connection to web server failed with code ")); DPRINTLN(code); }
     #endif
     client.stop();
   }
   
   #ifdef DEBUG_PRINT
-  Serial.print(F("Writing to web server took ")); Serial.print((uint32_t)(millis() - start_time));
-  Serial.println(F("ms."));
+  DPRINT(F("Writing to web server took ")); DPRINT((uint32_t)(millis() - start_time));
+  DPRINTLN(F("ms."));
   #endif
   return successCnt > 0;
 }
 
 #else // More memory, send values for all modules in one request (faster)
 
-bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, IPAddress &server,
+bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, uint8_t *server,
                                MILastScanTimes *last_scan_times, uint8_t port = 80,
                                bool primary_master = true, // (set primary_master=false on all masters but one if more than one)
                                uint16_t json_buffer_size = 3000) {
@@ -436,8 +450,8 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
   }
   
   #ifdef DEBUG_PRINT
-  //Serial.println(buf);
-  Serial.print(F("Writing ")); Serial.print(buf.length()); Serial.println(F(" bytes (outputs) to web server"));
+  //DPRINTLN(buf);
+  DPRINT(F("Writing ")); DPRINT(buf.length()); DPRINTLN(F(" bytes (outputs) to web server"));
   #endif
 
   // Post JSON to web server
@@ -446,7 +460,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
     post_json_to_server(client, buf, String(F("set_currentvalues.php")));
   }
   #ifdef DEBUG_PRINT
-  else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
+  else { DPRINT(F("Connection to web server failed with code ")); DPRINTLN(code); }
   #endif
   client.stop();
   if (code == 1) successCnt++;
@@ -455,24 +469,26 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
   if (primary_master) {
     int8_t code = client.connect(server, port);
     if (code == 1) { // 1=CONNECTED
-      client.println(F("GET /store_currentvalues.php"));
+      String s = F("GET /store_currentvalues.php");
+      s += "\r\n";
+      client.print(s.c_str());
     }
     #ifdef DEBUG_PRINT
-    else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
+    else { DPRINT(F("Connection to web server failed with code ")); DPRINTLN(code); }
     #endif
     client.stop();
   }
   
   #ifdef DEBUG_PRINT
-  Serial.print(F("Writing to web server took ")); Serial.print((uint32_t)(millis() - start_time));
-  Serial.println(F("ms."));
+  DPRINT(F("Writing to web server took ")); DPRINT((uint32_t)(millis() - start_time));
+  DPRINTLN(F("ms."));
   #endif
   return successCnt > 0;
 }
 
 #endif
 
-bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client, IPAddress &server,
+bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client, uint8_t *server,
                                uint8_t port = 80, uint16_t json_buffer_size = 3000) {
   // Quick check if there is anything to do                               
   bool changes = false;
@@ -496,8 +512,8 @@ bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client,
   }
   
   #ifdef DEBUG_PRINT
-  Serial.println(buf);
-  Serial.print(F("REVERSE writing ")); Serial.print(buf.length()); Serial.println(F(" bytes (settings) to web server"));
+  DPRINTLN(buf.c_str());
+  DPRINT(F("REVERSE writing ")); DPRINT(buf.length()); DPRINTLN(F(" bytes (settings) to web server"));
   #endif
   if (buf.length() == 0) return false; // No changed settings
   
@@ -507,7 +523,7 @@ bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client,
     post_json_to_server(client, buf, String(F("set_settings.php")));
   }
   #ifdef DEBUG_PRINT
-  else { Serial.print(F("Connection to web server failed with code ")); Serial.println(code); }
+  else { DPRINT(F("Connection to web server failed with code ")); DPRINTLN(code); }
   #endif
   client.stop();
   if (code == 1) successCnt++;   
@@ -519,7 +535,7 @@ class MIHttpTransfer {
   uint32_t settings_interval,
            outputs_interval;
   ModuleInterfaceSet &interfaces;
-  IPAddress web_server_ip;
+  uint8_t web_server_ip[4];
   
   // State
   uint32_t last_settings = 0, last_outputs = millis();
@@ -529,16 +545,16 @@ class MIHttpTransfer {
 public:
   MIHttpTransfer(ModuleInterfaceSet &module_interface_set,
                  Client &web_client,
-                 const IPAddress &web_server_address,
+                 const uint8_t web_server_address[4],
                  const uint32_t settings_transfer_interval_ms = 10000, 
                  const uint32_t outputs_transfer_interval_ms  = 10000) : 
                  interfaces(module_interface_set), client(web_client) {
-    web_server_ip = web_server_address;
+    memcpy(web_server_ip, web_server_address, 4);
     settings_interval = settings_transfer_interval_ms;
     outputs_interval = outputs_transfer_interval_ms;                   
   }
   
-  void set_web_server_address(IPAddress &server_address) { web_server_ip = server_address; }
+  void set_web_server_address(const uint8_t *server_address) { memcpy(web_server_ip, server_address, 4); }
  
   void update() {
     // Get settings for each module from the database via the web server

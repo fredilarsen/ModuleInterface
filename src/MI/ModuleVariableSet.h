@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
 #include <MI/ModuleVariable.h>
 
 // Value returned by get_variable_ix when variable name not found. Means that max 255 variables may be used.
@@ -64,7 +63,7 @@ private:
     for (uint8_t i = 0; i < num_variables; i++) {
       #ifdef IS_MASTER
       strncpy(name_buf, variables[i].name, MVAR_MAX_NAME_LENGTH);
-      len = strlen(name_buf);
+      len = (uint8_t) strlen(name_buf);
       #else
       uint16_t source_pos = 0;
       if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) return 0;
@@ -135,7 +134,7 @@ public:
     if (!variables) {
       out_of_memory = true;
       #ifdef DEBUG_PRINT
-      Serial.println(F("MVS::preallocate_variables OUT OF MEMORY"));
+      DPRINTLN(F("MVS::preallocate_variables OUT OF MEMORY"));
       #endif
       return false;
     }
@@ -187,7 +186,7 @@ public:
         if (variables == NULL) {
           out_of_memory = true;
           #ifdef DEBUG_PRINT
-          Serial.print(F("MVS::set_variables OUT OF MEMORY. #var=")); Serial.println(num_variables);
+          DPRINT(F("MVS::set_variables OUT OF MEMORY. #var=")); DPRINTLN(num_variables);
           #endif
           return;
         }
@@ -199,7 +198,7 @@ public:
       calculate_total_value_length();
     }
     #ifdef DEBUG_PRINT
-    else { Serial.print(F("IGNORED DUPLICATE CONTRACT ")); Serial.println(contract_id); }
+    else { DPRINT(F("IGNORED DUPLICATE CONTRACT ")); DPRINTLN(contract_id); }
     #endif
   }
   #endif
@@ -234,7 +233,7 @@ public:
     } else {
       out_of_memory = true;
       #ifdef DEBUG_PRINT
-      Serial.println(F("MVS::get_variables OUT OF MEMORY"));
+      DPRINTLN(F("MVS::get_variables OUT OF MEMORY"));
       #endif
     }
   }
@@ -242,7 +241,7 @@ public:
 
   void invalidate_contract() {
     #ifdef DEBUG_PRINT
-      Serial.println(F("***** INVALIDATING CONTRACT"));
+      DPRINTLN(F("***** INVALIDATING CONTRACT"));
     #endif
     #ifdef IS_MASTER
       contract_id = 0;
@@ -265,19 +264,21 @@ public:
     if (c_id != contract_id || (numvar > num_variables)) {
       invalidate_contract();
       #ifdef DEBUG_PRINT
-        Serial.print(F("Values received with mismatched contract id ")); Serial.println(c_id);
+        DPRINT(F("Values received with mismatched contract id ")); DPRINTLN(c_id);
       #endif
       return false;
     }
     if (numvar == 0) {
       #ifdef DEBUG_PRINT
-        Serial.print(F("--> set_values got no values, not updated on sender side yet. Length = ")); Serial.println(length);
+	  if (num_variables > 0) {
+        DPRINT(F("--> set_values got no values, not updated on sender side yet. Length = ")); DPRINTLN(length);
+	  }
       #endif
       return true; // Conforms to contract, but values not available yet
     }
     #ifdef DEBUG_PRINT
     if (numvar < num_variables) {
-      Serial.print(F("--> set_values got ")); Serial.print(numvar); Serial.print(F(" of ")); Serial.print(num_variables); Serial.println(F(" values."));
+      DPRINT(F("--> set_values got ")); DPRINT(numvar); DPRINT(F(" of ")); DPRINT(num_variables); DPRINTLN(F(" values."));
     }
     #endif
 
@@ -288,7 +289,7 @@ public:
       if (numvar != num_variables) { varpos = *p; p++; } // Variable number included
       if (varpos >= num_variables) {
         #ifdef DEBUG_PRINT
-        Serial.println(F("--> set_values got corrupted packet"));
+        DPRINTLN(F("--> set_values got corrupted packet"));
         #endif
         return false; // Corrupted message
       }
@@ -352,8 +353,8 @@ public:
       if (events_only) *p = (uint8_t) (*p | 0b10000000); // Using upper bit for event flag, limiting number of vars to 127
       #ifdef DEBUG_PRINT
         if (!(is_updated() || events_only)) {
-          Serial.print(F("Values not updated or event. Sending empty output values. Value length = "));
-          Serial.println(total_len);
+          DPRINT(F("Values not updated or event. Sending empty output values. Value length = "));
+          DPRINTLN(total_len);
         }
       #endif
       p++;
@@ -374,7 +375,7 @@ public:
     } else {
       out_of_memory = true;
       #ifdef DEBUG_PRINT
-      Serial.println(F("MVS::get_values OUT OF MEMORY"));
+      DPRINTLN(F("MVS::get_values OUT OF MEMORY"));
       #endif
     }
   }
@@ -566,9 +567,9 @@ public:
 
   #if defined(DEBUG_PRINT) || defined(STATUS_PRINT) || defined(DEBUGPRINT_SETTINGS)
     void debug_print_contract() const {
-      if (num_variables == 0) Serial.print(F("Empty contract."));
+      if (num_variables == 0) DPRINT(F("Empty contract."));
       else {
-        Serial.print(num_variables); Serial.print(F(":"));
+        DPRINT(num_variables); DPRINT(F(":"));
         char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
         uint16_t source_pos = 0;
         uint8_t len;
@@ -579,17 +580,17 @@ public:
           if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) break;
           remove_type(name_buf, len);
           #endif
-          if (i > 0) Serial.print(" ");
-          Serial.print(name_buf); Serial.print(":");
+          if (i > 0) DPRINT(" ");
+          DPRINT(name_buf); DPRINT(":");
           ModuleVariable::get_type_name(variables[i].get_type(), name_buf);
-          Serial.print(name_buf);
+          DPRINT(name_buf);
         }
       }
-      Serial.println("");
+      DPRINTLN("");
     }
 
     void debug_print_values() const {
-      if (num_variables == 0) Serial.print(F("Empty contract."));
+      if (num_variables == 0) DPRINT(F("Empty contract."));
       else {
         char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
         uint16_t source_pos = 0;
@@ -601,22 +602,22 @@ public:
           if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) break;
           remove_type(name_buf, len);
           #endif
-          if (i > 0) Serial.print(" ");
-          Serial.print(name_buf); Serial.print("=");
+          if (i > 0) DPRINT(" ");
+          DPRINT(name_buf); DPRINT("=");
           switch(variables[i].get_type()) {
-          case mvtBoolean: Serial.print(*((bool*)variables[i].get_value_pointer())); break;
-          case mvtUint8: Serial.print(*((uint8_t*)variables[i].get_value_pointer())); break;
-          case mvtInt8: Serial.print(*((int8_t*)variables[i].get_value_pointer())); break;
-          case mvtUint16: Serial.print(*((uint16_t*)variables[i].get_value_pointer())); break;
-          case mvtInt16: Serial.print(*((int16_t*)variables[i].get_value_pointer())); break;
-          case mvtUint32: Serial.print(*((uint32_t*)variables[i].get_value_pointer())); break;
-          case mvtInt32: Serial.print(*((int32_t*)variables[i].get_value_pointer())); break;
-          case mvtFloat32: Serial.print(*((float*)variables[i].get_value_pointer())); break;
-          default: Serial.print(F("Unrecognized type ")); Serial.print(variables[i].get_type()); break;
+          case mvtBoolean: DPRINT(*((bool*)variables[i].get_value_pointer())); break;
+          case mvtUint8: DPRINT(*((uint8_t*)variables[i].get_value_pointer())); break;
+          case mvtInt8: DPRINT(*((int8_t*)variables[i].get_value_pointer())); break;
+          case mvtUint16: DPRINT(*((uint16_t*)variables[i].get_value_pointer())); break;
+          case mvtInt16: DPRINT(*((int16_t*)variables[i].get_value_pointer())); break;
+          case mvtUint32: DPRINT(*((uint32_t*)variables[i].get_value_pointer())); break;
+          case mvtInt32: DPRINT(*((int32_t*)variables[i].get_value_pointer())); break;
+          case mvtFloat32: DPRINT(*((float*)variables[i].get_value_pointer())); break;
+          default: DPRINT(F("Unrecognized type ")); DPRINT(variables[i].get_type()); break;
           }
         }
       }
-      Serial.println("");
+      DPRINTLN("");
     }
     #endif
 };
