@@ -19,7 +19,7 @@ ESP8266-based setup using PJON GUDP (GlobalUDP) over WiFi
 
 ### ModuleMasterHttp on Windows, Linux or Raspberry
 
-As an alternative to having the ModuleMasterHttp on an Arduino Mega, it can be run on a computer, for example along with the web server. The master will communicate via Ethernet with a Surrogate on the SWBB bus. This version of the master is present in the WIN_TCP directory. If using this, a Nano or Uno with an Ethernet shield can run the PJON Surrogate sketch (present as an example in the PJON repository) and be the translator between Ethernet and SWBB.
+As an alternative to having the ModuleMasterHttp on an Arduino Mega, it can be run on a computer, for example along with the web server. The master will communicate via Ethernet with a Surrogate on the SWBB bus. This version of the master is present in the WINDOWS_LINUX_TCP directory. If using this, a Nano or Uno with an Ethernet shield can run the PJON Surrogate sketch (present as an example in the PJON repository) and be the translator between Ethernet and SWBB.
 
 ### Pages
 The web page example consists of a Dashboard that is meant to show key information from all modules in one place, plus one page per module. This is how it is meant to look:
