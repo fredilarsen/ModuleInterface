@@ -4,6 +4,8 @@
  * to that device. The interval is changed every 5s here, and that should be visible in the other device.
  */
 
+#define USE_MIVARIABLE // For named access to variables, constant even if contract changes
+ 
 #include <MIMaster.h>
 
 // Modules

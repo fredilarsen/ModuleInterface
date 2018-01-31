@@ -10,6 +10,8 @@
  * of values between modules (through the master).
  */
 
+#define USE_MIVARIABLE // For named access to variables, constant even if contract changes
+
 #include <MIMaster.h>
 
 // Modules

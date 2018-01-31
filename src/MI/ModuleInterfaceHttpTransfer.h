@@ -360,7 +360,7 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
 
 #ifdef MI_SMALLMEM // Little memory, transfer values for each module in separate requests.
 
-bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, IPAddress &server,
+bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, const uint8_t *server_ip,
                                MILastScanTimes *last_scan_times, uint8_t port = 80,
                                bool primary_master = true, // (set primary_master=false on all masters but one if more than one)
                                uint16_t json_buffer_size = 500) {
@@ -368,6 +368,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
   #ifdef DEBUG_PRINT
   uint32_t start_time = millis();
   #endif
+  IPAddress server(server_ip);
   for (int i=0; i<interfaces.num_interfaces; i++) {
     // Encode all settings to a JSON string
     String buf;
@@ -423,7 +424,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, I
 
 #else // More memory, send values for all modules in one request (faster)
 
-bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, uint8_t *server,
+bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, const uint8_t *server,
                                MILastScanTimes *last_scan_times, uint8_t port = 80,
                                bool primary_master = true, // (set primary_master=false on all masters but one if more than one)
                                uint16_t json_buffer_size = 3000) {
@@ -488,7 +489,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, u
 
 #endif
 
-bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client, uint8_t *server,
+bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client, const uint8_t *server,
                                uint8_t port = 80, uint16_t json_buffer_size = 3000) {
   // Quick check if there is anything to do                               
   bool changes = false;
@@ -545,7 +546,7 @@ class MIHttpTransfer {
 public:
   MIHttpTransfer(ModuleInterfaceSet &module_interface_set,
                  Client &web_client,
-                 const uint8_t web_server_address[4],
+                 const uint8_t *web_server_address,
                  const uint32_t settings_transfer_interval_ms = 10000, 
                  const uint32_t outputs_transfer_interval_ms  = 10000) : 
                  interfaces(module_interface_set), client(web_client) {

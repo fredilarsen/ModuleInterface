@@ -39,4 +39,8 @@
 	#define pgm_read_byte(c) *(const char *)(c)	
 	#define EthernetClient TCPHelperClient
 	#define Client TCPHelperClient	
+#else
+  #define DPRINTLN(x) Serial.println(x)
+	#define DPRINT(x) Serial.print(x)
+	#define _itoa(x,y,z) itoa(x,y,z)
 #endif

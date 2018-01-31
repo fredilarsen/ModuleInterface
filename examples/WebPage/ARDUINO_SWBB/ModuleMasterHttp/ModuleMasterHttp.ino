@@ -13,7 +13,7 @@
 PJONLink<SoftwareBitBang> bus(1); // PJON device id 1
 
 // Web server related
-IPAddress web_server_ip(192,1,1,143);
+const uint8_t web_server_ip[] = {192,1,1,143};
 EthernetClient web_client;
 
 // Ethernet configuration for this device

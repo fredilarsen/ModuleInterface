@@ -19,7 +19,7 @@ uint8_t remote_ip10[] = { 192, 1, 1, 187 };
 uint8_t remote_ip20[] = { 192, 1, 1, 188 };
 
 // Web server related
-IPAddress web_server_ip = { 192, 1, 1, 143};
+uint8_t web_server_ip[] = { 192, 1, 1, 143};
 WiFiClient web_client;
 
 // WiFi settings

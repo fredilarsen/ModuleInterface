@@ -39,7 +39,7 @@
 PJONLink<SoftwareBitBang> bus(1); // PJON device id 1
 
 // Web server related
-IPAddress web_server(192,1,1,71);
+uint8_t web_server[] = {192,1,1,71};
 EthernetClient web_client;
 
 // Ethernet configuration for this device
@@ -85,7 +85,6 @@ void flash_status_led() {
     led_on = !led_on;
   }
 }
-
 
 
 
