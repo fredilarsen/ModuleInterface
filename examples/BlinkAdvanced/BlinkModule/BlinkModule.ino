@@ -58,8 +58,8 @@ void setup() {
   interface.set_notification_callback(notification_function);
   read_settings_from_eeprom(interface);
 
-  pinMode(13, OUTPUT);
-  digitalWrite(13, LOW);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void loop() {
@@ -117,7 +117,7 @@ void blink() {
   if (now - last_change >= interval) {
     last_change = now;
     light_on = !light_on;
-    digitalWrite(13, light_on ? HIGH : LOW);
+    digitalWrite(LED_BUILTIN, light_on ? HIGH : LOW);
   }
 }
 

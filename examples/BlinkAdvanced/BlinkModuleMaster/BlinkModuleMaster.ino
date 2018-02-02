@@ -48,8 +48,8 @@ void setup() {
   interfaces.set_notification_callback(notification_function);
   interfaces.sampling_time_outputs = 1000;
   
-  pinMode(13, OUTPUT);
-  digitalWrite(13, LOW);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void loop() { 
@@ -64,7 +64,7 @@ void loop() {
   if (millis() - last_led_change >= 1000) {
     last_led_change = millis();
     static bool led_on = false;
-    digitalWrite(13, led_on ? HIGH : LOW);
+    digitalWrite(LED_BUILTIN, led_on ? HIGH : LOW);
     led_on = !led_on;
 
     // Show inacitve modules (if module gets disconnected or dies)
