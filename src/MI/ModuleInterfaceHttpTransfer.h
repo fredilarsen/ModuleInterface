@@ -98,9 +98,9 @@ last = utc;
   if (utc != 0) {
     if (abs((int32_t)(utc -miGetTime()) > 2)) {
     #ifndef NO_TIME_SYNC
-//      #ifdef DEBUG_PRINT
+      #ifdef DEBUG_PRINT
         DPRINT(F("--> Adjusted time from web by s: ")); DPRINTLN((int32_t) (utc - miGetTime() + delay_ms/1000ul));
-//      #endif
+      #endif
       miSetTime(utc + delay_ms/1000ul); // Set system time
     #endif
     }
