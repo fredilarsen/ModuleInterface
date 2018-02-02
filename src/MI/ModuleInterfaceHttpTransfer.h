@@ -21,14 +21,15 @@
 struct MILastScanTimes {
   uint32_t times[NUM_SCAN_INTERVALS];
   MILastScanTimes() {
-    memset(times, NUM_SCAN_INTERVALS*sizeof(uint32_t), 0);
+    memset(times, 0, NUM_SCAN_INTERVALS*sizeof(uint32_t));
   }
 };
 
 void write_http_settings_request(const char *module_prefix, Client &client) {
   String request = F("GET /get_settings.php?prefix=");
   request += module_prefix;
-  client.print((request + "\r\n\r\n").c_str());
+  request += "\r\n\r\n";
+  client.print(request);
   // NOTE: On ESP8266 a client.flush() seems to close the connection, so avoid it
 }
 
