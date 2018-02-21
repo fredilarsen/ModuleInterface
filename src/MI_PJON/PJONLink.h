@@ -8,7 +8,8 @@ struct PJONLink : public Link {
   PJON<Strategy> bus;
 
   PJONLink<Strategy>(uint8_t device_id) { bus.set_id(device_id); }
-    bus.set_id(device_id); bus.copy_bus_id(bus.bus_id, bus_id);
+  PJONLink<Strategy>(uint8_t device_id, const uint8_t *bus_id) {
+    bus.set_id(device_id); copy_bus_id(bus.bus_id, bus_id);
   }
 
   // These functions are required by the base class:
