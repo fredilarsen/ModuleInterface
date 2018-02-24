@@ -143,10 +143,11 @@ public:
     if (p1) set_prefix(p1);
     if (p2) remote_id = atoi(p2);
     if (p3) {
-      for (int i=0; i<4; i++) {
+      for (uint8_t i=0; i<4; i++) {
+        char *p4 = strchr(p3, '.');
+        if (p4) *p4 = 0; // Null-terminate this part of the bus id
         remote_bus_id[i] = atoi(p3);
-        while (*p3 != '.' && *p3 != 0) p3++;
-        if (*p3 != '.') break;
+        if (p4) p3 = p4; else break;
         p3++;
       }
     }
@@ -255,7 +256,10 @@ public:
 
   bool send(uint8_t remote_id, const uint8_t *remote_bus, const uint8_t *message, uint16_t length) {
     #if defined(DEBUG_MSG) || defined(DEBUG_PRINT)
-    dname(); DPRINT("S "); DPRINT(remote_id); DPRINT(" len "); DPRINT(length);
+    dname(); DPRINT("S "); DPRINT(remote_id); DPRINT(" bus ");
+    DPRINT(remote_bus[0]); DPRINT("."); DPRINT(remote_bus[1]); DPRINT(".");
+    DPRINT(remote_bus[2]); DPRINT("."); DPRINT(remote_bus[3]);  
+    DPRINT(" len "); DPRINT(length);
     DPRINT(" cmd "); DPRINT(message[0]); DPRINT(" active "); DPRINTLN(is_active());
     #endif
     uint16_t status = pjon->send_packet(remote_id, remote_bus, (const char*)message, length,
