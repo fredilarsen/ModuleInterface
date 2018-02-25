@@ -2,9 +2,7 @@
 
 #define IS_MASTER
 
-#include <PJON.h>
 #include <platforms/MIPlatforms.h>
-
 #include <MI_PJON/PJONLink.h>
 #include <MI_PJON/PJONModuleInterfaceSet.h>
 #include <utils/MIUtilities.h>
