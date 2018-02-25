@@ -32,4 +32,4 @@ BinaryBuffer	KEYWORD1
 # Constants (LITERAL1)
 #######################################
 
-FAIL LITERAL1
+FAIL	LITERAL1
