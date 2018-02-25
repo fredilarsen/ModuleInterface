@@ -75,38 +75,71 @@ public:
   #ifndef NO_TIME_SYNC
   void broadcast_time() {
     if (miIsTimeSynced()) {
-      bool do_sync = ((uint32_t)(millis() - last_time_sync) >= 60000); // Time for a scheduled broadcast?
+      bool scheduled_sync = ((uint32_t)(millis() - last_time_sync) >= 60000); // Time for a scheduled broadcast?
       #ifdef DEBUG_PRINT
-        if (do_sync) {DPRINT(F("Scheduled broadcast of time sync: ")); DPRINTLN(miGetTime()); }
+        if (scheduled_sync) {DPRINT(F("Scheduled broadcast of time sync: ")); DPRINTLN(miGetTime()); }
       #endif
-      // Check if any module has reported that is it missing time
-      if (!do_sync) {
-        for (uint8_t i = 0; i < num_interfaces; i++) if (interfaces[i]->status_bits & MISSING_TIME) {
-          #ifdef DEBUG_PRINT
-            DPRINT(F("Module ")); DPRINT(interfaces[i]->module_name);
-            DPRINT(F(" missing time, broadcasting: ")); DPRINTLN(miGetTime());
-          #endif
-          do_sync = true;
-          break;
+      
+      // Check if any local bus module has reported that is it missing time
+      bool broadcast = scheduled_sync;
+      if (!scheduled_sync) {
+        for (uint8_t i = 0; i < num_interfaces; i++) { 
+          if ((interfaces[i]->status_bits & MISSING_TIME) && has_local_bus(i)) {
+            // Same bus, can do broadcast
+            broadcast = true;
+            #ifdef DEBUG_PRINT
+            if (!scheduled_sync) {
+              DPRINT(F("Module ")); DPRINT(interfaces[i]->module_name);
+              DPRINT(F(" missing time, broadcasting: ")); DPRINTLN(miGetTime());
+            }
+            #endif
+          }
         }
       }
-      if (do_sync) {
-        last_time_sync = millis();
-        char buf[5];
-        buf[0] = (char) mcSetTime;
-        uint32_t t = miGetTime();
-        memcpy(&buf[1], &t, 4);
-        uint32_t dummy_bus_id = 0;
-        pjon->send_packet(0, (uint8_t*)&dummy_bus_id, buf, 5, MI_REDUCED_SEND_TIMEOUT);
+
+      // Do the broadcast on local bus
+      if (broadcast) {
+        send_timesync(0, pjon->get_bus_id());
 
         // Clear time-missing bit to avoid this triggering continuous broadcasts.
         // If a module did not pick up the broadcast, we will get this information in the next status reply.
-        for (uint8_t i = 0; i < num_interfaces; i++) interfaces[i]->status_bits &= ~MISSING_TIME;
+        for (uint8_t i = 0; i < num_interfaces; i++) 
+          if (has_local_bus(i)) interfaces[i]->status_bits &= ~MISSING_TIME;
       }
+      
+      // Broadcast will not reach devices on other buses, so send directed time sync to each
+      for (uint8_t i = 0; i < num_interfaces; i++) { 
+        if ((scheduled_sync || interfaces[i]->status_bits & MISSING_TIME) && !has_local_bus(i)) {
+          send_timesync(((PJONModuleInterface*)interfaces[i])->remote_id, ((PJONModuleInterface*)interfaces[i])->remote_bus_id);
+          #ifdef DEBUG_PRINT
+            if (interfaces[i]->status_bits & MISSING_TIME) DPRINT(F("Module missing time. ")); 
+            DPRINT(F("Sending directed sync to "));DPRINT(interfaces[i]->module_name);
+            DPRINT(F(F(": "))); DPRINTLN(miGetTime());
+          #endif
+
+          // Clear time-missing bit to avoid this triggering continuous time sync to this device
+          // If a module did not pick up the sync, we will get this information in the next status reply.
+          interfaces[i]->status_bits &= ~MISSING_TIME;  
+        }
+      }
+      if (scheduled_sync) last_time_sync = millis();      
     }
   }
+  
+  bool has_local_bus(uint8_t interface_ix) {
+    // Returns true if device is on the same bus as me (the master). Always returns true in local mode.
+    return (memcmp(((PJONModuleInterface*)interfaces[interface_ix])->remote_bus_id, pjon->get_bus_id(), 4)==0);
+  }
+  
+  void send_timesync(const uint8_t id, const uint8_t bus_id[]) {
+    char buf[5];
+    buf[0] = (char) mcSetTime;
+    uint32_t t = miGetTime();
+    memcpy(&buf[1], &t, 4);
+    pjon->send_packet(id, bus_id, buf, 5, MI_REDUCED_SEND_TIMEOUT);
+  }
   #endif
-
+  
   void update() {
     // Do PJON send and receive
     pjon->update();
