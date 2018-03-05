@@ -1,8 +1,8 @@
-## ModuleInterface v2.1
+# ModuleInterface v2.1
 
 This library enables fast and efficient setup of automation systems based on a collection of devices ("modules") controlled through a dynamic and responsive web interface. All under your control running locally with no subscriptions or cloud access required. The web interface can be easily extended and adapted to your use, or replaced with your own design.
 
-ModuleInterface takes care of automatic transfer of settings (module configuration) and values between devices, with very little programming needed for each device. It is built on top of the PJON communication library, allowing a wide range of devices to be connected with a single wire (no extra hardware!), Ethernet or WiFi, ASK/FSK/OOK/LoRa radio transceivers, serial, RS485 or light using LEDs and lasers.
+ModuleInterface takes care of automatic transfer of settings (module configuration) and values between devices, with very little programming needed for each device. It is built on top of the [PJON](https://github.com/gioblu/PJON) communication library, allowing a wide range of devices to be connected with a single wire (no extra hardware!), Ethernet or WiFi, ASK/FSK/OOK/LoRa radio transceivers, serial, RS485 or light using LEDs and lasers.
 
 A simple setup can consist of multiple Arduino Nano devices connected with a single wire to a master on an Arduino Mega with an Ethernet shield for communicating with the web server. No extra shields are needed for communication between the Arduinos, keeping this a low-cost but stable solution.
 
@@ -14,7 +14,7 @@ The terms _device_ and _module_ are used somewhat interchangeably in this text, 
 
 ![UseCase1](images/UseCase1.png)
 
-### Features
+## Features
 - Transport of values (measured and calculated) between modules according to their contracts
 - Transport of settings between master and modules in both directions.
 - HTTP client lets the master transfer settings between a database and the modules, for configuration in web pages and/or in the modules themselves.
@@ -22,7 +22,7 @@ The terms _device_ and _module_ are used somewhat interchangeably in this text, 
 - Optional persistence lets each module remember its last received settings at startup, for autonomous operation even if it has been disconnected from the master
 - Coarse clock synchronization of all modules (within a few seconds)
 
-### How it works
+## How it works
 It is a master-slave based system where a master can relate to multiple devices (modules) using the ModuleInterface library.
 
 Each module does not know about any other device. The master contacts each module and retrieves its service contracts for settings, input values and output values. The master will then read and write the values in the contracts regularly at a configurable time interval.
@@ -41,13 +41,7 @@ The ModuleInterface code in a master typically uses more storage space and RAM t
 
 Also read the [design principles](documentation/README.md) document.
 
-### PJON
-The ModuleInterface class that is used by a module, and the ModuleInterfaceSet class that is used by a master, implement transport logic and serialization/deserialization and other functionality, but do not implement any communication. The communication between modules is designed to be handled by deriving a class from each of these two, and letting these classes do the talking by some protocol.
-
-This library is not worth much without a proper communication bus for letting a master and multiple modules talk together. Luckily, we have the brilliant [PJON](https://github.com/gioblu/PJON) communication bus library created by *Giovanni Blu Mitolo* available, and this has been used as the primary choice for this library. The PJON library can be used for single-wire multi-master bus communication directly between Arduinos with no extra hardware, a brilliant feat. It can also be used for wireless communication, so ModuleInterface modules need not be wired to the master.
-The PJON library also supports a lot of different devices, making it a great choice.
-
-### Module implementation
+## Module implementation
 Each module must declare a global object of a ModuleInterface derived class like the PJONModuleInterface that is part of the library. In the declaration of this object, the contracts (names and data types) for settings, input values and output values are specified as text parameters for simplicity.
 
 The object's loop function must be called regularly. Contracts are exchanged automatically with the master, and settings will arrive shortly. Settings are retrieved from the object with getter functions using the same order as the contract specifies.
@@ -89,7 +83,7 @@ Adding reading of more sensors is done by adding more output parameters to the c
 
 After adding the variable, the value must be set in a similar way as the motion in the example.
 
-#### Variable naming convention
+### Variable naming convention
 Each setting, input or output is identified by a variable name. A variable name consists of two parts:
 
 1. A module prefix, as defined when declaring the module in the master. This is a two-character lower case prefix identifying the module, like "gh" for a GreenHouse module.
@@ -101,25 +95,26 @@ Variable names for settings and outputs within a module can be specified without
 
 Variable names for inputs must contain the module prefix for the module where they are expected to come from. For example, a GreenHouse monitoring module can specify an input with name "omTemp" to subscribe to an output with the name "Temp" in an "OutsideMonitor" module with prefix "om".
 
-#### Web pages
+### Web pages
 The included HTTP client retrieves settings from a database behind a web server and synchronizes them to all modules that have any settings. It also logs all outputs (measurements and states) from all modules to a database behind the web server.
 
 PHP scripts and a database scheme plus instructions are included, making it easy to get the transfer of settings and values up and running in a standard, free LAMP or WAMP setup (Linux/Windows + Apache + MySQL/MariaDb + PHP) on your computer.
 
-A sample web page is included in the examples, controlling a light controller module that subscribes to an ambient light measurement from another module. Measured ambient light is shown as current value and in trend plots along with the power output from the light controller. The settings used by the controller, a time interval and a ambient light limit, can be edited in the web page and is synced to the light controller.
+A sample web site is included in the examples, controlling a light controller module that subscribes to an ambient light measurement from another module. Measured ambient light is shown as current value and in trend plots along with the power output from the light controller. The settings used by the controller, a time interval and a ambient light limit, can be edited in the web page and is synced to the light controller.
+The sample web site can be used as a starting point for your own site.
 
-Here is a snapshot of my own responsive home automation web page, running on a server on my own LAN, with access from the outside and mobile phone through VPN:
+Here is a snapshot of a responsive home automation web site in production, running on a server on a LAN, with access from the outside and mobile phone through VPN:
 
 ![Web Page Example](images/WebPageExample.png)
 
 
-#### Dependencies and credits
+### Dependencies and credits
 This library depends on the following libraries in addition to the Arduino standard libraries:
 
 * [PJON](https://github.com/gioblu/PJON) for communication between modules
 * [ArduinoJSON](https://github.com/bblanchon/ArduinoJson) for communication between master and web server
 
-#### License
+### License
 ```cpp
 /* Copyright 2016-2017 Fred Larsen
 
