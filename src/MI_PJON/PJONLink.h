@@ -20,7 +20,7 @@ struct PJONLink : public Link {
 
   uint8_t update() { return 0; /*bus.update();*/ }
   uint16_t send_packet(uint8_t id, const uint8_t *b_id, const char *string, uint16_t length, uint32_t timeout) {
-    return bus.send_packet_blocking(id, b_id, (char *)string, length, bus.config | PJON_PORT_BIT, MI_PJON_MODULE_INTERFACE_PORT, timeout);
+    return bus.send_packet_blocking(id, b_id, (char *)string, length, bus.config | PJON_PORT_BIT, 0, MI_PJON_MODULE_INTERFACE_PORT, timeout);
   }
 
   const PJON_Packet_Info &get_last_packet_info() const { return bus.last_packet_info; }
