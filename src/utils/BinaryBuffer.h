@@ -21,10 +21,10 @@ public:
   void deallocate() { if (buffer) { delete[] buffer; buffer = NULL; len = 0; } }
   bool is_empty() const { return buffer == NULL; }
   
-  const uint8_t *get() const { return buffer; }
+  uint8_t *get() const { return buffer; }
   uint8_t *get() { return buffer; }
   
-  const uint8_t operator [] (const uint16_t ix) const { return buffer[ix]; }
+  uint8_t operator [] (const uint16_t ix) const { return buffer[ix]; }
   uint8_t &operator [] (const uint16_t ix) { return buffer[ix]; }
   
   uint16_t length() const { return len; }

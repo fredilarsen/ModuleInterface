@@ -173,7 +173,7 @@ public:
   #endif
 
   #ifdef IS_MASTER
-  void set_variables(const uint8_t *names_and_types, const uint8_t length) { // Serialized data coming from worker to master
+  void set_variables(const uint8_t *names_and_types, const uint8_t /*length*/) { // Serialized data coming from worker to master
     const uint8_t *p = names_and_types;
     uint32_t new_contract_id = 0;
     memcpy(&new_contract_id, p, 4); p += 4; // Remember incoming contract id
@@ -192,7 +192,7 @@ public:
         }
       }
       for (uint8_t i = 0; i < num_variables; i++) {
-        variables[i].set_variable(p, variables[i].get_size());
+        variables[i].set_variable(p);
         p += (2 + p[1]); // type byte + length byte + name length
       }
       calculate_total_value_length();
@@ -411,7 +411,7 @@ public:
   void set_value(const uint8_t ix, const void *value, const uint8_t size) {
     if (ix < num_variables) variables[ix].set_value(value, size);
   }
-  const void get_value(const uint8_t ix, void *value, const uint8_t size) const {
+  void get_value(const uint8_t ix, void *value, const uint8_t size) const {
     if (ix < num_variables) variables[ix].get_value(value, size);
   }
   

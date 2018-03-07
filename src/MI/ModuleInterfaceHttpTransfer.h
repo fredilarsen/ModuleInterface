@@ -55,8 +55,11 @@ bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
   uint32_t b;
   switch(v.get_type()) {
     // NOTE: boolean is transferred as 0/1 instead of true/false to enable plotting
-    case mvtBoolean: val_to_buf(&b, (uint8_t) root[name]); 
-                     *(bool*)&b = *(uint8_t*)&b != 0; buf_to_mvar(v, &b, sizeof(bool)); return true;
+    case mvtBoolean: { 
+      val_to_buf(&b, (uint8_t) root[name]); 
+      bool bv = *(uint8_t*)&b != 0;
+      buf_to_mvar(v, (uint32_t*)&bv, sizeof(bool)); return true;
+    }
     case mvtUint8: { val_to_buf(&b, (uint8_t) root[name]); buf_to_mvar(v, &b, sizeof(uint8_t)); return true; }
     case mvtInt8: val_to_buf(&b, (int8_t) root[name]); buf_to_mvar(v, &b, sizeof(int8_t)); return true;
     case mvtUint16: val_to_buf(&b, (uint16_t) root[name]); buf_to_mvar(v, &b, sizeof(uint16_t)); return true;
@@ -92,10 +95,6 @@ bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) 
 void set_time_from_json(JsonObject& root, uint32_t delay_ms) {
  // Set time if received (as early as possible)
   uint32_t utc = (uint32_t)root["UTC"];
-static uint32_t last = utc;
-if ((uint32_t)(utc-last) > 1)  
-printf("TIME FROM WEB: %d change=%d delay=%d\n", utc, (utc-last), delay_ms/1000);
-last = utc;
   if (utc != 0) {
     if (abs((int32_t)(utc -miGetTime()) > 2)) {
     #ifndef NO_TIME_SYNC
@@ -122,7 +121,7 @@ void decode_json_settings(ModuleInterface &interface, JsonObject& root) {
   interface.settings.set_updated(); // Flag that settings are ready to be used
 }
 
-bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_t port = 80,
+bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_t /*port*/ = 80,
                         const uint16_t buffer_size = 800, const uint16_t timeout_ms = 3000) {
   char *buf = new char[buffer_size];
   if (buf == NULL) {

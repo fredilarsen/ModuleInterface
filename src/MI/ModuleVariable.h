@@ -23,7 +23,9 @@
 #define MVAR_COMPOSITE_NAME_LENGTH (MVAR_MAX_NAME_LENGTH + MVAR_TYPE_LENGTH)
 
 // Suppress strncpy warnings
+#ifdef MI_POSIX
 #pragma warning(disable:4996)
+#endif
 
 
 enum ModuleVariableType {
@@ -43,6 +45,7 @@ struct ModuleVariable {
 private:
   union {
     uint32_t uint32; // To make sure it is properly aligned
+    float f;
     char array[4];   // A 4 byte buffer covers all supported value types, better than using a pointer and allocating memory
   } value;
   ModuleVariableType type = mvtUnknown; // To save memory we use the uppermost bits for change detection, therefore do not allow direct access
@@ -59,7 +62,7 @@ public:
   }
 
   // Setters and getters for serializing (type,length,name)
-  void set_variable(const uint8_t *name_and_type, const uint8_t length) {
+  void set_variable(const uint8_t *name_and_type) {
     // Read name length byte
     type = (ModuleVariableType) name_and_type[0];
     #ifdef IS_MASTER
@@ -133,9 +136,8 @@ public:
 
   bool is_equal(const void *v, const uint8_t size) { 
     if (get_size() == size) {
-      if (get_type() == mvtFloat32 && isfinite(*(const float*)value.array) && isfinite(*(const float*)v)) {
-        float val = *(const float*)value.array;
-        return (fabs(val - *(const float*)v) < 1e-5*fabs(val));
+      if (get_type() == mvtFloat32 && isfinite(value.f) && isfinite(*(float*)v)) {
+        return (fabs(value.f - *(const float*)v) < 1e-5*fabs(value.f));
       } else return (memcmp(value.array, v, size) == 0); 
     }
     return false;

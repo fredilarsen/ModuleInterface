@@ -5,7 +5,7 @@
 #define USE_MIVARIABLE // Can be defined manually to use this on module side as well
 
 // Value 255 is reserved to mean "no module"
-#define NO_MODULE 255
+#define NO_MODULE ((uint8_t)255)
 
 #include <MI/ModuleInterface.h>
 #include <utils/MITime.h>

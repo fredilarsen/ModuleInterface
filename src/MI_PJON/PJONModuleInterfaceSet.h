@@ -178,7 +178,7 @@ public:
   }
 
   uint8_t locate_module(const uint8_t device_id, const uint8_t *bus_id) const {
-    int8_t ix = 0;
+    uint8_t ix = NO_MODULE;
     for (uint8_t i=0; i<num_interfaces; i++) {
       if (((PJONModuleInterface*) interfaces[i])->remote_id == device_id &&
           (memcmp(((PJONModuleInterface*) interfaces[i])->remote_bus_id, bus_id, 4) == 0)) {
@@ -190,7 +190,7 @@ public:
 
   bool handle_message(const uint8_t *payload, const uint16_t length, const PJON_Packet_Info &packet_info) {
     // Locate the relevant module based on packet info (device id and bus id)
-    int8_t ix = locate_module(packet_info.sender_id, packet_info.sender_bus_id);
+    uint8_t ix = locate_module(packet_info.sender_id, packet_info.sender_bus_id);
     if (ix == NO_MODULE) return false;
 
     // Let the interface handle the message

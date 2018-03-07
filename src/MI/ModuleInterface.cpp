@@ -1,6 +1,6 @@
 #include <MI/ModuleInterface.h>
 
-void dummy_notification_function(NotificationType notification_type, const ModuleInterface *module_interface) {};
+void dummy_notification_function(NotificationType /*notification_type*/, const ModuleInterface */*module_interface*/) {};
 
 #ifndef IS_MASTER
 const char *ModuleInterface::settings_contract = NULL, // Pointer to ordinary or PROGMEM string constant
