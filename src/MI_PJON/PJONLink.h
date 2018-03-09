@@ -1,7 +1,7 @@
 #pragma once
 
-#include <MI_PJON/PJONModuleInterface.h>
 #include <MI_PJON/Link.h>
+#include <MI_PJON/PJONModuleInterface.h>
 
 template<typename Strategy>
 struct PJONLink : public Link {

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <PJON.h>
-
 struct Link {
   virtual uint16_t receive() = 0;
   virtual uint16_t receive(uint32_t duration) = 0;

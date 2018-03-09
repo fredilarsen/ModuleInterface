@@ -14,10 +14,6 @@
 #define MI_SMALLMEM
 #endif
 
-#ifdef PJON_ESP
-#define F(x) (x)
-#endif
-
 struct MILastScanTimes {
   uint32_t times[NUM_SCAN_INTERVALS];
   MILastScanTimes() {

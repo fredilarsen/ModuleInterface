@@ -1,19 +1,7 @@
 #pragma once
 
-#include <MI/ModuleInterface.h>
-
-#ifndef PJON_MAX_PACKETS
-  #define PJON_MAX_PACKETS 0
-#endif
-#ifndef PJON_PACKET_MAX_LENGTH
-  #define PJON_PACKET_MAX_LENGTH 250
-#endif
-// Increase SWBB timeout to handle long packets
-#ifndef SWBB_RESPONSE_TIMEOUT
-  #define SWBB_RESPONSE_TIMEOUT 2000
-#endif
-
 #include <MI_PJON/Link.h>
+#include <MI/ModuleInterface.h>
 
 // A timeout to make sure a lost request or reply does not stop everything permanently
 #define MI_REQUEST_TIMEOUT 5000000    // (us) How long to wait for an active module to reply to a request
