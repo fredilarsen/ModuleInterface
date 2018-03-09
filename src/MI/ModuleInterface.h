@@ -271,7 +271,7 @@ public:
 
   #ifdef IS_MASTER
   void set_prefix(const char *prefix) {
-    uint8_t len = (uint8_t) (prefix ? min(strlen(prefix), MVAR_PREFIX_LENGTH) : 0);
+    uint8_t len = (uint8_t) (prefix ? MI_min(strlen(prefix), MVAR_PREFIX_LENGTH) : 0);
     strncpy(module_prefix, prefix, len);
     module_prefix[len] = 0; // Null-terminate
   }

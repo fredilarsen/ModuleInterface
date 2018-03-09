@@ -22,15 +22,7 @@
 	#define DPRINT(x) mi_dprint(x)
 
 	#include <math.h>
-	
-	#ifndef min
-		#define min(x, y) (x <= y ? x : y)
-	#endif
-	
-	#ifndef max
-		#define max(x, y) (x >= y ? x : y)
-	#endif
-	
+		
 	#ifndef _itoa
 	#define _itoa(x,y,z) sprintf(y, "%d", (int)x)
 	#endif
@@ -43,4 +35,11 @@
   #define DPRINTLN(x) Serial.println(x)
 	#define DPRINT(x) Serial.print(x)
 	#define _itoa(x,y,z) itoa(x,y,z)
+#endif
+
+#ifndef MI_min
+  #define MI_min(x, y) (x <= y ? x : y)
+#endif
+#ifndef MI_max
+  #define MI_max(x, y) (x >= y ? x : y)
 #endif

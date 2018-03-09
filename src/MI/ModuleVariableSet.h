@@ -26,7 +26,7 @@ public:
   void set_name(const char *variable_name) {
     contract_id = 0;
     ix = NO_VARIABLE;
-    uint8_t len = min(strlen(variable_name), MVAR_MAX_NAME_LENGTH);
+    uint8_t len = MI_min(strlen(variable_name), MVAR_MAX_NAME_LENGTH);
     strncpy(name, variable_name, len);
     name[len] = 0;
   }

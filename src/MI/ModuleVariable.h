@@ -66,7 +66,7 @@ public:
     // Read name length byte
     type = (ModuleVariableType) name_and_type[0];
     #ifdef IS_MASTER
-    uint8_t len = (uint8_t) min(name_and_type[1], MVAR_MAX_NAME_LENGTH);
+    uint8_t len = (uint8_t) MI_min(name_and_type[1], MVAR_MAX_NAME_LENGTH);
     memcpy(name, &name_and_type[2], len);
     name[len] = 0; // Null-terminator
     #endif
@@ -78,14 +78,14 @@ public:
     const char *pos1 = strchr(s, ':'), *pos2 = strchr(s, ' ');
     if (pos1 == NULL || (pos2 != NULL && pos2 < pos1)) { // No colon in this variable declaration, use float as default
       #ifdef IS_MASTER
-      uint8_t len = (uint8_t) min(pos2 == NULL ? strlen(s) : pos2-s, MVAR_MAX_NAME_LENGTH);
+      uint8_t len = (uint8_t) MI_min(pos2 == NULL ? strlen(s) : pos2-s, MVAR_MAX_NAME_LENGTH);
       memcpy(name, s, len);
       name[len] = 0; // Null-terminator
       #endif
       type = mvtFloat32; // Default data type
     } else { // There is a colon in the declaration
       #ifdef IS_MASTER
-      uint8_t len = (uint8_t) min(pos1 - s, MVAR_MAX_NAME_LENGTH);
+      uint8_t len = (uint8_t) MI_min(pos1 - s, MVAR_MAX_NAME_LENGTH);
       memcpy(name, s, len);
       name[len] = 0; // Null-terminate
       #endif
@@ -102,7 +102,7 @@ public:
     if (has_module_prefix() || !prefix) strncpy(output_name_buf, name, buf_size); // Already prefixed
     else { // Add the specified prefix
       uint8_t len = (uint8_t) strlen(prefix);
-      strncpy(output_name_buf, prefix, min(len, buf_size));
+      strncpy(output_name_buf, prefix, MI_min(len, buf_size));
       strncpy(&output_name_buf[len], name, buf_size - len);
       output_name_buf[buf_size-1] = 0;
     }

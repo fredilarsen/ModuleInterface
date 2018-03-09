@@ -114,7 +114,7 @@ public:
           #ifdef DEBUG_PRINT
             if (interfaces[i]->status_bits & MISSING_TIME) DPRINT(F("Module missing time. ")); 
             DPRINT(F("Sending directed sync to "));DPRINT(interfaces[i]->module_name);
-            DPRINT(F(F(": "))); DPRINTLN(miGetTime());
+            DPRINT(F(": ")); DPRINTLN(miGetTime());
           #endif
 
           // Clear time-missing bit to avoid this triggering continuous time sync to this device
