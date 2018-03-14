@@ -25,7 +25,7 @@ void write_http_settings_request(const char *module_prefix, Client &client) {
   String request = F("GET /get_settings.php?prefix=");
   request += module_prefix;
   request += "\r\n\r\n";
-  client.print(request);
+  client.print(request.c_str());
   // NOTE: On ESP8266 a client.flush() seems to close the connection, so avoid it
 }
 
