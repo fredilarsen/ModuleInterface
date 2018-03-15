@@ -1,6 +1,6 @@
 /* This is the master for the full ModuleInterface example setup which includes:
-* 1. A master (this program, on Linux or Windows)
-* 2. A LUDP<->SWBB Switch (Nano or Uno with Ethernet shield)
+* 1. A master (Linux or Windows)
+* 2. A LUDP<->SWBB switch (Nano or Uno with Ethernet shield)
 * 3. A module reading the ambient light level (Nano, Uno, ...)
 * 4. A module which turns the light on and off (on-board LED for now) (Nano, Uno, ...)
 * 5. A webserver+database setup which keeps all the module configuration and logs their output
@@ -26,12 +26,12 @@ MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 10000)
 
 void setup() {
   printf("Welcome to ModuleMasterHttp.\n");
-  bus.bus.strategy.link.set_port(7200); // Use the same port on all devices
+  bus.bus.strategy.set_port(7200); // Must be the same for all devices
   bus.bus.begin();
 
   // Set frequency of transfer between modules
-  interfaces.sampling_time_settings = 1000;
-  interfaces.sampling_time_outputs = 1000;
+  interfaces.sampling_time_settings = 2000;
+  interfaces.sampling_time_outputs = 2000;
 }
 
 void loop() {
