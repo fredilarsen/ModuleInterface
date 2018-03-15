@@ -26,7 +26,7 @@ MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 10000)
 
 void setup() {
   printf("Welcome to ModuleMasterHttp.\n");
-  bus.bus.strategy.link.set_port(7200); // Use the same port on all devices
+  bus.bus.strategy.set_port(7200); // Use the same port on all devices
   bus.bus.begin();
 
   // Set frequency of transfer between modules
