@@ -4,7 +4,7 @@ The PJON SWBB strategy is not available on these platforms, so the LocalUDP stra
 
 This makes it possible to have one or more groups of SWBB connected modules reachable through one Switch for each group.
 
-These are two of many scenarios that can be used for this example setup.
+These are two of many scenarios that can be used for this example setup:
 ```
                                                        LAN (Ethernet)
                                        _______________________________________________
@@ -16,7 +16,7 @@ These are two of many scenarios that can be used for this example setup.
       |               |               |
       |               |               |
       ---------------------------------
-                         SWBB           
+                    SWBB           
 
 
 
