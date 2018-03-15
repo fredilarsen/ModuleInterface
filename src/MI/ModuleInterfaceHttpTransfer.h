@@ -92,12 +92,13 @@ void set_time_from_json(JsonObject& root, uint32_t delay_ms) {
  // Set time if received (as early as possible)
   uint32_t utc = (uint32_t)root["UTC"];
   if (utc != 0) {
+    utc += delay_ms/1000ul;
     if (abs((int32_t)(utc -miGetTime()) > 2)) {
     #ifndef NO_TIME_SYNC
       #ifdef DEBUG_PRINT
-        DPRINT(F("--> Adjusted time from web by s: ")); DPRINTLN((int32_t) (utc - miGetTime() + delay_ms/1000ul));
+        DPRINT(F("--> Adjusted time from web by s: ")); DPRINTLN((int32_t) (utc - miGetTime()));
       #endif
-      miSetTime(utc + delay_ms/1000ul); // Set system time
+      miSetTime(utc); // Set system time
     #endif
     }
   }
@@ -117,77 +118,70 @@ void decode_json_settings(ModuleInterface &interface, JsonObject& root) {
   interface.settings.set_updated(); // Flag that settings are ready to be used
 }
 
-bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_t /*port*/ = 80,
-                        const uint16_t buffer_size = 800, const uint16_t timeout_ms = 3000) {
-  char *buf = new char[buffer_size];
+JsonObject& read_json_settings_from_server(
+    Client &client, DynamicJsonBuffer &jsonBuffer, char *buf, const uint16_t buffer_size, 
+    const uint8_t /*port*/ = 80, const uint16_t timeout_ms = 3000) 
+{
   if (buf == NULL) {
     ModuleVariableSet::out_of_memory = true;
     #ifdef DEBUG_PRINT
     DPRINTLN(F("read_json_settings OUT OF MEMORY"));
     #endif
-    return false; // Out of memory at the moment
+    return JsonObject::invalid();
   }
-//printf("CONNECTED=%d AVAIL=%d\n", client.connected(), client.available());   
   uint16_t pos = 0;
-  unsigned long start = millis();
+  uint32_t start = millis();
   while (client.connected() && (millis()-start) < timeout_ms && pos==0) {
-//printf("OUTER LOOP CONNECTED=%d AVAIL=%d TIMEOUT=%d\n", client.connected(), client.available(), millis()-start);   
     while (client.connected() && client.available()>0 && pos < buffer_size -1 && (millis()-start) < timeout_ms) { 
       uint16_t len = client.read((uint8_t*) &buf[pos], buffer_size - pos -1); 
-//printf("INNER LOOP CONNECTED=%d AVAIL=%d TIMEOUT=%d pos=%d len=%d bufsize=%d\n", client.connected(), client.available(), millis()-start, pos,  len, buffer_size);   
       if (len > 0) pos += len; else break;
     }
     if (pos == 0) delay(1);
   }
   buf[pos] = 0; // null-terminate
   client.stop();  // Finished using the socket, close it as soon as possible
-  #ifdef DEBUG_PRINT
-  //DPRINT(F("Read ")); DPRINT(pos); DPRINT(F(" bytes (settings) from web server for "));
-  //DPRINTLN(interface.module_name);
-  //DPRINT(buf);
-  #endif
+  char *jsonStart = buf;
   if (pos >= buffer_size - 1) {
-    delete[] buf;
     ModuleVariableSet::out_of_memory = true;
     #ifdef DEBUG_PRINT
     DPRINT(pos); DPRINTLN(F(" bytes, read_json_settings BUFFER TOO SMALL"));
     #endif
-    return false;
+    return JsonObject::invalid();
   }
-  bool status = false;
   if (pos > 0) {
-    uint32_t before_parsing = millis();
     // Locate JSON part of reply
     const char *jsonDecl = "Content-Type: application/json";
-    char *jsonStart = strstr(buf, jsonDecl);
+    jsonStart = strstr(buf, jsonDecl);
     if (jsonStart) jsonStart += strlen(jsonDecl) + 1;
     else jsonStart = buf;
-    {        
-      DynamicJsonBuffer jsonBuffer;
-      JsonObject& root = jsonBuffer.parseObject(jsonStart);  
-      if (root.success()) {
-        // Set system time if UTC was returned from server, exclude parsing time and half of retrieval time
-        #ifdef DEBUG_PRINT
-        uint32_t before_set = millis();
-        #endif
-        set_time_from_json(root, ((uint32_t)(millis()-before_parsing)) + ((uint32_t)(before_parsing-start))/2ul);
-        decode_json_settings(interface, root);
-        #ifdef DEBUG_PRINT
-//        DPRINT(": Get, parse, set in ms: "); DPRINT((uint32_t)(before_parsing-start)); DPRINT(" ");
-//        DPRINT((uint32_t)(before_set-before_parsing)); DPRINT(" ");
-//        DPRINT((uint32_t)(millis()-before_set));
-        #endif
-        status = true;
-      } else {
-        #ifdef DEBUG_PRINT
-        DPRINTLN("Failed parsing settings JSON. Out of memory?");
-        #endif
-      }
-    }
+  }
+  return jsonBuffer.parseObject(jsonStart);
+}
+
+
+bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_t port = 80,
+                        const uint16_t buffer_size = 800, const uint16_t timeout_ms = 3000) {
+  char *buf = new char[buffer_size];
+  DynamicJsonBuffer jsonBuffer;
+  uint32_t start = millis();
+  JsonObject& root = read_json_settings_from_server(client, jsonBuffer, buf, buffer_size, port, timeout_ms);
+  bool status = false;
+  if (root.success()) {
+    // Set system time if UTC was returned from server, exclude parsing time and half of retrieval time
+    #ifdef DEBUG_PRINT
+    uint32_t before_set = millis();
+    #endif
+    set_time_from_json(root, (uint32_t)(millis()-start));
+    decode_json_settings(interface, root);
+    status = true;
+  } else {
+    #ifdef DEBUG_PRINT
+    DPRINTLN("Failed parsing settings JSON. Out of memory?");
+    #endif
   }
 
   // Deallocate buffer
-  delete[] buf;
+  if (buf != NULL) delete[] buf;
 
   return status;
 }
@@ -528,6 +522,7 @@ bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client,
 }
 
 class MIHttpTransfer {
+protected:  
   // Configuration
   uint32_t settings_interval,
            outputs_interval;
@@ -546,7 +541,7 @@ public:
                  const uint32_t settings_transfer_interval_ms = 10000, 
                  const uint32_t outputs_transfer_interval_ms  = 10000) : 
                  interfaces(module_interface_set), client(web_client) {
-    memcpy(web_server_ip, web_server_address, 4);
+    if (web_server_address) memcpy(web_server_ip, web_server_address, 4);
     settings_interval = settings_transfer_interval_ms;
     outputs_interval = outputs_transfer_interval_ms;                   
   }
@@ -565,5 +560,5 @@ public:
       // (set primary_master=false on all masters but one if there are more than one)
       send_values_to_web_server(interfaces, client, web_server_ip, &last_scan_times); 
     }    
-  }                   
+  }  
 };

@@ -12,5 +12,8 @@ struct Link {
   virtual uint8_t get_id() const = 0;
   virtual const uint8_t *get_bus_id() const = 0;
 
+  virtual void set_id(uint8_t id) = 0;
+  virtual void set_bus_id(const uint8_t *bus_id) = 0;
+
   virtual void set_receiver(PJON_Receiver r, void *custom_ptr = NULL) = 0;
 };

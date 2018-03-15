@@ -11,7 +11,7 @@
 // The reason for not always including it is that some storage and RAM is 
 // taken when including Ethernet.h even if not using it.
 #if defined(ethernet_h) || defined(MI_POSIX)
-#include <MI/ModuleInterfaceHttpTransfer.h>
+#include <MI_PJON/PJONModuleInterfaceHttpTransfer.h>
 #endif
 
 // Arduino includes the cpp files, but for others we must include them manually.

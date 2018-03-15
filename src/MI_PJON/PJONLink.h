@@ -7,6 +7,7 @@ template<typename Strategy>
 struct PJONLink : public Link {
   PJON<Strategy> bus;
 
+  PJONLink<Strategy>() { }
   PJONLink<Strategy>(uint8_t device_id) { bus.set_id(device_id); }
   PJONLink<Strategy>(const uint8_t *bus_id, uint8_t device_id) {
     bus.set_id(device_id); bus.copy_bus_id(bus.bus_id, bus_id);
@@ -24,8 +25,13 @@ struct PJONLink : public Link {
   }
 
   const PJON_Packet_Info &get_last_packet_info() const { return bus.last_packet_info; }
+  
   uint8_t get_id() const { return bus.device_id(); }
   const uint8_t *get_bus_id() const { return bus.bus_id; }
+
+  void set_id(uint8_t id) { bus.set_id(id); }
+  void set_bus_id(const uint8_t *bus_id) { bus.copy_bus_id(bus.bus_id, bus_id); }
+  
   void set_receiver(PJON_Receiver r, void *custom_pointer = NULL) {
     bus.set_receiver(r);
     bus.set_custom_pointer(custom_pointer);

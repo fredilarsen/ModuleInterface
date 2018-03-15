@@ -15,21 +15,39 @@ protected:
   friend void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info);
 public:
   PJONModuleInterfaceSet(const char *prefix = NULL) : ModuleInterfaceSet(prefix) { init(); }
+  PJONModuleInterfaceSet(Link &bus, const char *prefix = NULL) : ModuleInterfaceSet(prefix) { 
+    init(); 
+    pjon = &bus; 
+    pjon->set_receiver(mis_global_receive_function, this);
+  }
   PJONModuleInterfaceSet(Link &bus, const uint8_t num_interfaces, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
-    init(); this->num_interfaces = num_interfaces; interfaces = new ModuleInterface*[num_interfaces];
-    for (uint8_t i = 0; i < num_interfaces; i++) interfaces[i] = new PJONModuleInterface();
+    init(); 
+    this->num_interfaces = num_interfaces; 
+    if (num_interfaces > 0) {
+      interfaces = new ModuleInterface*[num_interfaces];
+      for (uint8_t i = 0; i < num_interfaces; i++) interfaces[i] = new PJONModuleInterface();
+    }
     pjon = &bus;
     pjon->set_receiver(mis_global_receive_function, this);
   }
   // Specifying modules as textual list like "BlinkModule:bm:44 TestModule:tm:44:0.0.0.1":
   PJONModuleInterfaceSet(Link &bus, const char *interface_list, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
+    init();
+    pjon = &bus;
+    pjon->set_receiver(mis_global_receive_function, this);
+    set_interface_list(interface_list);
+  }
+  void init() { }
+  void set_interface_list(const char *interface_list) {
+    // This function can only be called once after startup
+    if (num_interfaces > 0) return;
+
     // Count number of interfaces
-    num_interfaces = 0;
     const char *p = interface_list;
     while (*p != 0) { p++; if (*p == 0 || *p == ' ') num_interfaces++; }
 
     // Allocate
-    init(); interfaces = new ModuleInterface*[num_interfaces];
+    interfaces = new ModuleInterface*[num_interfaces];
     for (uint8_t i = 0; i < num_interfaces; i++) interfaces[i] = new PJONModuleInterface();
 
     // Set names and ids
@@ -37,15 +55,13 @@ public:
     uint8_t cnt = 0;
     while (*p != 0) {
       ((PJONModuleInterface*) (interfaces[cnt]))->set_name_prefix_and_address(p);
-      ((PJONModuleInterface*) (interfaces[cnt]))->set_bus(bus);
+      ((PJONModuleInterface*) (interfaces[cnt]))->set_bus(*pjon);
       cnt++;
       while (*p != 0 && *p != ' ') p++;
       if (*p == ' ') p++; // First char after space
     }
-    pjon = &bus;
-    pjon->set_receiver(mis_global_receive_function, this);
   }
-  void init() { }
+  Link *get_link() { return pjon; }
 
   void set_receiver(mis_receive_function r) {
     pjon->set_receiver(mis_global_receive_function, this); // Make sure main receiver function is registered
