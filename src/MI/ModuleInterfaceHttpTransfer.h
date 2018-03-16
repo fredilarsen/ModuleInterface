@@ -120,7 +120,7 @@ void decode_json_settings(ModuleInterface &interface, JsonObject& root) {
 
 JsonObject& read_json_settings_from_server(
     Client &client, DynamicJsonBuffer &jsonBuffer, char *buf, const uint16_t buffer_size, 
-    const uint8_t /*port*/ = 80, const uint16_t timeout_ms = 3000) 
+    const uint16_t timeout_ms = 3000) 
 {
   if (buf == NULL) {
     ModuleVariableSet::out_of_memory = true;
@@ -159,12 +159,13 @@ JsonObject& read_json_settings_from_server(
 }
 
 
-bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_t port = 80,
-                        const uint16_t buffer_size = 800, const uint16_t timeout_ms = 3000) {
+bool read_json_settings(ModuleInterface &interface, Client &client, 
+                        const uint16_t buffer_size = 800, const uint16_t timeout_ms = 3000) 
+{
   char *buf = new char[buffer_size];
   DynamicJsonBuffer jsonBuffer;
   uint32_t start = millis();
-  JsonObject& root = read_json_settings_from_server(client, jsonBuffer, buf, buffer_size, port, timeout_ms);
+  JsonObject& root = read_json_settings_from_server(client, jsonBuffer, buf, buffer_size, timeout_ms);
   bool status = false;
   if (root.success()) {
     // Set system time if UTC was returned from server, exclude parsing time and half of retrieval time
@@ -186,7 +187,7 @@ bool read_json_settings(ModuleInterface &interface, Client &client, const uint8_
   return status;
 }
 
-bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, Client &client, uint8_t *server, uint8_t port = 80) {
+bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, Client &client, uint8_t *server, uint16_t port = 80) {
   #ifdef DEBUG_PRINT
   uint32_t start_time = millis();
   #endif
@@ -351,7 +352,7 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
 #ifdef MI_SMALLMEM // Little memory, transfer values for each module in separate requests.
 
 bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, const uint8_t *server_ip,
-                               MILastScanTimes *last_scan_times, uint8_t port = 80,
+                               MILastScanTimes *last_scan_times, uint16_t port = 80,
                                bool primary_master = true, // (set primary_master=false on all masters but one if more than one)
                                uint16_t json_buffer_size = 500) {
   int successCnt = 0;
@@ -415,7 +416,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, c
 #else // More memory, send values for all modules in one request (faster)
 
 bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, const uint8_t *server,
-                               MILastScanTimes *last_scan_times, uint8_t port = 80,
+                               MILastScanTimes *last_scan_times, uint16_t port = 80,
                                bool primary_master = true, // (set primary_master=false on all masters but one if more than one)
                                uint16_t json_buffer_size = 3000) {
   int successCnt = 0;
@@ -480,7 +481,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, c
 #endif
 
 bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client, const uint8_t *server,
-                               uint8_t port = 80, uint16_t json_buffer_size = 3000) {
+                               uint16_t port = 80, uint16_t json_buffer_size = 3000) {
   // Quick check if there is anything to do                               
   bool changes = false;
   for (int i=0; i<interfaces.num_interfaces; i++) changes = changes || interfaces[i]->settings.is_changed();
@@ -528,6 +529,8 @@ protected:
            outputs_interval;
   ModuleInterfaceSet &interfaces;
   uint8_t web_server_ip[4];
+  uint16_t web_server_port = 80;
+  bool is_primary_master = true;
   
   // State
   uint32_t last_settings = 0, last_outputs = millis();
@@ -547,18 +550,23 @@ public:
   }
   
   void set_web_server_address(const uint8_t *server_address) { memcpy(web_server_ip, server_address, 4); }
- 
+
+  void set_web_server_port(uint16_t server_port) { web_server_port = server_port; }
+
+  void set_primary_master(bool is_primary) { is_primary_master = is_primary; }
+
   void update() {
     // Get settings for each module from the database via the web server
     if (mi_interval_elapsed(last_settings, settings_interval)) {
-      send_settings_to_web_server(interfaces, client, web_server_ip);
-      get_settings_from_web_server(interfaces, client, web_server_ip);
+      send_settings_to_web_server(interfaces, client, web_server_ip, web_server_port);
+      get_settings_from_web_server(interfaces, client, web_server_ip, web_server_port);
     }
 
     // Store all measurements to the database via the web server
     if (mi_interval_elapsed(last_outputs, outputs_interval)) {
       // (set primary_master=false on all masters but one if there are more than one)
-      send_values_to_web_server(interfaces, client, web_server_ip, &last_scan_times); 
+      send_values_to_web_server(interfaces, client, web_server_ip, &last_scan_times, 
+        web_server_port, is_primary_master); 
     }    
   }  
 };

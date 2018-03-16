@@ -2,11 +2,11 @@
 
 #include <MI/ModuleInterfaceHttpTransfer.h>
 
-bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &client, const uint8_t port = 80,
+bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &client,
                         const uint16_t buffer_size = 800, const uint16_t timeout_ms = 3000) {
   char *buf = new char[buffer_size];
   DynamicJsonBuffer jsonBuffer;
-  JsonObject& root = read_json_settings_from_server(client, jsonBuffer, buf, buffer_size, port, timeout_ms);
+  JsonObject& root = read_json_settings_from_server(client, jsonBuffer, buf, buffer_size, timeout_ms);
   bool status = false;
   if (root.success()) {
     String key = interfaces.get_prefix(); key += "DevID";
@@ -38,7 +38,7 @@ bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &clien
   return status;
 }
 
-bool get_master_settings_from_web_server(PJONModuleInterfaceSet &interfaces, Client &client, uint8_t *server, uint8_t port = 80) {
+bool get_master_settings_from_web_server(PJONModuleInterfaceSet &interfaces, Client &client, uint8_t *server, uint16_t port = 80) {
   int8_t code = client.connect(server, port);
   bool success = false;
   if (code == 1) { // 1=CONNECTED
@@ -64,6 +64,6 @@ public:
   
   bool get_master_settings_from_server() {
     // Read the module list and other settings from the web server
-    return get_master_settings_from_web_server(*(PJONModuleInterfaceSet*)&interfaces, client, web_server_ip);
+    return get_master_settings_from_web_server(*(PJONModuleInterfaceSet*)&interfaces, client, web_server_ip, web_server_port);
   }
 };
