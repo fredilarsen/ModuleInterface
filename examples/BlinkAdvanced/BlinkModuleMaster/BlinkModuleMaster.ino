@@ -75,7 +75,7 @@ void loop() {
   }
 }
 
-void notification_function(NotificationType notification_type, const ModuleInterface *module_interface) { 
+void notification_function(NotificationType notification_type, const ModuleInterface *) { 
   if (notification_type == ntNewOutputs) {
     // Display a measurement
     uint8_t heartbeat = interfaces[BLINKMODULE]->outputs.get_uint8(o_b1heartbeat);
@@ -93,12 +93,12 @@ void notification_function(NotificationType notification_type, const ModuleInter
   }
 }
 
-void receive_function(const uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info, const ModuleInterface *module_interface){
+void receive_function(const uint8_t *payload, uint16_t length, const PJON_Packet_Info &, const ModuleInterface *module_interface){
   // Handle specialized messages to this module
   Serial.print("!!!!!!!!!!!!!!!!! CUSTOM MESSAGE from ");
   Serial.print(module_interface ? module_interface->module_name : "unregistered device");
   Serial.print(", len "); Serial.print(length); Serial.print(":");
-  for (int i=0; i<length; i++) { Serial.print(payload[i]); Serial.print(" "); }
+  for (uint16_t i=0; i<length; i++) { Serial.print(payload[i]); Serial.print(" "); }
   Serial.println();
 }
 

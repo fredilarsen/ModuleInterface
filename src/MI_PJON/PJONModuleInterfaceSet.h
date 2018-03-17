@@ -15,11 +15,6 @@ protected:
   friend void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info);
 public:
   PJONModuleInterfaceSet(const char *prefix = NULL) : ModuleInterfaceSet(prefix) { init(); }
-  PJONModuleInterfaceSet(Link &bus, const char *prefix = NULL) : ModuleInterfaceSet(prefix) { 
-    init(); 
-    pjon = &bus; 
-    pjon->set_receiver(mis_global_receive_function, this);
-  }
   PJONModuleInterfaceSet(Link &bus, const uint8_t num_interfaces, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
     init(); 
     this->num_interfaces = num_interfaces; 
@@ -35,7 +30,7 @@ public:
     init();
     pjon = &bus;
     pjon->set_receiver(mis_global_receive_function, this);
-    set_interface_list(interface_list);
+    if (interface_list) set_interface_list(interface_list);
   }
   void init() { }
   void set_interface_list(const char *interface_list) {

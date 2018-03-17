@@ -19,7 +19,7 @@ PJONLink<LocalUDP> bus; // PJON device id 1
 EthernetClient web_client;
 
 // Module interfaces
-PJONModuleInterfaceSet interfaces(bus);
+PJONModuleInterfaceSet interfaces(bus, (const char *)NULL);
 PJONMIHttpTransfer http_transfer(interfaces, web_client, NULL, 1000, 10000);
 
 void parse_ip_string(const char *ip_string, in_addr &ip) {

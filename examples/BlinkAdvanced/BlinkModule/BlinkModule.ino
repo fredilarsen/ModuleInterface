@@ -67,7 +67,7 @@ void loop() {
   blink();
 }
 
-void notification_function(NotificationType notification_type, const ModuleInterface *module_interface) {
+void notification_function(NotificationType notification_type, const ModuleInterface *) {
   if (notification_type == ntSampleOutputs) {
     interface.outputs.set_value(o_heartbeat_ix, ++heartbeat); // Set heartbeat
     interface.outputs.set_value(o_uptime_ix, millis()); // Set uptime
@@ -96,8 +96,9 @@ void receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info 
   // Else unrecognized message
 }
 
-bool do_something(uint8_t *message, uint8_t length) {
-  // ...
+bool do_something(uint8_t * message, uint16_t length) {
+  Serial.print("do_something received "); Serial.print(message[0]);
+  Serial.print(" len "); Serial.println(length);
   return false;
 }
 

@@ -436,7 +436,7 @@ public:
     // Set the value with the verified ix
     if (var.ix < num_variables) variables[var.ix].set_value(value, size);
   }
-  const void get_value(MIVariable &var, void *value, const uint8_t size) const {
+  void get_value(MIVariable &var, void *value, const uint8_t size) const {
     verify_mivariable(var);
 
     // Get the value with the verified ix

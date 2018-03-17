@@ -83,9 +83,9 @@ void check_user_input() {
   static bool modePinLowLast = false;
   bool modePinLow = digitalRead(MODESWITCH_PIN) == LOW;
   if (modePinLow && !modePinLowLast) {
-    uint8_t mode = interface.settings.get_uint16(s_mode_ix);
+    uint8_t mode = interface.settings.get_uint8(s_mode_ix);
     mode = ++mode % 3;
-    interface.settings.set_value(s_mode_ix, (uint8_t)mode);
+    interface.settings.set_value(s_mode_ix, mode);
     Serial.print("Mode set to "); Serial.println(mode);
   }
   modePinLowLast = modePinLow;

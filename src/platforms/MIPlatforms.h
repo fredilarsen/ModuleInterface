@@ -55,6 +55,9 @@
 	#define DPRINTLN(x) Serial.println(x)
 	#define DPRINT(x) Serial.print(x)
 	#define _itoa(x,y,z) itoa(x,y,z)
+	#ifdef PJON_ESP
+	  #define isfinite(x) std::isfinite(x)
+	#endif
 #endif
 
 #ifndef MI_min
