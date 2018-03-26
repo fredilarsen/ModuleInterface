@@ -10,7 +10,7 @@ Other platforms than Arduino are supported, and they can be connected with diffe
 
 Automatic persistence of module settings in EEPROM is supported, so that a module can continue working autonomously after a power failure even if it is isolated, if it has enough local input to meaningfully do so.
 
-The terms _device_ and _module_ are used somewhat interchangeably in this text, with a device being an standalone Arduino, ESP8266 or similar, and a module usually being a programmed device with some attached equipment, capable of doing some actual work.
+The terms _device_ and _module_ are used somewhat interchangeably in this text, with a device being a standalone Arduino, ESP8266 or similar, and a module usually being a programmed device with some attached equipment, capable of doing some actual work.
 
 ![UseCase1](images/UseCase1.png)
 
