@@ -1,4 +1,4 @@
-# ModuleInterface v2.1
+# ModuleInterface v3.0
 
 This library enables fast and efficient setup of automation systems based on a collection of devices ("modules") controlled through a dynamic and responsive web interface. All under your control running locally with no subscriptions or cloud access required. The web interface can be easily extended and adapted to your use, or replaced with your own design.
 
