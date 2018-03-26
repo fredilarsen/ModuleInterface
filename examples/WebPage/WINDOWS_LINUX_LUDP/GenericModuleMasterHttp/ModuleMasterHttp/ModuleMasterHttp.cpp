@@ -10,6 +10,11 @@
 
 #define PJON_INCLUDE_LUDP
 
+#ifdef _WIN32
+  // MS compiler does not like PJON_MAX_PACKETS=0 in PJON
+  #define PJON_MAX_PACKETS 1
+#endif
+
 #include <MIMaster.h>
 
 // PJON related
