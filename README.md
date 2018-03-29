@@ -25,9 +25,9 @@ The terms _device_ and _module_ are used somewhat interchangeably in this text, 
 ## How it works
 It is a master-slave based system where a master can relate to multiple devices (modules) using the ModuleInterface library.
 
-Each module does not know about any other device. The master contacts each module and retrieves its service contracts for settings, input values and output values. The master will then read and write the values in the contracts regularly at a configurable time interval.
+Each module does not know about any other device. The master contacts each module and retrieves its service contracts for settings, input values and output values. The master will then read and write the values in the contracts regularly at a configurable time interval, plus that a module can send values immediately as an event.
 
-Output values from one module will be delivered to all other modules that have an input value with the same name.
+Output values from one module will be delivered to all other modules that have an input value with the same name. Values flagged as events will be distributed immediately.
 
 Depending on the type of master used, the settings for all modules can be configured on a GUI (LCD+buttons or similar) belonging to the master or the modules, and/or retrieved from a database using the HTTP client. The settings in the database are then typically displayed in and modified from web pages.
 
@@ -37,7 +37,7 @@ The optional persistence functionality lets new settings be kept and automatical
 
 The ModuleInterface library consists of a collection of classes, and some files with functions for functionality like EEPROM based persistence and master HTTP transfer. The basic classes are ModuleVariable (keeping one setting or input or output value), ModuleVariableSet (keeping a set of settings or input or output values), ModuleInterface (keeping settings, input values, output values and functionality for a module), ModuleInterfaceSet (in the master -- a collection of ModuleInterface objects that are kept synchronized with the modules).
 
-The ModuleInterface code in a master typically uses more storage space and RAM than within a module. It is still fine to run on an Arduino Uno or Nano, but when adding the HTTP client (and implicitly the large required Ethernet and ArduinoJson libraries), it is necessary to step up to an Arduino Mega or similar for the master. An ESP8266 based setup is also an alternative.
+The ModuleInterface code in a master typically uses more storage space and RAM than within a module. It is still fine to run on an Arduino Uno or Nano, but when adding the HTTP client (and implicitly the large required Ethernet and ArduinoJson libraries), it is necessary to step up to an Arduino Mega or similar for the master. An ESP8266 based setup is also an alternative. The master can also be run on a RPI or on a Linux or Windows computer.
 
 Also read the [design principles](documentation/README.md) document.
 
