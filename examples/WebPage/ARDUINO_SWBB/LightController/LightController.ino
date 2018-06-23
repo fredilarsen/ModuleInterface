@@ -2,7 +2,7 @@
     to a configured limit.
     So if time is within the configured time-of-day interval _and_ the measured light is below the limit, light is kept on.
  */
-
+//#define DEBUG_PRINT
 #include <MIModule.h>
 #include <utils/MITime.h>
 
@@ -25,15 +25,15 @@ PJONLink<SoftwareBitBang> link(20); // PJON device id 20
 PJONModuleInterface interface("LightCon",                             // Module name
                               link,                                   // PJON bus
                               "Mode:u1 Limit:u2 TStartM:u2 TEndM:u2", // Settings
-                              "smLightLP:f4",                         // Inputs                       
+                              "smLight:u2",                           // Inputs                       
                               "LightOn:u1 UTC:u4");                   // Outputs (measurements)                         
 
 // Allow user to change the mode with a button locally on this module, this will be synced back to web page
 const uint8_t MODESWITCH_PIN = 4;                              
-                        
+
 void setup() {
   Serial.begin(115200);
-  Serial.println("LighController example v1.1");
+  Serial.println("LightController example v1.2");
     
   link.bus.strategy.set_pin(7);
     
@@ -61,11 +61,11 @@ void lightcontrol() {
     if (start_minute_of_day > minute_of_day) minute_of_day += 24*60;
     bool within_interval = (start_minute_of_day == end_minute_of_day) 
       || (start_minute_of_day <= minute_of_day && minute_of_day <= end_minute_of_day);
-    
+
     // Check light level
-    bool below_limit = interface.inputs.get_float(i_ambientlight_ix) <= 
+    bool below_limit = interface.inputs.get_uint16(i_ambientlight_ix) <= 
                        interface.settings.get_uint16(s_light_limit_ix);
-                       
+
     // Turn light on or off
     uint8_t mode = interface.settings.get_uint16(s_mode_ix);  // Get the controller mode (on/off/auto)
     bool light_on = mode == 1 || (mode==2 && within_interval && below_limit);
