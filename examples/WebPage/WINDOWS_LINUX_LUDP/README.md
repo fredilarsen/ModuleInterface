@@ -38,6 +38,7 @@ These are two of many scenarios that can be used for this example setup:
 All the LocalUDP devices must be connected to the same LAN. If you need to communicate across LANs, you will need to use the GlobalUDP or EthernetTCP strategies instead. Also note that the LocalUDP strategy does not work very fast on ESP8266 because of shortcomings in the network library when it comes to UDP broadcasts. On all other architectures it is a good choice. On ESP8266 the GlobalUDP strategy works well, but requires fixed IP addresses and some more configuration than LocalUDP.
 
 Please make sure that you change the web server IP address to what you have assigned to your web server.
+
 ## The GenericModuleMasterHttp program
 This program is identical to the ModuleMasterHttp program except for that it only needs a command line parameter (the IP address of the web server), and will get all other configuration from the web server. This means that adding a new module to the setup, or removing one, can be done by editing settings in the *settings* table in the database. This can easily be made configurable in a web page as well.
 
@@ -50,6 +51,23 @@ The relevant settings in the *settings* table are:
 * _m1Modules_ - This is the module list that is hardcoded in the non-generic ModuleMasterHttp, giving name, prefix and device id and optionally bus id for each module this master shall control.
 * _m1IntSettings_ - The interval between each synchronization of settings, in milliseconds.
 * _m1IntOutputs_ - The interval betwen each synchronization of outputs and inputs, in milliseconds.
+
+## The TestModuleMaster program
+
+This is a simplified master that does not communicate with a web server. It is meant to be used for testing that the modules and the switch can be reached and that everything except the web server and database is built and programmed correctly. It is only meant to be used instead of the ModuleMasterHttp or GenericModuleMasterHttp while testing.
+```
+                                       LAN (Ethernet)
+                                       _______________
+                                 LUDP |          LUDP |
+  _________       _________       ____|____       ____|____ 
+ | MODULE1 |     | MODULE2 |     | SWITCH1 |     | MASTER  |
+ | ARDUINO |     | ARDUINO |     | ARDUINO |     | LINUX   |
+ |_________|     |_________|     |_________|     |_________|
+      |               |               |
+      |               |               |
+      ---------------------------------
+                    SWBB           
+```
 
 ## Build instructions
 The ModuleInterface repo has the PJON and ArduinoJson repositiories as dependencies. You should have these located in the same place as the ModuleInterface repository. This is assumed by the build setups for this example.

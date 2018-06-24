@@ -81,7 +81,7 @@ void set_modulesettings() {
 
     interfaces.interfaces[0]->settings.set_updated();
 
-    interfaces.interfaces[1]->settings.set_value(s_lcMode, (uint8_t) 2);
+    interfaces.interfaces[1]->settings.set_value(s_lcMode, (uint8_t) 2); // Auto
     interfaces.interfaces[1]->settings.set_value(s_lcLimit, (uint16_t) 200);
     interfaces.interfaces[1]->settings.set_value(s_lcTStartM, (uint16_t) 0);
     interfaces.interfaces[1]->settings.set_value(s_lcTEndM, (uint16_t) 0);
