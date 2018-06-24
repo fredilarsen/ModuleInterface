@@ -30,7 +30,7 @@ void miSetTime(uint32_t utc_seconds) {
 uint32_t miGetTime() {
 #ifdef MI_USE_SYSTEMTIME
   // Do not keep track of time, just use the system time
-  return time(0);
+  return (uint32_t) time(0);
 #else
   miUpdateTime(); return miTimeS;
 #endif
@@ -38,7 +38,7 @@ uint32_t miGetTime() {
 
 bool miIsTimeSynced() {
 #ifdef MI_USE_SYSTEMTIME
-  return MI_SECONDS_YEAR_2017 < time(0):
+  return MI_SECONDS_YEAR_2017 < time(0);
 #else
   miUpdateTime(); return miLastSyncedMs != 0 && MI_SECONDS_YEAR_2017 < miTimeS;
 #endif
