@@ -46,13 +46,18 @@ void set_modulesettings() {
   if (interfaces.got_all_contracts() && !did_set_settings) {
     did_set_settings = true; // No need to repeat setting these static values
 
-    interfaces.interfaces[0]->settings.set_updated();
+    ModuleVariableSet *settings = interfaces.find_settings_by_prefix("sm");
+    if (settings) settings->set_updated();
 
-    interfaces.interfaces[1]->settings.set_value(s_lcMode, (uint8_t)2); // Auto
-    interfaces.interfaces[1]->settings.set_value(s_lcLimit, (uint16_t)200);
-    interfaces.interfaces[1]->settings.set_value(s_lcTStartM, (uint16_t)0);
-    interfaces.interfaces[1]->settings.set_value(s_lcTEndM, (uint16_t)0);
-    interfaces.interfaces[1]->settings.set_updated();
+    settings = interfaces.find_settings_by_prefix("lc");
+    if (settings) {
+      settings->set_value(s_lcMode, (uint8_t)2); // Auto
+      settings->set_value(s_lcMode, (uint8_t)2); // Auto
+      settings->set_value(s_lcLimit, (uint16_t)200);
+      settings->set_value(s_lcTStartM, (uint16_t)0);
+      settings->set_value(s_lcTEndM, (uint16_t)0);
+      settings->set_updated();
+    }
   }
 }
 

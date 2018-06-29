@@ -13,7 +13,7 @@
 
 class ModuleInterfaceSet {
 protected:
-  char moduleset_prefix[MVAR_PREFIX_LENGTH+1]; // A unique lower case prefix, usefule if there are multiple masters connected to same db
+  char moduleset_prefix[MVAR_PREFIX_LENGTH+1]; // A unique lower case prefix, useful if there are multiple masters connected to same db
   bool updated_intermodule_dependencies = false; 
   uint16_t active_contract_count = 0;
 public:
@@ -65,7 +65,7 @@ public:
         }
       }
       updated_intermodule_dependencies = true;
-	  active_contract_count = count;
+      active_contract_count = count;
     }
   }
   
@@ -165,19 +165,53 @@ public:
     for (uint8_t i = 0; i < num_interfaces; i++) interfaces[i]->set_notification_callback(n);
   }
   
-  bool find_output_by_name(const char *name, uint8_t &module_ix, uint8_t &output_ix) const {
+  // Locate the interface that has the specified prefix. Only the start of the given string will be checked,
+  // so it can be a full prefixed variable name.
+  uint8_t find_interface_by_prefix(const char *prefix) const {
+    for (uint8_t i = 0; i < num_interfaces; i++)
+      if (strncmp(prefix, interfaces[i]->get_prefix(), MVAR_PREFIX_LENGTH)==0) return i;
+    return NO_MODULE;
+  }
+
+  // Helper functions for getting a variable set for a specific interface
+  ModuleVariableSet *find_settings_by_prefix(const char *prefix) {
+    uint8_t i = find_interface_by_prefix(prefix);
+    return i == NO_MODULE ? NULL : &(interfaces[i]->settings);
+  }
+  ModuleVariableSet *find_inputs_by_prefix(const char *prefix) {
+    uint8_t i = find_interface_by_prefix(prefix);
+    return i == NO_MODULE ? NULL : &(interfaces[i]->inputs);
+  }
+  ModuleVariableSet *find_outputs_by_prefix(const char *prefix) {
+    uint8_t i = find_interface_by_prefix(prefix);
+    return i == NO_MODULE ? NULL : &(interfaces[i]->outputs);
+  }
+
+  bool find_output_by_name(const char *name, uint8_t &interface_ix, uint8_t &output_ix) const {
     char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
     for (uint8_t i=0; i<num_interfaces; i++) {
       for (uint8_t j=0; j < interfaces[i]->outputs.get_num_variables(); j++) {
         interfaces[i]->outputs.get_module_variable(j).get_prefixed_name(interfaces[i]->get_prefix(), prefixed_name, sizeof prefixed_name);
         if (strcmp(name, prefixed_name) == 0) {
-          module_ix = i;
+          interface_ix = i;
           output_ix = j;
           return true;
         }
       }
     }
-    module_ix = output_ix = NO_MODULE;
+    interface_ix = NO_MODULE;
+    output_ix = NO_VARIABLE;
+    return false;
+  }
+
+  bool find_setting_by_name(const char *name, uint8_t &interface_ix, uint8_t &setting_ix) const {
+    interface_ix = find_interface_by_prefix(name);
+    if (interface_ix != NO_MODULE && strlen(name) > MVAR_PREFIX_LENGTH) {
+      setting_ix = interfaces[interface_ix]->settings.get_variable_ix(&name[MVAR_PREFIX_LENGTH]);
+      if (setting_ix != NO_VARIABLE) return true;
+    }
+    interface_ix = NO_MODULE;
+    setting_ix = NO_VARIABLE;
     return false;
   }
 };
