@@ -238,8 +238,12 @@ void post_json_to_server(Client &client, const String &buf, const String &reques
 
 void add_module_status(ModuleInterface *interface, JsonObject &root) {
   // Add status values
-  String name = interface->get_prefix(); name += F("LastLife");
-  root[name] = interface->get_last_alive_age();
+  String name;
+  int16_t age = interface->get_last_alive_age();
+  if (age >= 0 && miGetTime()!=0) { // Leave last registered UTC value in database if unknown alive age
+    name = interface->get_prefix(); name += F("LastLife");
+    root[name] = (uint32_t)(miGetTime() - age/1000ul); // Set as UTC
+  }
 
   name = interface->get_prefix(); name += F("Uptime");
   root[name] = interface->get_uptime_s();

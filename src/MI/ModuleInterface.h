@@ -267,7 +267,11 @@ public:
   }
   
   // Return the time passed since the last life sign was received from module, or -1 if no life sign received after startup
-  int32_t get_last_alive_age() const { return last_alive ? (uint32_t) ((millis() - last_alive))/1000ul : -1; }
+  int32_t get_last_alive_age() { 
+    int32_t age = last_alive ? (uint32_t) ((millis() - last_alive))/1000ul : -1;
+    if (age >= 1000000000ul) last_alive = 0; // Clear before roll around of age in millis
+    return last_alive ? age : -1;
+  }
 
   #ifdef IS_MASTER
   void set_prefix(const char *prefix) {
@@ -464,7 +468,7 @@ public:
   void set_notification_callback(notify_function n) { notify = n; }
 
   // Whether this module is active or has not been reachable for a while
-  bool is_active() const {
+  bool is_active() {
     #ifdef IS_MASTER
     return comm_failures < (uint8_t)MI_INACTIVE_THRESHOLD && get_last_alive_age() != -1 && get_last_alive_age() < 1000L*MI_INACTIVE_TIME_THRESHOLD;
     #else
