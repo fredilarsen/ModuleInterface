@@ -16,6 +16,9 @@ bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &clien
     key = interfaces.get_prefix(); key += "Modules";
     String module_list = (const char*)root[key];
     interfaces.set_interface_list(module_list.c_str());
+    #ifdef DEBUG_PRINT
+    DPRINT("Contract: '"); DPRINT(module_list.c_str()); DPRINTLN("'");
+    #endif
 
     key = interfaces.get_prefix(); key += "IntSettings";
     uint32_t t = (uint32_t)root[key];

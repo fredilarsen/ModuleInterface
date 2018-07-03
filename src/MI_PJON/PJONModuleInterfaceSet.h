@@ -39,7 +39,11 @@ public:
 
     // Count number of interfaces
     const char *p = interface_list;
-    while (*p != 0) { p++; if (*p == 0 || *p == ' ') num_interfaces++; }
+    while (*p != 0) {
+      p++; 
+      if (*p == 0 || *p == ' ') num_interfaces++;
+      while (*p == ' ') p++; // Allow multiple spaces in sequence
+    }
 
     // Allocate
     interfaces = new ModuleInterface*[num_interfaces];
@@ -48,13 +52,22 @@ public:
     // Set names and ids
     p = interface_list;
     uint8_t cnt = 0;
-    while (*p != 0) {
+    #ifdef DEBUG_PRINT
+    DPRINT("Interface count="); DPRINT(num_interfaces); DPRINT(": ");
+    #endif
+    while (*p != 0 && cnt < num_interfaces) {
       ((PJONModuleInterface*) (interfaces[cnt]))->set_name_prefix_and_address(p);
       ((PJONModuleInterface*) (interfaces[cnt]))->set_bus(*pjon);
+      #ifdef DEBUG_PRINT
+      if (cnt>0) DPRINT(", "); DPRINT(((PJONModuleInterface*) (interfaces[cnt]))->module_name);
+      #endif
       cnt++;
       while (*p != 0 && *p != ' ') p++;
-      if (*p == ' ') p++; // First char after space
+      while (*p == ' ') p++; // Find char after spaces
     }
+    #ifdef DEBUG_PRINT
+    DPRINTLN("");
+    #endif
   }
   Link *get_link() { return pjon; }
 
