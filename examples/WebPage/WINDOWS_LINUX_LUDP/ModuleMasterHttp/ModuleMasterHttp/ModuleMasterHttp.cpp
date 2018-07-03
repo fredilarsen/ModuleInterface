@@ -9,6 +9,7 @@
 */
 
 #define PJON_INCLUDE_LUDP
+#define MI_USE_SYSTEMTIME
 
 #ifdef _WIN32
   // MS compiler does not like PJON_MAX_PACKETS=0 in PJON

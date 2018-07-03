@@ -9,6 +9,7 @@
 */
 
 #define PJON_INCLUDE_LUDP
+#define MI_USE_SYSTEMTIME
 
 #ifdef _WIN32
   // MS compiler does not like PJON_MAX_PACKETS=0 in PJON
@@ -35,7 +36,7 @@ void parse_ip_string(const char *ip_string, in_addr &ip) {
 }
 
 void setup(int argc, const char * const argv[]) {
-  printf("Welcome to ModuleMasterHttp.\n");
+  printf("Welcome to GenericModuleMasterHttp.\n");
 
   if (argc < 2) {
     printf("ERROR: The IP address of a web server must be specified on the command line.\n");
