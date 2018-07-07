@@ -269,7 +269,7 @@ public:
   // Return the time passed since the last life sign was received from module, or -1 if no life sign received after startup
   int32_t get_last_alive_age() { 
     int32_t age = last_alive ? (uint32_t) ((millis() - last_alive))/1000ul : -1;
-    if (age >= 1000000000ul) last_alive = 0; // Clear before roll around of age in millis
+    if (age >= 1000000ul) last_alive = 0; // Clear before roll around of age in millis
     return last_alive ? age : -1;
   }
 

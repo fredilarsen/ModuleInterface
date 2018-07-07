@@ -297,10 +297,7 @@
 
           // Last alive bar chart
           val = [myData["m1UTC"], myData["smLastLife"], myData["lcLastLife"]];
-          var masterLife = (Number(myData["SERVERTIME"]) - Number(val[0])); // Calculate age of last update from master
-          val[0] = masterLife;
-          val[1] = Number(val[1]) + masterLife; // LastLife is measured by master, so add master LastLife
-          val[2] = Number(val[2]) + masterLife;
+          for (i=0; i<val.length; i++) val[i] = (Number(myData["SERVERTIME"]) - Number(val[i]));
           barChartDataLastAlive.datasets[0].data = val;
           window.barLastAlive.update();
 
@@ -340,7 +337,7 @@
       // Check if online
       var aliveAlert = 0;
       if (myData[lastLifeId] != null && Number(myData[lastLifeId]) > 0) {
-        var lastLife = Number(myData[lastLifeId]);
+        var lastLife = (Number(myData["SERVERTIME"]) - Number(myData[lastLifeId]));
         if (lastLife > 120) {
           stat.dTxt += "<p>Lost connection to " + moduleName + ".</p>";
           statmalfunction = true;
