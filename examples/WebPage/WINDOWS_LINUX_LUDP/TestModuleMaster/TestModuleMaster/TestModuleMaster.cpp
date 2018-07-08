@@ -5,7 +5,7 @@
 * 4. A module which turns the light on and off (on-board LED for now) (Nano, Uno, ...)
 */
 
-//#define DEBUG_PRINT
+#define DEBUG_PRINT
 #define PJON_INCLUDE_LUDP
 #define USE_MIVARIABLE
 #define MI_USE_SYSTEMTIME

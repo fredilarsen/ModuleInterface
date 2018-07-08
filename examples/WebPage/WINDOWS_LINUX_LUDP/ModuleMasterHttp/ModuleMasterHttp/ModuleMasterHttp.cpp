@@ -8,6 +8,7 @@
 *    and to view their output as instant values or in trend plots.
 */
 
+#define DEBUG_PRINT
 #define PJON_INCLUDE_LUDP
 #define MI_USE_SYSTEMTIME
 
