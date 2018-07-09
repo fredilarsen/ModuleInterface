@@ -34,6 +34,22 @@ $(document).ready(function() {
   setInterval(updateTablesWithSettings, 5000);
 });
 
+function pad(number) {
+  if (number < 10) {
+    return '0' + number;
+  }
+  return number;	
+}
+
+Date.prototype.toLocaleISOString = function() {
+  return this.getFullYear() +
+    '-' + pad(this.getMonth() + 1) +
+    '-' + pad(this.getDate()) +
+    ' ' + pad(this.getHours()) +
+    ':' + pad(this.getMinutes()) +
+    ':' + pad(this.getSeconds());
+};
+
 var startedUpdating = 0;
 var startedUpdatingSettings = 0;
 
@@ -59,7 +75,12 @@ function updateTablesWithMeasurements() {
         }
         if (table_outputs.length) {
           var cell = table_outputs.find('[id="' + i + '"]');
-          if (cell.length > 0) cell.text(item);
+          if (cell.length > 0) {
+            if (i.indexOf("LastLife") != -1) {
+              var d = new Date(1000 * item);
+              cell.text(d.toLocaleISOString());
+            } else cell.text(item);
+          }
         }
         if (table_inputs.length) {
           var cell = table_inputs.find('[id="' + i + '"]');
