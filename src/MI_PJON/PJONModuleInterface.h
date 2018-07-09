@@ -4,9 +4,10 @@
 #include <MI/ModuleInterface.h>
 
 // A timeout to make sure a lost request or reply does not stop everything permanently
-#define MI_REQUEST_TIMEOUT 5000000    // (us) How long to wait for an active module to reply to a request
-#define MI_SEND_TIMEOUT 5000000       // (us) How long to wait for an active device to PJON_ACK
-#define MI_REDUCED_SEND_TIMEOUT 10000 // (us) How long to try to contact a module that is marked as inactive
+#define MI_REQUEST_TIMEOUT 5000000        // (us) How long to wait for an active module to reply to a request
+#define MI_REDUCED_REQUEST_TIMEOUT 10000  // (us) How long to try to contact a module that is marked as inactive
+#define MI_SEND_TIMEOUT 5000000           // (us) How long to wait for an active device to PJON_ACK
+#define MI_REDUCED_SEND_TIMEOUT 1000      // (us) How long to try to contact a module that is marked as inactive
 
 // The well-known PJON port number for ModuleInterface packets, used to quickly separate ModuleInterface related messages from others
 #define MI_PJON_MODULE_INTERFACE_PORT 100
@@ -158,35 +159,37 @@ public:
     return status;
   }
 
+  uint32_t get_request_timeout() { return is_active() ? MI_REQUEST_TIMEOUT : MI_REDUCED_REQUEST_TIMEOUT; }
+
   void update_contract(const uint32_t interval_ms) {
     if (!settings.got_contract() && (settings.contract_requested_time == 0 || ((uint32_t)(millis()-settings.contract_requested_time) >= interval_ms))) {
-      if (send_setting_contract_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetSettingContract); else pjon->receive();
+      if (send_setting_contract_request()) receive_packet(get_request_timeout(), mcSetSettingContract); else pjon->receive();
     }
     if (!inputs.got_contract() && (inputs.contract_requested_time == 0 || ((uint32_t)(millis()-inputs.contract_requested_time) >= interval_ms))) {
-      if (send_input_contract_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetInputContract);  else pjon->receive();
+      if (send_input_contract_request()) receive_packet(get_request_timeout(), mcSetInputContract);  else pjon->receive();
     }
     if (!outputs.got_contract() && (outputs.contract_requested_time == 0 || ((uint32_t)(millis()-outputs.contract_requested_time) >= interval_ms))) {
-      if (send_output_contract_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetOutputContract);  else pjon->receive();
+      if (send_output_contract_request()) receive_packet(get_request_timeout(), mcSetOutputContract);  else pjon->receive();
     }
   }
 
   void update_values(const uint32_t interval_ms) {
     if (outputs.got_contract() && outputs.get_num_variables() != 0 &&
       (outputs.requested_time == 0 || ((uint32_t)(millis()-outputs.requested_time) >= interval_ms))) {
-      if (send_outputs_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetOutputs); else pjon->receive();
+      if (send_outputs_request()) receive_packet(get_request_timeout(), mcSetOutputs); else pjon->receive();
     }
   }
 
   void update_settings(const uint32_t interval_ms) {
     if (((status_bits & MODIFIED_SETTINGS) != 0) && settings.got_contract() && settings.get_num_variables() != 0 &&
       (settings.requested_time == 0 || ((uint32_t)(millis()-settings.requested_time) >= interval_ms))) {
-      if (send_settings_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetSettings); else pjon->receive();
+      if (send_settings_request()) receive_packet(get_request_timeout(), mcSetSettings); else pjon->receive();
     }
   }
 
   void update_status(const uint32_t interval_ms) {
     if (got_contract() && (status_requested_time == 0 || ((uint32_t)(millis()-status_requested_time) >= interval_ms))) {
-      if (send_status_request()) receive_packet(MI_REQUEST_TIMEOUT, mcSetStatus); else pjon->receive();
+      if (send_status_request()) receive_packet(get_request_timeout(), mcSetStatus); else pjon->receive();
     }
   }
 
