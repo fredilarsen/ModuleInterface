@@ -470,7 +470,7 @@ public:
   // Whether this module is active or has not been reachable for a while
   bool is_active() {
     #ifdef IS_MASTER
-    return comm_failures < (uint8_t)MI_INACTIVE_THRESHOLD && get_last_alive_age() != -1 && get_last_alive_age() < 1000L*MI_INACTIVE_TIME_THRESHOLD;
+    return comm_failures < (uint8_t)MI_INACTIVE_THRESHOLD && get_last_alive_age() != -1 && get_last_alive_age() < MI_INACTIVE_TIME_THRESHOLD;
     #else
     return true;
     #endif
