@@ -1,4 +1,4 @@
-# ModuleInterface v3.0
+# ModuleInterface v3.1
 
 This library enables fast and efficient setup of automation systems based on a collection of devices ("modules") controlled through a dynamic and responsive web interface. All under your control running locally with no subscriptions or cloud access required. The web interface can be easily extended and adapted to your use, or replaced with your own design.
 
@@ -116,7 +116,7 @@ This library depends on the following libraries in addition to the Arduino stand
 
 ### License
 ```cpp
-/* Copyright 2016-2017 Fred Larsen
+/* Copyright 2016-2018 Fred Larsen
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
