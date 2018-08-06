@@ -1,8 +1,11 @@
 # ModuleInterface v3.1
+Do you want to create a communication bus with inexpensive IoT devices in a simple way? 
+
+Would you like web pages to configure and inspect the devices, with trend plots and historical storage?
 
 This library enables fast and efficient setup of automation systems based on a collection of devices ("modules") controlled through a dynamic and responsive web interface. All under your control running locally with no subscriptions or cloud access required. The web interface can be easily extended and adapted to your use, or replaced with your own design.
 
-ModuleInterface takes care of automatic transfer of settings (module configuration) and values between devices, with very little programming needed for each device. It is built on top of the [PJON](https://github.com/gioblu/PJON) communication library, allowing a wide range of devices to be connected with a single wire (no extra hardware!), Ethernet or WiFi, ASK/FSK/OOK/LoRa radio transceivers, serial, RS485 or light using LEDs and lasers.
+ModuleInterface takes care of automatic transfer of settings (module configuration) and values between devices, with very little programming needed for each device. It is built on top of the [PJON](https://github.com/gioblu/PJON) communication library, allowing a wide range of devices to be connected with a single wire (no extra hardware!), Ethernet or WiFi, ASK/FSK/OOK/LoRa radio transceivers, serial, RS485 or light using LEDs or lasers.
 
 A simple setup can consist of multiple Arduino Nano devices connected with a single wire to a master on an Arduino Mega with an Ethernet shield for communicating with the web server. No extra shields are needed for communication between the Arduinos, keeping this a low-cost but stable solution.
 
