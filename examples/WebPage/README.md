@@ -11,7 +11,7 @@ The modules and master for this setup can be found in the ARDUINO_SWBB folder.
 1. A SensorMonitor module, for example running on an Arduino Uno or Nano. This module simply reads a light sensor and reports it to the master.
 2. A LightController module, for example running on an Arduino Uno or Nano. This module subscribes to the light sensor reading from the SensorMonitor, and gets settings like time interval and light limit from the Master for controlling the light. In this example it only controls the on-board LED. It reports the current light state (or or off) to the master.
 3. A ModuleMasterHttp module running on an Arduino Mega (because of memory requirements) with an Ethernet shield. This will transfer settings to and from the database and outputs to the database using JSON and HTTP requests.
-4. A computer with a LAMP or WAMP setup. For example by following a tutorial like [this](https://www.digitalocean.com/community/tutorials/how-to-install-linux-apache-mysql-php-lamp-stack-on-ubuntu-16-04) for Linux, or using  a distro like [XAMPP](https://www.apachefriends.org/download.html) or [WampServer](http://www.wampserver.com/en/) for Windows.
+4. A computer with a LAMP or WAMP setup. For example by following a tutorial like [this](https://linuxconfig.org/how-to-install-lamp-ubuntu-18-04-bionic-beaver-linux-apache-mysql-php) for Linux, or using  a distro like [XAMPP](https://www.apachefriends.org/download.html) or [WampServer](http://www.wampserver.com/en/) for Windows.
 
 Have a look at the chapter "How to build the setup" further down to be able to build and verify the setup in stages.
 
@@ -67,7 +67,9 @@ After modifying the network and IP addresses in the ModuleMasterHttp sketch, pro
 Then add an Ethernet shield to the Mega, connect a CAT5 cable between the shield and your network switch or router, then power on.
 
 ## Installation of web server and database
-Follow the recipe, or run the XAMPP or WampServer installation package. If you want a stable and uninterrupted system, use Linux or a server version of Windows to avoid the frequent updates and reboots of the desktop versions of Windows.
+Follow a recipe as mentioned in point 4 of the Components section above. If you want a stable and uninterrupted system, use Linux or a server version of Windows to avoid the frequent updates and reboots of the desktop versions of Windows.
+
+On Linux you probably wish to install [phpMyAdmin](https://linuxconfig.org/how-to-install-phpmyadmin-on-ubuntu-18-04-bionic-beaver-linux) to be able to inspect and configure the database. If you get a problem logging in through phpMyAdmin, [this](https://devanswers.co/phpmyadmin-access-denied-for-user-root-localhost/) may help.
 
 ### Configuration of database
 1. Start Apache and MySQL/MariaDb and open the phpMyAdmin page. Or use a similar tool, like HeidiSQL if you want to keep your htdocs directory clean from other stuff. If you use the XAMPP distro, you can start phpMyAdmin by opening ```http://localhost/applications.html``` in the browser and clicking phpMyAdmin on the top right.
