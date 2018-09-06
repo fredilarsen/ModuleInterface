@@ -9,6 +9,9 @@
 // It must return the character at the given position in the string, and return char(0) after the last character.
 typedef char (* MVS_getContractChar)(uint16_t position);
 
+// A flag that should be set if memory allocation fails (can be set and read from all places)
+extern bool mvs_out_of_memory;
+
 // This variable object can be used on the master side to handle changing contracts,
 // where a variable index may become invalid if the number of parameters or parameter order changes.
 // It can be used on the module side as well if the extra bytes of storage/RAM usage is acceptable.
@@ -115,9 +118,6 @@ public:
   }
   #endif
 
-  // A flag that should be set if memory allocation fails (can be set and read from all places)
-  static bool out_of_memory;
-
   #ifndef IS_MASTER
   #ifdef MI_NO_DYNAMIC_MEM
   // Support for having variables declared in user sketch to avoid dynamic allocation
@@ -132,7 +132,7 @@ public:
     if (num_variables == 0) { contract_id = calculate_contract_id(); return true; }
     variables = new ModuleVariable[num_variables];
     if (!variables) {
-      out_of_memory = true;
+      mvs_out_of_memory = true;
       #ifdef DEBUG_PRINT
       DPRINTLN(F("MVS::preallocate_variables OUT OF MEMORY"));
       #endif
@@ -184,7 +184,7 @@ public:
       if (num_variables > 0) {
         variables = new ModuleVariable[num_variables];
         if (variables == NULL) {
-          out_of_memory = true;
+          mvs_out_of_memory = true;
           #ifdef DEBUG_PRINT
           DPRINT(F("MVS::set_variables OUT OF MEMORY. #var=")); DPRINTLN(num_variables);
           #endif
@@ -231,7 +231,7 @@ public:
         p += len;
       }
     } else {
-      out_of_memory = true;
+      mvs_out_of_memory = true;
       #ifdef DEBUG_PRINT
       DPRINTLN(F("MVS::get_variables OUT OF MEMORY"));
       #endif
@@ -373,7 +373,7 @@ public:
         }
       }
     } else {
-      out_of_memory = true;
+      mvs_out_of_memory = true;
       #ifdef DEBUG_PRINT
       DPRINTLN(F("MVS::get_values OUT OF MEMORY"));
       #endif

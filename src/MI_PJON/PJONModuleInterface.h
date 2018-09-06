@@ -119,7 +119,7 @@ public:
     if (!end) end = name_and_address + strlen(name_and_address);
     uint8_t len = end - name_and_address;
     char *buf = new char[len + 1];
-    if (buf == NULL) { ModuleVariableSet::out_of_memory = true; return; }
+    if (buf == NULL) { mvs_out_of_memory = true; return; }
     memcpy(buf, name_and_address, len); buf[len] = 0;
     char *p1 = strchr(buf + 1, ':');
     if (p1) { *p1 = 0; p1++; } // p1 now pointing to prefix

@@ -10,7 +10,7 @@
 // Include HTTP support if Ethernet.h has been included before MI_PJON.h.
 // The reason for not always including it is that some storage and RAM is 
 // taken when including Ethernet.h even if not using it.
-#if defined(ethernet_h) || defined(MI_POSIX)
+#if defined(ethernet_h) || defined(MI_POSIX) || defined(MI_HTTPCLIENT)
 #include <MI_PJON/PJONModuleInterfaceHttpTransfer.h>
 #endif
 

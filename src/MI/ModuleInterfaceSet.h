@@ -27,7 +27,7 @@ public:
     for (uint8_t i=0; i < num_interfaces; i++) {
       interfaces[i] = new ModuleInterface();
       if (interfaces[i] == NULL) {
-        ModuleVariableSet::out_of_memory = true;
+        mvs_out_of_memory = true;
         #ifdef DEBUG_PRINT
         DPRINTLN(F("MIS::constr OUT OF MEMORY"));
         #endif

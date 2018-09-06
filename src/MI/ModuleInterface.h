@@ -63,7 +63,9 @@ enum NotificationType {
 // Notification callback
 class ModuleInterface;
 typedef void (*notify_function)(NotificationType notification_type, const ModuleInterface *module_interface);
-extern void dummy_notification_function(NotificationType notification_type, const ModuleInterface *module_interface);
+//extern void dummy_notification_function(NotificationType notification_type, const ModuleInterface *module_interface);
+static void dummy_notification_function(NotificationType /*notification_type*/, const ModuleInterface* /*module_interface*/) {};
+
 
 #define UTC_FIRST_ACCEPTED 1483228800ul
 
@@ -87,13 +89,14 @@ extern void dummy_notification_function(NotificationType notification_type, cons
 6. The web pages will show the value in the database, so the modified value from the module shall be shown after some seconds.
 */
 
+#ifndef IS_MASTER
+extern const char *settings_contract, // Pointer to ordinary or PROGMEM string constant
+                  *inputs_contract,
+                  *outputs_contract;
+#endif
+
 
 class ModuleInterface {
-  #ifndef IS_MASTER
-  static const char *settings_contract, // Pointer to ordinary or PROGMEM string constant
-                    *inputs_contract,
-                    *outputs_contract;
-  #endif
 public:
   char module_name[MAX_MODULE_NAME_LENGTH+1];  // A user readable name for the module
   uint8_t status_bits = 0;     // Bits for requesting transfer of contracts or values from master
@@ -531,12 +534,12 @@ friend class ModuleInterfaceSet;
     if (message.allocate(7)) {
       message.get()[0] = mcSetStatus;
       message.get()[1] = (uint8_t) status_bits;
-      message.get()[2] = (uint8_t) ModuleVariableSet::out_of_memory;
+      message.get()[2] = (uint8_t) mvs_out_of_memory;
       uint32_t uptime_s = get_uptime_s();
       memcpy(&(message.get()[3]), &uptime_s, sizeof uptime_s);
       length = 7;
     } else {
-      length = 0; ModuleVariableSet::out_of_memory = true;
+      length = 0; mvs_out_of_memory = true;
       #ifdef DEBUG_PRINT
       DPRINTLN(F("MI::get_status OUT OF MEMORY"));
       #endif
@@ -610,14 +613,14 @@ friend class ModuleInterfaceSet;
       input_source_module_ix.set_all(NO_VARIABLE); // no source
       input_source_output_ix.set_all(NO_VARIABLE); // no source
     } else {
-      ModuleVariableSet::out_of_memory = true;
+      mvs_out_of_memory = true;
       #ifdef DEBUG_PRINT
       DPRINTLN(F("MI::allocate_source_arrays OUT OF MEMORY"));
       #endif
     }
   }
   #endif
-
+/*
   // Callbacks for reading contracts from ordinary string constants
   static char settings_callback(uint16_t pos);
   static char inputs_callback(uint16_t pos);
@@ -627,4 +630,17 @@ friend class ModuleInterfaceSet;
   static char settings_callback_P(uint16_t pos);
   static char inputs_callback_P(uint16_t pos);
   static char outputs_callback_P(uint16_t pos);
+*/
+
+#ifndef IS_MASTER
+// Callbacks for reading contracts from ordinary string constants
+static char settings_callback(uint16_t pos) { return settings_contract[pos]; }
+static char inputs_callback(uint16_t pos) { return inputs_contract[pos]; }
+static char outputs_callback(uint16_t pos) { return outputs_contract[pos]; }
+
+// Callbacks for reading contracts from PROGMEM string constants
+static char settings_callback_P(uint16_t pos) { return pgm_read_byte(&(settings_contract[pos])); }
+static char inputs_callback_P(uint16_t pos) { return pgm_read_byte(&(inputs_contract[pos])); }
+static char outputs_callback_P(uint16_t pos) { return pgm_read_byte(&(outputs_contract[pos])); }  
+#endif  
 };

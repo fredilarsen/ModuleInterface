@@ -123,7 +123,7 @@ JsonObject& read_json_settings_from_server(
     const uint16_t timeout_ms = 3000) 
 {
   if (buf == NULL) {
-    ModuleVariableSet::out_of_memory = true;
+    mvs_out_of_memory = true;
     #ifdef DEBUG_PRINT
     DPRINTLN(F("read_json_settings OUT OF MEMORY"));
     #endif
@@ -142,7 +142,7 @@ JsonObject& read_json_settings_from_server(
   client.stop();  // Finished using the socket, close it as soon as possible
   char *jsonStart = buf;
   if (pos >= buffer_size - 1) {
-    ModuleVariableSet::out_of_memory = true;
+    mvs_out_of_memory = true;
     #ifdef DEBUG_PRINT
     DPRINT(pos); DPRINTLN(F(" bytes, read_json_settings BUFFER TOO SMALL"));
     #endif
@@ -342,7 +342,7 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
 
   // Add out-of-memory status
   name = interfaces.get_prefix(); name += F("MemErr");
-  root[name] = (uint8_t) ModuleVariableSet::out_of_memory;
+  root[name] = (uint8_t) mvs_out_of_memory;
   
   // Add uptime
   name = interfaces.get_prefix(); name += F("Uptime");

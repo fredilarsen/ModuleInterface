@@ -7,6 +7,7 @@
  *    and to view their output as instant values or in trend plots.
  */
 
+#define MI_HTTPCLIENT
 #include <MIMaster.h>
 
 // Ethernet configuration for this device
@@ -66,7 +67,7 @@ void flash_status_led() {
   // Let activity flash go to rapid if one or more modules are inactive, faster if low mem
   static uint32_t last_led_change = millis();
   uint16_t intervalms = interfaces.get_inactive_module_count() > 0 ? 300 : 1000;
-  if (ModuleVariableSet::out_of_memory) intervalms = 30;
+  if (mvs_out_of_memory) intervalms = 30;
   if (mi_interval_elapsed(last_led_change, intervalms)) {
     static bool led_on = false;
     digitalWrite(LED_BUILTIN, led_on ? LOW : HIGH);

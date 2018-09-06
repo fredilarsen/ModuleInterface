@@ -77,7 +77,7 @@ void flash_status_led() {
   // Let activity flash go to rapid if one or more modules are inactive, faster if low mem
   static uint32_t last_led_change = millis();
   uint16_t intervalms = interfaces.get_inactive_module_count() > 0 ? 300 : 1000;
-  if (ModuleVariableSet::out_of_memory) intervalms = 30;
+  if (mvs_out_of_memory) intervalms = 30;
   if (millis() - last_led_change >= intervalms) {
     last_led_change = millis();
     static bool led_on = false;
