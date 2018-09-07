@@ -41,7 +41,7 @@ before_install:
 install:
 #  - ln -s $PWD /usr/local/share/arduino/libraries/Adafruit_FONA
 #  - arduino --install-library "Adafruit SleepyDog Library,Adafruit MQTT Library"
-  - arduino --install-library "PJON"
+  - arduino --install-library "PJON,ArduinoJson"
   # old version of OLED_Display_96X96 - the one on github is too new and has incompatible constructor
   #- wget https://github.com/Seeed-Studio/OLED_Display_96X96/archive/v1.0.0.tar.gz
   #- tar xzf v1.0.0.tar.gz
@@ -66,12 +66,12 @@ install:
   #- pip install pip flake8 flake8-docstrings flake8-bandit flake8-chart --upgrade
   #- pip --version
   #- flake8 --version
-  #- deactivate
-  #- set -o pipefail  # error in case 'diff' sees differences (get 1st error in pipe), use '+o' to disable/unset
+  - deactivate
+  - set -o pipefail  # error in case 'diff' sees differences (get 1st error in pipe), use '+o' to disable/unset
 
 script:
   #- ls -la
-  - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
+#  - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
   ## examples/WebPage/ARDUINO_SWBB/LightController
   - FILE=$PWD/examples/WebPage/ARDUINO_SWBB/LightController/LightController.ino
   - arduino --verify --board arduino:avr:uno --verbose --preserve-temp-files $FILE  >> $FILE.compile
