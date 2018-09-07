@@ -10,7 +10,7 @@ language: c
 
 env:
   global:
-    - ARDUINO_VERSION=1.8.6
+    - ARDUINO_VERSION=1.8.2
   matrix:
     #- BOARD="arduino:avr:uno"
     - BOARD="arduino:avr:nano:cpu=atmega328"
@@ -30,7 +30,7 @@ before_install:
   # install other needed packages
   - sudo apt-get install astyle
   - sudo apt-get install diffstat
-  #- sudo apt-get install doxygen
+  - sudo apt-get install doxygen
   - sudo apt-get install gcc-avr avr-libc
   - sudo apt-get install clang-tidy-3.9 #clang-tidy-*
   - wget https://github.com/oclint/oclint/releases/download/v0.10.3/oclint-0.10.3-x86_64-linux-3.13.0-74-generic.tar.gz
