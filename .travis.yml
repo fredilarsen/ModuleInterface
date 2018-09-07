@@ -50,13 +50,13 @@ install:
   #- sudo cp -R $PWD/libraries/LCD_Display9696 $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/Adafruit_Si7021 $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/TinyWireM $HOME/Arduino/libraries/
-  - sudo cp -R $PWD/libraries/PJON-master $HOME/Arduino/libraries/ && sudo cp -d $PWD/libraries/PJON $HOME/Arduino/libraries/
+#  - sudo cp -R $PWD/libraries/PJON-master $HOME/Arduino/libraries/ && sudo cp -d $PWD/libraries/PJON $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/DS2438 $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/IBM_LMIC_framework $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/TinyGPS-13 $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/I2C_Sensor_Lib_iLib-0.8.2 $HOME/Arduino/libraries/
-  - arduino --pref boardsmanager.additional.urls="http://digistump.com/package_digistump_index.json,http://drazzy.com/package_drazzy.com_index.json" --save-prefs
-  - arduino --install-boards "digistump:avr"
+#  - arduino --pref boardsmanager.additional.urls="http://digistump.com/package_digistump_index.json,http://drazzy.com/package_drazzy.com_index.json" --save-prefs
+#  - arduino --install-boards "digistump:avr"
   - arduino --install-boards "ATTinyCore:avr"
   #- git clone git://git.drogon.net/wiringPi && pushd $PWD/wiringPi && ./build && popd
   #- source ~/virtualenv/python2.7/bin/activate
@@ -72,29 +72,29 @@ install:
 script:
   #- ls -la
   - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
-  ## OWPJON/ATTINY/Local/SoftwareBitBang/DeviceGeneric
-  - FILE=$PWD/OWPJON/ATTINY/Local/SoftwareBitBang/DeviceGeneric/DeviceGeneric.ino
+  ## examples/WebPage/ARDUINO_SWBB/LightController
+  - FILE=$PWD/examples/WebPage/ARDUINO_SWBB/LightController/LightController.ino
   - arduino --verify --board ATTinyCore:avr:attinyx5:LTO=disable,TimerClockSource=default,chip=85,clock=16pll,eesave=aenable,bod=disable --verbose --preserve-temp-files $FILE  >> $FILE.compile
-  - ELF_FILE=`find /tmp/ -name "DeviceGeneric.ino.elf"`
+  - ELF_FILE=`find /tmp/ -name "LightController.ino.elf"`
   - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
   - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
   - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
-  ## OWPJON/ARDUINO/Local/AnalogSampling/BlinkTest/Receiver
-  - FILE=$PWD/OWPJON/ARDUINO/Local/AnalogSampling/BlinkTest/Receiver/Receiver.ino
+  ## examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp
+  - FILE=$PWD/examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp/ModuleMasterHttp.ino
   - arduino --verify --board arduino:avr:uno --verbose --preserve-temp-files $FILE  >> $FILE.compile
-  - ELF_FILE=`find /tmp/ -name "Receiver.ino.elf"`
+  - ELF_FILE=`find /tmp/ -name "ModuleMasterHttp.ino.elf"`
   - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
   - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
-  ## OWPJON/ARDUINO/Local/AnalogSampling/BlinkTest/Transmitter
-  - FILE=$PWD/OWPJON/ARDUINO/Local/AnalogSampling/BlinkTest/Transmitter/Transmitter.ino
+  ## examples/WebPage/ARDUINO_SWBB/SensorMonitor
+  - FILE=$PWD/examples/WebPage/ARDUINO_SWBB/SensorMonitor/SensorMonitor.ino
   - arduino --verify --board arduino:avr:uno --verbose --preserve-temp-files $FILE  >> $FILE.compile
-  - ELF_FILE=`find /tmp/ -name "Transmitter.ino.elf"`
+  - ELF_FILE=`find /tmp/ -name "SensorMonitor.ino.elf"`
   - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
   - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
-  ## OWPJON/LINUX/Local/LocalUDP/RemoteWorker/DeviceGeneric
-  - FILE=$PWD/OWPJON/LINUX/Local/LocalUDP/RemoteWorker/DeviceGeneric/DeviceGeneric.cpp
-  - pushd $PWD/OWPJON/LINUX/Local/LocalUDP/RemoteWorker/DeviceGeneric/ && make && popd
-  - ELF_FILE=$PWD/OWPJON/LINUX/Local/LocalUDP/RemoteWorker/DeviceGeneric/owpshell
+  ## examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp
+  - FILE=$PWD/examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp/GenericModuleMasterHttp.cpp
+  - pushd $PWD/examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp/ && make && popd
+  - ELF_FILE=$PWD/examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp/owpshell
   - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
   - deactivate
 
