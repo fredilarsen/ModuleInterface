@@ -39,9 +39,10 @@ before_install:
   #- sudo apt-get install tree
 
 install:
+  - ln -s $PWD /usr/local/share/arduino/libraries/
 #  - ln -s $PWD /usr/local/share/arduino/libraries/Adafruit_FONA
 #  - arduino --install-library "Adafruit SleepyDog Library,Adafruit MQTT Library"
-  - arduino --install-library "PJON,ArduinoJson"
+  - arduino --install-library "PJON,ArduinoJson,ModuleInterface"
   # old version of OLED_Display_96X96 - the one on github is too new and has incompatible constructor
   #- wget https://github.com/Seeed-Studio/OLED_Display_96X96/archive/v1.0.0.tar.gz
   #- tar xzf v1.0.0.tar.gz
@@ -67,6 +68,7 @@ install:
   #- pip --version
   #- flake8 --version
 #  - deactivate
+  - arduino --pref "compiler.warning_level=none" --save-prefs
   - set -o pipefail  # error in case 'diff' sees differences (get 1st error in pipe), use '+o' to disable/unset
 
 script:
