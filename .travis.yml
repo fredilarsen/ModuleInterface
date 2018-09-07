@@ -1,0 +1,128 @@
+# $GIT_USER, $GIT_PASS (hide) and $TRAVIS_TOKEN (hide) in Settings > Environment Variables
+# Triggering builds (get TOKEN): https://docs.travis-ci.com/user/triggering-builds/
+
+language: c
+
+# blocklist
+#branches:
+#  except:
+#  - result/docu
+
+env:
+  global:
+    - ARDUINO_VERSION=1.8.6
+  matrix:
+    #- BOARD="arduino:avr:uno"
+    - BOARD="arduino:avr:nano:cpu=atmega328"
+
+before_install:
+  # setup a pseudo-display
+  - "/sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_1.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :1 -ac -screen 0 1280x1024x16"
+  - sleep 3
+  - export DISPLAY=:1.0
+  # setup Arduino IDE
+  - wget http://downloads.arduino.cc/arduino-$ARDUINO_VERSION-linux64.tar.xz
+  - tar xf arduino-$ARDUINO_VERSION-linux64.tar.xz && rm arduino-$ARDUINO_VERSION-linux64.tar.xz
+  - sudo mv arduino-$ARDUINO_VERSION /usr/local/share/arduino
+  - sudo ln -s /usr/local/share/arduino/arduino /usr/local/bin/arduino
+  #- sudo pip install ino
+  #- sudo ln -s /usr/local/share/arduino/hardware/arduino/avr/boards.txt /usr/local/share/arduino/hardware/arduino/boards.txt
+  # install other needed packages
+  - sudo apt-get install astyle
+  - sudo apt-get install diffstat
+  #- sudo apt-get install doxygen
+  - sudo apt-get install gcc-avr avr-libc
+  - sudo apt-get install clang-tidy-3.9 #clang-tidy-*
+  - wget https://github.com/oclint/oclint/releases/download/v0.10.3/oclint-0.10.3-x86_64-linux-3.13.0-74-generic.tar.gz
+  - tar xf oclint-0.10.3-x86_64-linux-3.13.0-74-generic.tar.gz && rm oclint-0.10.3-x86_64-linux-3.13.0-74-generic.tar.gz
+  #- sudo apt-get install texlive-font-utils  # epstopdf for doxygen
+  #- sudo apt-get install tree
+
+install:
+#  - ln -s $PWD /usr/local/share/arduino/libraries/Adafruit_FONA
+#  - arduino --install-library "Adafruit SleepyDog Library,Adafruit MQTT Library"
+  - arduino --install-library "PJON"
+  # old version of OLED_Display_96X96 - the one on github is too new and has incompatible constructor
+  #- wget https://github.com/Seeed-Studio/OLED_Display_96X96/archive/v1.0.0.tar.gz
+  #- tar xzf v1.0.0.tar.gz
+  # modified (?) libraries
+  #- sudo mv $PWD/OLED_Display_96X96-1.0.0 $HOME/Arduino/libraries/
+  #- sudo cp -R $PWD/libraries/LCD_Display9696 $HOME/Arduino/libraries/
+  #- sudo cp -R $PWD/libraries/Adafruit_Si7021 $HOME/Arduino/libraries/
+  #- sudo cp -R $PWD/libraries/TinyWireM $HOME/Arduino/libraries/
+  - sudo cp -R $PWD/libraries/PJON-master $HOME/Arduino/libraries/ && sudo cp -d $PWD/libraries/PJON $HOME/Arduino/libraries/
+  #- sudo cp -R $PWD/libraries/DS2438 $HOME/Arduino/libraries/
+  #- sudo cp -R $PWD/libraries/IBM_LMIC_framework $HOME/Arduino/libraries/
+  #- sudo cp -R $PWD/libraries/TinyGPS-13 $HOME/Arduino/libraries/
+  #- sudo cp -R $PWD/libraries/I2C_Sensor_Lib_iLib-0.8.2 $HOME/Arduino/libraries/
+  - arduino --pref boardsmanager.additional.urls="http://digistump.com/package_digistump_index.json,http://drazzy.com/package_drazzy.com_index.json" --save-prefs
+  - arduino --install-boards "digistump:avr"
+  - arduino --install-boards "ATTinyCore:avr"
+  #- git clone git://git.drogon.net/wiringPi && pushd $PWD/wiringPi && ./build && popd
+  #- source ~/virtualenv/python2.7/bin/activate
+  #- python --version
+  #- pip install -r requirements.txt
+  #- pip install pip flake8 flake8-docstrings flake8-future flake8-bandit flake8-chart --upgrade
+  #- pip install pip flake8 flake8-docstrings flake8-bandit flake8-chart --upgrade
+  #- pip --version
+  #- flake8 --version
+  #- deactivate
+  #- set -o pipefail  # error in case 'diff' sees differences (get 1st error in pipe), use '+o' to disable/unset
+
+script:
+  #- ls -la
+  - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
+  ## OWPJON/ATTINY/Local/SoftwareBitBang/DeviceGeneric
+  - FILE=$PWD/OWPJON/ATTINY/Local/SoftwareBitBang/DeviceGeneric/DeviceGeneric.ino
+  - arduino --verify --board ATTinyCore:avr:attinyx5:LTO=disable,TimerClockSource=default,chip=85,clock=16pll,eesave=aenable,bod=disable --verbose --preserve-temp-files $FILE  >> $FILE.compile
+  - ELF_FILE=`find /tmp/ -name "DeviceGeneric.ino.elf"`
+  - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
+  - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
+  - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
+  ## OWPJON/ARDUINO/Local/AnalogSampling/BlinkTest/Receiver
+  - FILE=$PWD/OWPJON/ARDUINO/Local/AnalogSampling/BlinkTest/Receiver/Receiver.ino
+  - arduino --verify --board arduino:avr:uno --verbose --preserve-temp-files $FILE  >> $FILE.compile
+  - ELF_FILE=`find /tmp/ -name "Receiver.ino.elf"`
+  - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
+  - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
+  ## OWPJON/ARDUINO/Local/AnalogSampling/BlinkTest/Transmitter
+  - FILE=$PWD/OWPJON/ARDUINO/Local/AnalogSampling/BlinkTest/Transmitter/Transmitter.ino
+  - arduino --verify --board arduino:avr:uno --verbose --preserve-temp-files $FILE  >> $FILE.compile
+  - ELF_FILE=`find /tmp/ -name "Transmitter.ino.elf"`
+  - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
+  - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
+  ## OWPJON/LINUX/Local/LocalUDP/RemoteWorker/DeviceGeneric
+  - FILE=$PWD/OWPJON/LINUX/Local/LocalUDP/RemoteWorker/DeviceGeneric/DeviceGeneric.cpp
+  - pushd $PWD/OWPJON/LINUX/Local/LocalUDP/RemoteWorker/DeviceGeneric/ && make && popd
+  - ELF_FILE=$PWD/OWPJON/LINUX/Local/LocalUDP/RemoteWorker/DeviceGeneric/owpshell
+  - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
+  - deactivate
+
+after_script:
+  #- tree
+  # doxygen docu generation
+#  - doxygen Doxyfile >> doxygen.log
+  #- pushd $PWD/doc/latex/; make; popd
+  # push result back to git repo
+#  - git checkout -b result/docu
+  #- git add $PWD/doc/
+#  - git add --all  # may be use .gitignore to exclude .pyc files (not many yet)
+  #- git status
+#  - git config user.email 'travis@travis-ci.org'
+#  - git config user.name 'Travis CI'
+#  - git commit --message "Travis build $TRAVIS_BUILD_NUMBER" --quiet
+#  - git push -f https://$GIT_USER:$GIT_PASS@github.com/drtrigon/sketchbook.git result/docu  # dangerous; overwrite remote branch!
+
+after_success:
+  # trigger docker-sketchbook (same tests based on docker-arduino)
+#  - |-
+#    if [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_PULL_REQUEST" == "false" ]] ; then
+#      if [[ "$DOCKERTAG" == "$LATEST" ]] ; then
+#        curl -s -X POST -H "Content-Type: application/json" -H "Accept: application/json" -H "Travis-API-Version: 3" -H "Authorization: token $TRAVIS_TOKEN" -d "{\"request\": {\"branch\":\"master\"}}" https://api.travis-ci.org/repo/drtrigon%2Fdocker-sketchbook/requests ;
+#      fi ;
+#    fi
+
+#notifications:
+#  email:
+#    on_success: change
+#    on_failure: change
