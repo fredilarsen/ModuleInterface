@@ -57,7 +57,7 @@ install:
   #- sudo cp -R $PWD/libraries/I2C_Sensor_Lib_iLib-0.8.2 $HOME/Arduino/libraries/
 #  - arduino --pref boardsmanager.additional.urls="http://digistump.com/package_digistump_index.json,http://drazzy.com/package_drazzy.com_index.json" --save-prefs
 #  - arduino --install-boards "digistump:avr"
-  - arduino --install-boards "ATTinyCore:avr"
+#  - arduino --install-boards "ATTinyCore:avr"
   #- git clone git://git.drogon.net/wiringPi && pushd $PWD/wiringPi && ./build && popd
   #- source ~/virtualenv/python2.7/bin/activate
   #- python --version
