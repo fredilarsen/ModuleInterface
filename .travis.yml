@@ -10,7 +10,7 @@ language: c
 
 env:
   global:
-    - ARDUINO_VERSION=1.8.2
+    - ARDUINO_VERSION=1.8.6
   matrix:
     #- BOARD="arduino:avr:uno"
     - BOARD="arduino:avr:nano:cpu=atmega328"
@@ -42,7 +42,7 @@ install:
   - ln -s $PWD /usr/local/share/arduino/libraries/
 #  - ln -s $PWD /usr/local/share/arduino/libraries/Adafruit_FONA
 #  - arduino --install-library "Adafruit SleepyDog Library,Adafruit MQTT Library"
-  - arduino --install-library "PJON,ArduinoJson,ModuleInterface"
+  - arduino --install-library "PJON:master,ArduinoJson,ModuleInterface"
   # old version of OLED_Display_96X96 - the one on github is too new and has incompatible constructor
   #- wget https://github.com/Seeed-Studio/OLED_Display_96X96/archive/v1.0.0.tar.gz
   #- tar xzf v1.0.0.tar.gz
