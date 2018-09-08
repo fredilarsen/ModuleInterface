@@ -14,15 +14,22 @@ before_install:
   - source <(curl -SLs https://raw.githubusercontent.com/adafruit/travis-ci-arduino/master/install.sh)
 install:
   - arduino --install-library "ArduinoJson:5.13.2"
+  # Use PJON master, not a release for now
   - wget https://github.com/gioblu/PJON/archive/master.zip
   - unzip master.zip
   - rm master.zip
   - sudo mv PJON-master $HOME/Arduino/libraries/PJON
 script:
-  - cd examples/WebPage/ARDUINO_SWBB
-  - build_platform arduino:avr:uno
-  - build_platform arduino:avr:mega:cpu=atmega2560
-  - cd examples/WebPage/ESP8266_GUDP; build_platform esp32:esp32:featheresp32:FlashFreq=80
+  - pwd
+  - ls -la
+  - tree --charset ASCII
+  - pushd
+  - cd $HOME/fredilarsen/ModuleInterface/examples/WebPage/ARDUINO_SWBB
+  - build_platform uno
+  - build_platform mega
+  - popd
+  - cd $HOME/fredilarsen/ModuleInterface/examples/WebPage/ESP8266_GUDP
+  - cd examples/WebPage/ESP8266_GUDP; build_platform esp8266
 notifications:
   email:
     on_success: change
