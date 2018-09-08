@@ -12,6 +12,7 @@ env:
      - ARDUINO_IDE_VERSION="1.8.6"
 before_install:
   - source <(curl -SLs https://raw.githubusercontent.com/adafruit/travis-ci-arduino/master/install.sh)
+  - sudo apt-get install tree
 install:
   - arduino --install-library "ArduinoJson:5.13.2"
   # Use PJON master, not a release for now
@@ -23,12 +24,8 @@ script:
   - pwd
   - ls -la
   - tree --charset ASCII
-  - pushd
-  - cd $HOME/fredilarsen/ModuleInterface/examples/WebPage/ARDUINO_SWBB
-  - build_platform uno
-  - build_platform mega
-  - popd
-  - cd $HOME/fredilarsen/ModuleInterface/examples/WebPage/ESP8266_GUDP
+  - pushd; cd examples/WebPage/ARDUINO_SWBB/SensorMonitor; build_platform uno; popd
+  - pushd; cd examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp; build_platform mega2560; popd
   - cd examples/WebPage/ESP8266_GUDP; build_platform esp8266
 notifications:
   email:
