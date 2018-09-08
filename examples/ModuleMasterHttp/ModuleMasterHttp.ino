@@ -33,6 +33,7 @@
  * libraries that are used.
  */
 
+#define MI_HTTPCLIENT
 #include <MIMaster.h>
 
 // PJON related
