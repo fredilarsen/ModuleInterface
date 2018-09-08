@@ -18,25 +18,27 @@ install:
   - wget https://github.com/gioblu/PJON/archive/master.zip
   - unzip master.zip
   - rm master.zip
+  # Put libraries where the Linux Makefile expects them
   - sudo cp -R PJON-master ../PJON
+  - sudo cp -R $HOME/Arduino/libraries/ArduinoJson ..
   - sudo mv PJON-master $HOME/Arduino/libraries/PJON
 script:
   # Arduino based examples
-  - pushd examples/BlinkAdvanced >/dev/null; build_platform uno; popd >/dev/null
-  - pushd examples/BlinkSimple; build_platform uno; popd >/dev/null
-  - pushd examples/ModuleMasterHttp; build_platform mega2560; popd >/dev/null
-  - pushd examples/NetworkBlinkSimple; build_platform uno; popd >/dev/null
-  - pushd examples/SensorMonitor; build_platform uno; popd >/dev/null
-  - pushd examples/WebPage/ARDUINO_SWBB/LightController; build_platform uno; popd >/dev/null
-  - pushd examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp; build_platform mega2560; popd >/dev/null
-  - pushd examples/WebPage/ARDUINO_SWBB/SensorMonitor; build_platform uno; popd >/dev/null
-  - pushd examples/WebPage/ARDUINO_SWBB/TestModuleMaster; build_platform uno; popd >/dev/null
-  - pushd examples/WebPage/ESP8266_GUDP; build_platform esp8266; popd >/dev/null
+  - pushd examples/BlinkAdvanced >/dev/null && build_platform uno && popd >/dev/null
+  - pushd examples/BlinkSimple >/dev/null; build_platform uno; popd >/dev/null
+  - pushd examples/ModuleMasterHttp >/dev/null; build_platform mega2560; popd >/dev/null
+  - pushd examples/NetworkBlinkSimple >/dev/null; build_platform uno; popd >/dev/null
+  - pushd examples/SensorMonitor >/dev/null; build_platform uno; popd >/dev/null
+  - pushd examples/WebPage/ARDUINO_SWBB/LightController >/dev/null; build_platform uno; popd >/dev/null
+  - pushd examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp >/dev/null; build_platform mega2560; popd >/dev/null
+  - pushd examples/WebPage/ARDUINO_SWBB/SensorMonitor >/dev/null; build_platform uno; popd >/dev/null
+  - pushd examples/WebPage/ARDUINO_SWBB/TestModuleMaster >/dev/null; build_platform uno; popd >/dev/null
+  - pushd examples/WebPage/ESP8266_GUDP >/dev/null; build_platform esp8266; popd >/dev/null
   # Linux examples
-  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp; make; popd >/dev/null
-  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/ModuleMasterHttp/ModuleMasterHttp; make; popd >/dev/null
-  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/TestModuleMaster; make; popd >/dev/null
-  - pushd examples/WebPage/WINDOWS_LINUX_ETCP/ModuleMasterHttp/ModuleMasterHttp; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp >/dev/null; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/TestModuleMaster >/dev/null; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_ETCP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
 notifications:
   email:
     on_success: change
