@@ -12,8 +12,8 @@ env:
   global:
     - ARDUINO_VERSION=1.8.6
   matrix:
-    #- BOARD="arduino:avr:uno"
-  - BOARD="arduino:avr:nano:cpu=atmega328"
+  - BOARD="arduino:avr:uno"
+  #- BOARD="arduino:avr:nano:cpu=atmega328"
   - BD=esp8266:esp8266:nodemcuv2:CpuFrequency=80,FlashSize=4M3M
     
 before_install:
@@ -52,7 +52,7 @@ install:
   #- sudo cp -R $PWD/libraries/LCD_Display9696 $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/Adafruit_Si7021 $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/TinyWireM $HOME/Arduino/libraries/
-#  - sudo cp -R $PWD/libraries/PJON-master $HOME/Arduino/libraries/ && sudo cp -d $PWD/libraries/PJON $HOME/Arduino/libraries/
+  - sudo cp -R $PWD/libraries/PJON-master $HOME/Arduino/libraries/ && sudo cp -d $PWD/libraries/PJON $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/DS2438 $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/IBM_LMIC_framework $HOME/Arduino/libraries/
   #- sudo cp -R $PWD/libraries/TinyGPS-13 $HOME/Arduino/libraries/
@@ -69,7 +69,7 @@ install:
   #- pip --version
   #- flake8 --version
 #  - deactivate
-  - arduino --pref "compiler.warning_level=none" --save-prefs
+  - arduino --pref "compiler.warning_level=all" --save-prefs
   - set -o pipefail  # error in case 'diff' sees differences (get 1st error in pipe), use '+o' to disable/unset
 
 script:
