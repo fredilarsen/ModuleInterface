@@ -13,8 +13,9 @@ env:
     - ARDUINO_VERSION=1.8.6
   matrix:
     #- BOARD="arduino:avr:uno"
-    - BOARD="arduino:avr:nano:cpu=atmega328"
-
+  - BOARD="arduino:avr:nano:cpu=atmega328"
+  - BD=esp8266:esp8266:nodemcuv2:CpuFrequency=80,FlashSize=4M3M
+    
 before_install:
   # setup a pseudo-display
   - "/sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_1.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :1 -ac -screen 0 1280x1024x16"
@@ -90,6 +91,12 @@ script:
   ## examples/WebPage/ARDUINO_SWBB/SensorMonitor
   - FILE=$PWD/examples/WebPage/ARDUINO_SWBB/SensorMonitor/SensorMonitor.ino
   - arduino --verify --board arduino:avr:uno --verbose --preserve-temp-files $FILE  >> $FILE.compile
+  - ELF_FILE=`find /tmp/ -name "SensorMonitor.ino.elf"`
+  - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
+  - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
+  ## examples/WebPage/ESP8266_GUDP/SensorMonitor
+  - FILE=$PWD/examples/WebPage/ESP8266_GUDP/SensorMonitor/SensorMonitor.ino
+  - arduino --verify --board $BD --verbose --preserve-temp-files $FILE  >> $FILE.compile
   - ELF_FILE=`find /tmp/ -name "SensorMonitor.ino.elf"`
   - readelf -a $ELF_FILE  >> $FILE.info && strings -d $ELF_FILE  >> $FILE.info && size $ELF_FILE  >> $FILE.info
   - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
