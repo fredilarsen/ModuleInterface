@@ -24,8 +24,8 @@ script:
   - pwd
   - ls -la
   - tree --charset ASCII
-  - pushd; cd examples/WebPage/ARDUINO_SWBB/SensorMonitor; build_platform uno; popd
-  - pushd; cd examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp; build_platform mega2560; popd
+  - pushd examples/WebPage/ARDUINO_SWBB/SensorMonitor; build_platform uno; popd
+  - pushd examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp; build_platform mega2560; popd
   - cd examples/WebPage/ESP8266_GUDP; build_platform esp8266
 notifications:
   email:
