@@ -15,7 +15,8 @@ before_install:
 install:
   - arduino --install-library "ArduinoJson","PJON:master"
 script:
-  - build_main_platforms
+  - build_platform [uno]
+  - build_platform nano
 notifications:
   email:
     on_success: change
