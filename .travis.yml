@@ -12,7 +12,6 @@ env:
      - ARDUINO_IDE_VERSION="1.8.6"
 before_install:
   - source <(curl -SLs https://raw.githubusercontent.com/adafruit/travis-ci-arduino/master/install.sh)
-  - sudo apt-get install tree
 install:
   - arduino --install-library "ArduinoJson:5.13.2"
   # Use PJON master, not a release for now
@@ -21,12 +20,22 @@ install:
   - rm master.zip
   - sudo mv PJON-master $HOME/Arduino/libraries/PJON
 script:
-  - pwd
-  - ls -la
-  - tree --charset ASCII
-  - pushd examples/WebPage/ARDUINO_SWBB/SensorMonitor; build_platform uno; popd
-  - pushd examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp; build_platform mega2560; popd
-  - cd examples/WebPage/ESP8266_GUDP; build_platform esp8266
+  # Arduino based examples
+  - pushd examples/BlinkAdvanced; build_platform uno; popd >/dev/null
+  - pushd examples/BlinkSimple; build_platform uno; popd >/dev/null
+  - pushd examples/ModuleMasterHttp; build_platform mega2560; popd >/dev/null
+  - pushd examples/NetworkBlinkSimple; build_platform uno; popd >/dev/null
+  - pushd examples/SensorMonitor; build_platform uno; popd >/dev/null
+  - pushd examples/WebPage/ARDUINO_SWBB/LightController; build_platform uno; popd >/dev/null
+  - pushd examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp; build_platform mega2560; popd >/dev/null
+  - pushd examples/WebPage/ARDUINO_SWBB/SensorMonitor; build_platform uno; popd >/dev/null
+  - pushd examples/WebPage/ARDUINO_SWBB/TestModuleMaster; build_platform uno; popd >/dev/null
+  - pushd examples/WebPage/ESP8266_GUDP; build_platform esp8266; popd >/dev/null
+  # Linux examples
+  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/ModuleMasterHttp/ModuleMasterHttp; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/TestModuleMaster; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_ETCP/ModuleMasterHttp/ModuleMasterHttp; make; popd >/dev/null
 notifications:
   email:
     on_success: change
