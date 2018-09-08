@@ -4,7 +4,7 @@
 language: c
 
 # blocklist
-branches:
+#branches:
 #  except:
 #  - result/docu
 
@@ -49,7 +49,7 @@ install:
   - unzip master.zip
   - rm master.zip
   - mv PJON-master PJON
-  - sudo cp -R $PWD/PJON $HOME/Arduino/libraries/
+  - sudo mv PJON $HOME/Arduino/libraries/
   - tree
   # old version of OLED_Display_96X96 - the one on github is too new and has incompatible constructor
   #- wget https://github.com/Seeed-Studio/OLED_Display_96X96/archive/v1.0.0.tar.gz
@@ -80,7 +80,9 @@ install:
   - set -o pipefail  # error in case 'diff' sees differences (get 1st error in pipe), use '+o' to disable/unset
 
 script:
+  - pwd
   - ls -la
+  - ls -la ..
   #- astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
 
   ## examples/WebPage/ARDUINO_SWBB/LightController
