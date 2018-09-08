@@ -18,10 +18,11 @@ install:
   - wget https://github.com/gioblu/PJON/archive/master.zip
   - unzip master.zip
   - rm master.zip
+  - sudo cp -R PJON-master ../PJON
   - sudo mv PJON-master $HOME/Arduino/libraries/PJON
 script:
   # Arduino based examples
-  - pushd examples/BlinkAdvanced; build_platform uno; popd >/dev/null
+  - pushd examples/BlinkAdvanced >/dev/null; build_platform uno; popd >/dev/null
   - pushd examples/BlinkSimple; build_platform uno; popd >/dev/null
   - pushd examples/ModuleMasterHttp; build_platform mega2560; popd >/dev/null
   - pushd examples/NetworkBlinkSimple; build_platform uno; popd >/dev/null
