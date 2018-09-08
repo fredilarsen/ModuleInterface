@@ -37,7 +37,7 @@ script:
   # Linux examples
   - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp >/dev/null; make; popd >/dev/null
   - pushd examples/WebPage/WINDOWS_LINUX_LUDP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
-  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/TestModuleMaster >/dev/null; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/TestModuleMaster/TestModuleMaster >/dev/null; make; popd >/dev/null
   - pushd examples/WebPage/WINDOWS_LINUX_ETCP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
 notifications:
   email:
