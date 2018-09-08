@@ -13,7 +13,11 @@ env:
 before_install:
   - source <(curl -SLs https://raw.githubusercontent.com/adafruit/travis-ci-arduino/master/install.sh)
 install:
-  - arduino --install-library "ArduinoJson","PJON:master"
+  - arduino --install-library "ArduinoJson:5.13.2"
+  - wget https://github.com/gioblu/PJON/archive/master.zip
+  - unzip master.zip
+  - rm master.zip
+  - sudo mv PJON-master $HOME/Arduino/libraries/PJON
 script:
   - build_platform [uno]
   - build_platform nano
