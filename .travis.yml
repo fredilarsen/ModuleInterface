@@ -81,7 +81,7 @@ install:
 
 script:
   - ls -la
-  - astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
+  #- astyle  --style=kr  --indent=spaces=2  --verbose  $FILE  &>> $FILE.style && ((test ! -e ${FILE}.orig) || (diff -u ${FILE}.orig $FILE | tee -a $FILE.style | diffstat >> $FILE.style))
 
   ## examples/WebPage/ARDUINO_SWBB/LightController
   - FILE=$PWD/examples/WebPage/ARDUINO_SWBB/LightController/LightController.ino
