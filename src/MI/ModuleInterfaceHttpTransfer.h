@@ -14,6 +14,15 @@
 #define MI_SMALLMEM
 #endif
 
+// A buffer is used for transferring JSON data, and the max size can be defined here
+#ifndef MI_MAX_JSON_SIZE
+  #ifdef MI_SMALLMEM
+    #define MI_MAX_JSON_SIZE 800
+  #else
+    #define MI_MAX_JSON_SIZE 2000
+  #endif
+#endif
+
 struct MILastScanTimes {
   uint32_t times[NUM_SCAN_INTERVALS];
   MILastScanTimes() {
@@ -93,12 +102,12 @@ void set_time_from_json(JsonObject& root, uint32_t delay_ms) {
   uint32_t utc = (uint32_t)root["UTC"];
   if (utc != 0) {
     utc += delay_ms/1000ul;
-    if (abs((int32_t)(utc -miGetTime()) > 2)) {
+    if (abs((int32_t)(utc -miTime::Get()) > 2)) {
     #ifndef NO_TIME_SYNC
       #ifdef DEBUG_PRINT
-        DPRINT(F("--> Adjusted time from web by s: ")); DPRINTLN((int32_t) (utc - miGetTime()));
+        DPRINT(F("--> Adjusted time from web by s: ")); DPRINTLN((int32_t) (utc - miTime::Get()));
       #endif
-      miSetTime(utc); // Set system time
+      miTime::Set(utc); // Set system time
     #endif
     }
   }
@@ -160,7 +169,7 @@ JsonObject& read_json_settings_from_server(
 
 
 bool read_json_settings(ModuleInterface &interface, Client &client, 
-                        const uint16_t buffer_size = 800, const uint16_t timeout_ms = 3000) 
+                        const uint16_t buffer_size = MI_MAX_JSON_SIZE, const uint16_t timeout_ms = 3000) 
 {
   char *buf = new char[buffer_size];
   DynamicJsonBuffer jsonBuffer;
@@ -240,9 +249,9 @@ void add_module_status(ModuleInterface *interface, JsonObject &root) {
   // Add status values
   String name;
   int16_t age = interface->get_last_alive_age();
-  if (age >= 0 && miGetTime()!=0) { // Leave last registered UTC value in database if unknown alive age
+  if (age >= 0 && miTime::Get()!=0) { // Leave last registered UTC value in database if unknown alive age
     name = interface->get_prefix(); name += F("LastLife");
-    root[name] = (uint32_t)(miGetTime() - age); // Set as UTC
+    root[name] = (uint32_t)(miTime::Get() - age); // Set as UTC
   }
 
   name = interface->get_prefix(); name += F("Uptime");
@@ -289,7 +298,7 @@ void set_scan_columns(JsonObject &root,
 {
   if (last_scan_times) {
     // Do not sample at startup, init time array to now
-    uint32_t curr = miGetTime();
+    uint32_t curr = miTime::Get();
     for (uint8_t i=0; i<NUM_SCAN_INTERVALS; i++)
       if (last_scan_times->times[i]==0) last_scan_times->times[i] = curr;
 
@@ -350,7 +359,7 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
   
   // Add system time
   name = interfaces.get_prefix(); name += F("UTC");
-  root[name] = (uint32_t) miGetTime();
+  root[name] = (uint32_t) miTime::Get();
 }
 
 #ifdef MI_SMALLMEM // Little memory, transfer values for each module in separate requests.

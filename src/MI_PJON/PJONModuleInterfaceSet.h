@@ -98,10 +98,10 @@ public:
   // Time will be broadcast to all modules unless NO_TIME_SYNC is defined or master itself is not timesynced
   #ifndef NO_TIME_SYNC
   void broadcast_time() {
-    if (miIsTimeSynced()) {
+    if (miTime::IsSynced()) {
       bool scheduled_sync = ((uint32_t)(millis() - last_time_sync) >= 60000); // Time for a scheduled broadcast?
       #ifdef DEBUG_PRINT
-        if (scheduled_sync) {DPRINT(F("Scheduled broadcast of time sync: ")); DPRINTLN(miGetTime()); }
+        if (scheduled_sync) {DPRINT(F("Scheduled broadcast of time sync: ")); DPRINTLN(miTime::Get()); }
       #endif
       
       // Check if any local bus module has reported that is it missing time
@@ -114,7 +114,7 @@ public:
             #ifdef DEBUG_PRINT
             if (!scheduled_sync) {
               DPRINT(F("Module ")); DPRINT(interfaces[i]->module_name);
-              DPRINT(F(" missing time, broadcasting: ")); DPRINTLN(miGetTime());
+              DPRINT(F(" missing time, broadcasting: ")); DPRINTLN(miTime::Get());
             }
             #endif
           }
@@ -138,7 +138,7 @@ public:
           #ifdef DEBUG_PRINT
             if (interfaces[i]->status_bits & MISSING_TIME) DPRINT(F("Module missing time. ")); 
             DPRINT(F("Sending directed sync to "));DPRINT(interfaces[i]->module_name);
-            DPRINT(F(": ")); DPRINTLN(miGetTime());
+            DPRINT(F(": ")); DPRINTLN(miTime::Get());
           #endif
 
           // Clear time-missing bit to avoid this triggering continuous time sync to this device
@@ -158,7 +158,7 @@ public:
   void send_timesync(const uint8_t id, const uint8_t bus_id[]) {
     char buf[5];
     buf[0] = (char) mcSetTime;
-    uint32_t t = miGetTime();
+    uint32_t t = miTime::Get();
     memcpy(&buf[1], &t, 4);
     pjon->send_packet(id, bus_id, buf, 5, MI_REDUCED_SEND_TIMEOUT);
   }

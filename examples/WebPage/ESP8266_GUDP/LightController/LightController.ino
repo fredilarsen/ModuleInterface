@@ -66,7 +66,7 @@ void lightcontrol() {
   if (interface.settings.is_updated() && interface.inputs.is_updated() && interface.is_time_set()) {
 
   // Check if within configured time-of-day interval (or if no interval is defined)
-    uint16_t minute_of_day = miGetMinuteOfDay(interface.get_time_utc_s()),
+    uint16_t minute_of_day = miTime::GetMinuteOfDay(interface.get_time_utc_s()),
              start_minute_of_day = interface.settings.get_uint16(s_time_interval_start_ix),
              end_minute_of_day = interface.settings.get_uint16(s_time_interval_end_ix);
     if (start_minute_of_day > end_minute_of_day) end_minute_of_day += 24*60;
