@@ -77,7 +77,7 @@ void set_modulesettings() {
   if (interfaces.got_all_contracts() && !did_set_settings) {
     did_set_settings = true; // No need to repeat setting these static values
 
-    miSetTime(1529764437); // We have no time source, so start with a valid fixed time
+    miTime::Set(1529764437); // We have no time source, so start with a valid fixed time
 
     ModuleVariableSet *settings = interfaces.find_settings_by_prefix("sm");
     if (settings) settings->set_updated();
