@@ -53,8 +53,8 @@ public:
   ModuleInterface *operator [] (const uint8_t ix) { return (interfaces[ix]); }
   
   void update_intermodule_dependencies() {
-	uint16_t count = count_active_contracts();
-	if (count != active_contract_count) updated_intermodule_dependencies = false;
+	  uint16_t count = count_active_contracts();
+	  if (count != active_contract_count) updated_intermodule_dependencies = false;
     if (!updated_intermodule_dependencies && count > 1) {
       for (uint8_t i = 0; i < num_interfaces; i++) {
         interfaces[i]->allocate_source_arrays();
@@ -85,13 +85,14 @@ public:
       bool all_sources_updated = true, some_set = false;
       for (int j=0; j<interfaces[i]->inputs.get_num_variables(); j++) {
         uint8_t module_ix = interfaces[i]->input_source_module_ix[j], var_ix = interfaces[i]->input_source_output_ix[j];
-        if (module_ix != NO_MODULE && var_ix != NO_VARIABLE && interfaces[module_ix]->outputs.is_updated()) {     
-          uint8_t size = interfaces[i]->inputs.get_module_variable(j).get_size();
-          memset(buf, 0, 4);
-          interfaces[module_ix]->outputs.get_value(var_ix, buf, size);
-          interfaces[i]->inputs.set_value(j, buf, size);
-          if (!interfaces[module_ix]->outputs.is_updated()) all_sources_updated = false; // Source not updated yet
-          some_set = true;
+        if (module_ix != NO_MODULE && var_ix != NO_VARIABLE) {
+          if (interfaces[module_ix]->outputs.is_updated()) {     
+            uint8_t size = interfaces[i]->inputs.get_module_variable(j).get_size();
+            memset(buf, 0, 4);
+            interfaces[module_ix]->outputs.get_value(var_ix, buf, size);
+            interfaces[i]->inputs.set_value(j, buf, size);
+            some_set = true;
+          } else all_sources_updated = false; // Source not updated yet
         }
       }
       // Flag inputs as ready for transfer

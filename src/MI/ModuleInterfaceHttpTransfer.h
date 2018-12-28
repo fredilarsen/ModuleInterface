@@ -25,14 +25,23 @@
 
 struct MILastScanTimes {
   uint32_t times[NUM_SCAN_INTERVALS];
+
+  // Also keep track of time usage for web requests
+  uint32_t last_get_settings_usage_ms = 0,
+           last_set_settings_usage_ms = 0,
+           last_set_values_usage_ms = 0;
+
   MILastScanTimes() {
     memset(times, 0, NUM_SCAN_INTERVALS*sizeof(uint32_t));
   }
 };
 
 void write_http_settings_request(const char *module_prefix, Client &client) {
-  String request = F("GET /get_settings.php?prefix=");
-  request += module_prefix;
+  String request = F("GET /get_settings.php");
+  if (module_prefix != NULL) {
+    request += F("?prefix=");
+    request += module_prefix;
+  }
   request += "\r\n\r\n";
   client.print(request.c_str());
   // NOTE: On ESP8266 a client.flush() seems to close the connection, so avoid it
@@ -167,7 +176,7 @@ JsonObject& read_json_settings_from_server(
   return jsonBuffer.parseObject(jsonStart);
 }
 
-
+#ifdef MI_SMALLMEM
 bool read_json_settings(ModuleInterface &interface, Client &client, 
                         const uint16_t buffer_size = MI_MAX_JSON_SIZE, const uint16_t timeout_ms = 3000) 
 {
@@ -195,12 +204,47 @@ bool read_json_settings(ModuleInterface &interface, Client &client,
 
   return status;
 }
+#else
+bool read_json_settings(ModuleInterfaceSet &interfaces, Client &client,
+  const uint16_t buffer_size_per_module = MI_MAX_JSON_SIZE, const uint16_t timeout_ms = 3000)
+{
+  if (interfaces.num_interfaces == 0) return false;
+  const uint32_t buffer_size = buffer_size_per_module * interfaces.num_interfaces;
+  char *buf = new char[buffer_size];
+  DynamicJsonBuffer jsonBuffer;
+  uint32_t start = millis();
+  JsonObject& root = read_json_settings_from_server(client, jsonBuffer, buf, buffer_size, timeout_ms);
+  bool status = false;
+  if (root.success()) {
+    // Set system time if UTC was returned from server, exclude parsing time and half of retrieval time
+#ifdef DEBUG_PRINT
+    uint32_t before_set = millis();
+#endif
+    set_time_from_json(root, (uint32_t)(millis() - start));
+    for (int i = 0; i < interfaces.num_interfaces; i++) {
+      decode_json_settings(*interfaces[i], root);
+    }
+    status = true;
+  }
+  else {
+#ifdef DEBUG_PRINT
+    DPRINTLN("Failed parsing settings JSON. Out of memory?");
+#endif
+  }
+
+  // Deallocate buffer
+  if (buf != NULL) delete[] buf;
+
+  return status;
+}
+#endif
 
 bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, Client &client, uint8_t *server, uint16_t port = 80) {
   #ifdef DEBUG_PRINT
   uint32_t start_time = millis();
   #endif
   uint8_t cnt = 0;
+#ifdef MI_SMALLMEM
   for (int i=0; i < interfaces.num_interfaces; i++) {
     int8_t code = client.connect(server, port);
     bool success = false;
@@ -214,6 +258,19 @@ bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, Client &client
     client.stop();
     if (success) cnt++;
   }
+#else
+  int8_t code = client.connect(server, port);
+  bool success = false;
+  if (code == 1) { // 1=CONNECTED
+    write_http_settings_request(NULL, client);
+    success = read_json_settings(interfaces, client);
+  }
+#ifdef DEBUG_PRINT
+  else { DPRINT("Connection to web server failed with code "); DPRINTLN(code); }
+#endif
+  client.stop();
+  if (success) cnt++;
+#endif
   #ifdef DEBUG_PRINT
   DPRINT(F("Reading settings took ")); DPRINT((uint32_t)(millis() - start_time)); DPRINTLN("ms.");
   #endif
@@ -245,6 +302,12 @@ void post_json_to_server(Client &client, const String &buf, const String &reques
 #endif  
 }
 
+uint32_t difftime(const uint32_t start, const uint32_t end) {
+  if (start == 0 || end == 0) return 0;
+  uint32_t diff = (uint32_t)(end - start);
+  return diff > 600000 ? 0 : diff;
+}
+
 void add_module_status(ModuleInterface *interface, JsonObject &root) {
   // Add status values
   String name;
@@ -262,6 +325,15 @@ void add_module_status(ModuleInterface *interface, JsonObject &root) {
 
   name = interface->get_prefix(); name += F("StatBits");
   root[name] = (uint8_t) interface->get_status_bits();
+
+  // Find max time of request of outputs, settings or status
+  uint32_t statustime = difftime(interface->before_status_requested_time, interface->status_received_time),
+    outputtime = difftime(interface->outputs.before_requested_time, interface->outputs.get_updated_time_ms()),
+    settingstime = difftime(interface->settings.before_requested_time, interface->settings.get_updated_time_ms()),
+    maxtime = statustime > outputtime ? statustime : outputtime;
+  maxtime = maxtime > settingstime ? maxtime : settingstime;
+  name = interface->get_prefix(); name += F("ReqTime");
+  root[name] = maxtime;
 }
 
 void add_json_values(ModuleInterface *interface, JsonObject &root) {
@@ -294,7 +366,7 @@ void add_json_settings(ModuleInterface *interface, JsonObject &root) {
 }
 
 void set_scan_columns(JsonObject &root,
-                      MILastScanTimes *last_scan_times) // NULL or array of length 4
+                      MILastScanTimes *last_scan_times)
 {
   if (last_scan_times) {
     // Do not sample at startup, init time array to now
@@ -325,7 +397,7 @@ void set_scan_columns(JsonObject &root,
   }
 }
 
-void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
+void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root, const MILastScanTimes &last_scan_times) {
   // Add number of currently inactive (nonresponding) modules
   String name = interfaces.get_prefix(); name += F("InactCnt");
   root[name] = interfaces.get_inactive_module_count();
@@ -360,6 +432,16 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root) {
   // Add system time
   name = interfaces.get_prefix(); name += F("UTC");
   root[name] = (uint32_t) miTime::Get();
+
+  // Add times spent in HTTP requests
+  name = interfaces.get_prefix(); name += F("WValTm"); // Write values time
+  root[name] = last_scan_times.last_set_values_usage_ms;
+
+  name = interfaces.get_prefix(); name += F("WSetTm"); // Write settings time
+  root[name] = last_scan_times.last_set_settings_usage_ms;
+
+  name = interfaces.get_prefix(); name += F("RSetTm"); // Read settings time
+  root[name] = last_scan_times.last_get_settings_usage_ms;
 }
 
 #ifdef MI_SMALLMEM // Little memory, transfer values for each module in separate requests.
@@ -385,7 +467,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, c
       if (primary_master && i == 0) set_scan_columns(root, last_scan_times);
 
       // Add status for the master
-      if (i == 0) add_master_status(interfaces, root);
+      if (i == 0) add_master_status(interfaces, root, *last_scan_times);
       root.printTo(buf);
     }
     if (buf.length() <= 2) continue; // Empty buffer, nothing to send, so not a failure
@@ -445,7 +527,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, c
     if (primary_master) set_scan_columns(root, last_scan_times);
 
     // Add status for the master
-    add_master_status(interfaces, root);
+    add_master_status(interfaces, root, *last_scan_times);
     
     // Add values from all modules
     for (int i=0; i<interfaces.num_interfaces; i++) add_json_values(interfaces[i], root);
@@ -568,6 +650,25 @@ public:
 
   void set_primary_master(bool is_primary) { is_primary_master = is_primary; }
 
+  void put_to_web_server() {
+    // Send values (outputs) to the web server
+    uint32_t start = millis();
+    send_values_to_web_server(interfaces, client, web_server_ip, &last_scan_times,
+      web_server_port, is_primary_master);
+    last_scan_times.last_set_values_usage_ms = (uint32_t)(millis() - start);
+
+    // If any setting has been modified in module, send it to the web server
+    start = millis();
+    send_settings_to_web_server(interfaces, client, web_server_ip, web_server_port);
+    last_scan_times.last_set_settings_usage_ms = (uint32_t)(millis() - start);
+  }
+
+  void get_from_web_server() {
+    uint32_t start = millis();
+    get_settings_from_web_server(interfaces, client, web_server_ip, web_server_port);
+    last_scan_times.last_get_settings_usage_ms = (uint32_t)(millis() - start);
+  }
+
   void update() {
     // Get settings for each module from the database via the web server
     if (mi_interval_elapsed(last_settings, settings_interval)) {
@@ -581,5 +682,5 @@ public:
       send_values_to_web_server(interfaces, client, web_server_ip, &last_scan_times, 
         web_server_port, is_primary_master); 
     }    
-  }  
+  }
 };

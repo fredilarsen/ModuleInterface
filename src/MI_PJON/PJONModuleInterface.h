@@ -176,6 +176,7 @@ public:
   void update_values(const uint32_t interval_ms) {
     if (outputs.got_contract() && outputs.get_num_variables() != 0 &&
       (outputs.requested_time == 0 || ((uint32_t)(millis()-outputs.requested_time) >= interval_ms))) {
+      outputs.before_requested_time = millis();
       if (send_outputs_request()) receive_packet(get_request_timeout(), mcSetOutputs); else pjon->receive();
     }
   }
@@ -183,12 +184,14 @@ public:
   void update_settings(const uint32_t interval_ms) {
     if (((status_bits & MODIFIED_SETTINGS) != 0) && settings.got_contract() && settings.get_num_variables() != 0 &&
       (settings.requested_time == 0 || ((uint32_t)(millis()-settings.requested_time) >= interval_ms))) {
+      settings.before_requested_time = millis();
       if (send_settings_request()) receive_packet(get_request_timeout(), mcSetSettings); else pjon->receive();
     }
   }
 
   void update_status(const uint32_t interval_ms) {
     if (got_contract() && (status_requested_time == 0 || ((uint32_t)(millis()-status_requested_time) >= interval_ms))) {
+      before_status_requested_time = millis();
       if (send_status_request()) receive_packet(get_request_timeout(), mcSetStatus); else pjon->receive();
     }
   }

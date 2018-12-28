@@ -270,9 +270,9 @@ public:
     }
     if (numvar == 0) {
       #ifdef DEBUG_PRINT
-	  if (num_variables > 0) {
+	    if (num_variables > 0) {
         DPRINT(F("--> set_values got no values, not updated on sender side yet. Length = ")); DPRINTLN(length);
-	  }
+	    }
       #endif
       return true; // Conforms to contract, but values not available yet
     }
@@ -562,6 +562,7 @@ public:
   // Helper variables not used internally, available for use by a communication protocol
   #ifdef IS_MASTER
   uint32_t contract_requested_time = 0,
+           before_requested_time = 0,
            requested_time = 0;
   #endif
 

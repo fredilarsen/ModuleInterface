@@ -201,6 +201,44 @@ public:
     update_statuses();
   }
 
+  // Return true if transferred values
+  void update_frequent() {
+    // Do PJON send and receive
+    pjon->update();
+    pjon->receive(100);
+
+    // Handle incoming events
+    handle_events();
+
+    // Broadcast time to all modules with a few minutes interval
+    #ifndef NO_TIME_SYNC
+    broadcast_time();
+    #endif
+
+    // Request the contract of each module if not received already
+    update_contracts();
+  }
+
+  void get_outputs() {
+    update_values();
+  }
+
+  void do_transfer() {
+    // Transfer outputs from modules to inputs of other modules
+    transfer_outputs_to_inputs();
+
+    send_inputs();
+
+    // Get fresh status from each module
+    update_statuses();
+
+    // Get potential modified settings from each module
+    update_settings();
+
+    // Send settings to each module
+    send_settings();
+  }
+
   uint8_t locate_module(const uint8_t device_id, const uint8_t *bus_id) const {
     uint8_t ix = NO_MODULE;
     for (uint8_t i=0; i<num_interfaces; i++) {
