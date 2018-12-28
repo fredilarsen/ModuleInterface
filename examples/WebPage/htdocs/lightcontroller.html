@@ -40,9 +40,10 @@
           function highlightModeTabFromModeName(mode) {
             // Find tab link name to highlight
             var tabName;
-            if (mode == '0') tabName = "modeOff";
-            else if (mode == '1') tabName = "modeOn";
-            else if (mode == '2') tabName = "modeAuto";
+            var m = parseInt(mode, 10);
+            if (m == 0) tabName = "modeOff";
+            else if (m == 1) tabName = "modeOn";
+            else if (m == 2) tabName = "modeAuto";
 
             // Activate tab
             if (tabName != null) {
@@ -84,9 +85,10 @@
           }
 
           function getModeName(number) {
-            if (number == '0') return 'Off';
-            if (number == '1') return 'On';
-            if (number == '2') return 'Auto';
+            var n = parseInt(number, 10);
+            if (n == 0) return 'Off';
+            if (n == 1) return 'On';
+            if (n == 2) return 'Auto';
             return 'Unknown';
           }
 
