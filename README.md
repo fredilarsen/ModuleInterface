@@ -86,6 +86,8 @@ Adding reading of more sensors is done by adding more output parameters to the c
 
 After adding the variable, the value must be set in a similar way as the motion in the example.
 
+For a complete list of and description of examples, look [here](https://github.com/fredilarsen/ModuleInterface/blob/master/examples/README.md).
+
 ### Variable naming convention
 Each setting, input or output is identified by a variable name. A variable name consists of two parts:
 
