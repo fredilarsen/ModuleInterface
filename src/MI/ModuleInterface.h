@@ -222,8 +222,8 @@ public:
     inputs.set_variables_by_callback(inputnames_callback);
     outputs.set_variables_by_callback(outputnames_callback);
 
-    if (settings.get_num_variables() == 0) status_bits &= !MISSING_SETTINGS; // No settings, so do not mark them as missing
-    if (inputs.get_num_variables() == 0) status_bits &= !MISSING_INPUTS;     // No inputs, so do not mark them as missing
+    if (settings.get_num_variables() == 0) status_bits &= ~MISSING_SETTINGS; // No settings, so do not mark them as missing
+    if (inputs.get_num_variables() == 0) status_bits &= ~MISSING_INPUTS;     // No inputs, so do not mark them as missing
   }
   #ifndef MI_NO_DYNAMIC_MEM
   // This function can be called early on to pre-allocate module variables to avoid memory fragmentation.
@@ -231,8 +231,8 @@ public:
   // to set_contracts from within a function.
   // If this function returns false, there is a fatal memory problem and the program should be aborted
   bool preallocate_variables(const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) {
-    if (num_settings == 0) status_bits &= !MISSING_SETTINGS; // No settings, so do not mark them as missing
-    if (num_inputs == 0) status_bits &= !MISSING_INPUTS;     // No inputs, so do not mark them as missing
+    if (num_settings == 0) status_bits &= ~MISSING_SETTINGS; // No settings, so do not mark them as missing
+    if (num_inputs == 0) status_bits &= ~MISSING_INPUTS;     // No inputs, so do not mark them as missing
     return settings.preallocate_variables(num_settings) &&
            inputs.preallocate_variables(num_inputs) &&
            outputs.preallocate_variables(num_outputs);
@@ -328,7 +328,7 @@ public:
         else {
           status_bits &= ~CONTRACT_MISMATCH_SETTINGS; // Clear "missing settings contract" flag
           if (settings.is_updated()) {
-            status_bits &= ~MISSING_SETTINGS; // Clear "missing settings" flag
+            status_bits &= ~MISSING_SETTINGS & ~MODIFIED_SETTINGS; // Clear "missing" and "modified" flags
             notify(ntNewSettings, this);
           }
         }
