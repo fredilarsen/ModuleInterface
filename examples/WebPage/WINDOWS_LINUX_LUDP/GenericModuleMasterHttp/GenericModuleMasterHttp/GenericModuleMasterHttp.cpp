@@ -36,7 +36,7 @@ void parse_ip_string(const char *ip_string, in_addr &ip) {
 }
 
 void setup(int argc, const char * const argv[]) {
-  printf("Welcome to GenericModuleMasterHttp.\n");
+  printf("Welcome to GenericModuleMasterHttp (LocalUDP).\n");
 
   if (argc < 2) {
     printf("ERROR: The IP address of a web server must be specified on the command line.\n");

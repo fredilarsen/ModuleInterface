@@ -65,7 +65,7 @@ There is another example setup running both the modules and the master on ESP826
 If an Ethernet based strategy is used for the modules (like in the ESP8266 setup), or there is a switch connecting a SoftwareBitBang bus to an Ethernet based bus like LocalUDP, then the master can successfully be run as a process on a multi-process operating system like Linux or Windows. It can run on the same computer as the web server and database, or on a Raspberry PI or similar.
 
 Therefore, masters for Windows and Linux for a few Ethernet based strategies are included.
-Of these, the LocalUDP strategy seems to be the best choice, offering autodiscovery of devices based on their PJON id alone, while at the same time reducing the amount of broadcasts and also supporting remote modules on other buses.
+Of these, the DualUDP strategy seems to be the best choice, offering autodiscovery of LAN devices based on their PJON id alone (like LocalUDP), while at the same time reducing the amount of broadcasts and also supporting remote modules on other buses (like GlobalUDP).
 
 The _GenericModuleMasterHttp_ masters are recommended, as they can be built once and will not have to be modified when a new device is added to the setup. The text containing the list of modules is read at startup from the database through the web server.
 

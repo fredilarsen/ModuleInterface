@@ -33,7 +33,7 @@ PJONModuleInterfaceSet interfaces(bus, "SensMon:sm:10 LightCon:lc:20", "m1");
 MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 10000);
 
 void setup() {
-  printf("Welcome to ModuleMasterHttp.\n");
+  printf("Welcome to ModuleMasterHttp (ETCP).\n");
   bus.bus.strategy.link.set_id(bus.get_id());
   bus.bus.strategy.link.keep_connection(true);
 #ifdef ETCP_SINGLE_DIRECTION
