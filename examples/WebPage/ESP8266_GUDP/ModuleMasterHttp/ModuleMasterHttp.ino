@@ -31,7 +31,7 @@ PJONLink<GlobalUDP> link(1); // PJON device id 1
 
 // Module interfaces
 PJONModuleInterfaceSet interfaces(link, "SensMon:sm:10 LightCon:lc:20", "m1");
-MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 10000);
+MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip);
 
 void setup() {
   Serial.begin(115200);
@@ -58,8 +58,7 @@ void setup() {
 }
 
 void loop() {
-  interfaces.update();    // Data exchange to and from and between the modules
-  http_transfer.update(); // Data exchange to and from web server    
+  interfaces.update(&http_transfer); // Do all data exchange
   flash_status_led();     // Show module status by flashing LED
 }
 

@@ -20,6 +20,9 @@ public:
   uint8_t num_interfaces = 0;
   ModuleInterface **interfaces = NULL;
   
+  // Statistics
+  uint32_t last_total_usage_ms = 0; // Time for the whole transfer operation to/from all modules and web server
+  
   ModuleInterfaceSet(const char *prefix = NULL) { set_prefix(prefix); }  
   ModuleInterfaceSet(const uint8_t num_interfaces, const char *prefix = NULL) {
     set_prefix(prefix);

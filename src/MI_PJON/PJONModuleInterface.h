@@ -163,13 +163,16 @@ public:
 
   void update_contract(const uint32_t interval_ms) {
     if (!settings.got_contract() && (settings.contract_requested_time == 0 || ((uint32_t)(millis()-settings.contract_requested_time) >= interval_ms))) {
-      if (send_setting_contract_request()) receive_packet(get_request_timeout(), mcSetSettingContract); else pjon->receive();
+      if (send_setting_contract_request()) receive_packet(get_request_timeout(), mcSetSettingContract);
+      pjon->receive();
     }
     if (!inputs.got_contract() && (inputs.contract_requested_time == 0 || ((uint32_t)(millis()-inputs.contract_requested_time) >= interval_ms))) {
-      if (send_input_contract_request()) receive_packet(get_request_timeout(), mcSetInputContract);  else pjon->receive();
+      if (send_input_contract_request()) receive_packet(get_request_timeout(), mcSetInputContract);
+      pjon->receive();
     }
     if (!outputs.got_contract() && (outputs.contract_requested_time == 0 || ((uint32_t)(millis()-outputs.contract_requested_time) >= interval_ms))) {
-      if (send_output_contract_request()) receive_packet(get_request_timeout(), mcSetOutputContract);  else pjon->receive();
+      if (send_output_contract_request()) receive_packet(get_request_timeout(), mcSetOutputContract);
+      pjon->receive();
     }
   }
 
@@ -177,7 +180,7 @@ public:
     if (outputs.got_contract() && outputs.get_num_variables() != 0 &&
       (outputs.requested_time == 0 || ((uint32_t)(millis()-outputs.requested_time) >= interval_ms))) {
       outputs.before_requested_time = millis();
-      if (send_outputs_request()) receive_packet(get_request_timeout(), mcSetOutputs); else pjon->receive();
+      if (send_outputs_request()) receive_packet(get_request_timeout(), mcSetOutputs);
     }
   }
 
@@ -185,14 +188,14 @@ public:
     if (((status_bits & MODIFIED_SETTINGS) != 0) && settings.got_contract() && settings.get_num_variables() != 0 &&
       (settings.requested_time == 0 || ((uint32_t)(millis()-settings.requested_time) >= interval_ms))) {
       settings.before_requested_time = millis();
-      if (send_settings_request()) receive_packet(get_request_timeout(), mcSetSettings); else pjon->receive();
+      if (send_settings_request()) receive_packet(get_request_timeout(), mcSetSettings);
     }
   }
 
   void update_status(const uint32_t interval_ms) {
     if (got_contract() && (status_requested_time == 0 || ((uint32_t)(millis()-status_requested_time) >= interval_ms))) {
       before_status_requested_time = millis();
-      if (send_status_request()) receive_packet(get_request_timeout(), mcSetStatus); else pjon->receive();
+      if (send_status_request()) receive_packet(get_request_timeout(), mcSetStatus);
     }
   }
 

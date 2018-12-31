@@ -1,13 +1,12 @@
 #pragma once
 
 #include <MI/ModuleInterface.h>
+#include <MI/MITransferBase.h>
 #include <utils/MITime.h>
 #include <utils/MIUptime.h>
 #include <utils/MemFrag.h>
 
 #include <ArduinoJson.h>
-
-#define NUM_SCAN_INTERVALS 4
 
 // See if we have to minimize memory usage by splitting operations into smaller parts
 #if defined(ARDUINO) && !defined(PJON_ESP)
@@ -22,19 +21,6 @@
     #define MI_MAX_JSON_SIZE 2000
   #endif
 #endif
-
-struct MILastScanTimes {
-  uint32_t times[NUM_SCAN_INTERVALS];
-
-  // Also keep track of time usage for web requests
-  uint32_t last_get_settings_usage_ms = 0,
-           last_set_settings_usage_ms = 0,
-           last_set_values_usage_ms = 0;
-
-  MILastScanTimes() {
-    memset(times, 0, NUM_SCAN_INTERVALS*sizeof(uint32_t));
-  }
-};
 
 void write_http_settings_request(const char *module_prefix, Client &client) {
   String request = F("GET /get_settings.php");
@@ -442,6 +428,11 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root, const M
 
   name = interfaces.get_prefix(); name += F("RSetTm"); // Read settings time
   root[name] = last_scan_times.last_get_settings_usage_ms;
+
+  // Total time spent in timed transfer for the last time
+  // (Settings and outputs/inputs between modules and between modules and web server)
+  name = interfaces.get_prefix(); name += F("TotalTm"); // Total transfer time
+  root[name] = interfaces.last_total_usage_ms;
 }
 
 #ifdef MI_SMALLMEM // Little memory, transfer values for each module in separate requests.
@@ -617,31 +608,23 @@ bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client,
   return successCnt > 0;
 }
 
-class MIHttpTransfer {
+class MIHttpTransfer : public MITransferBase {
 protected:  
   // Configuration
-  uint32_t settings_interval,
-           outputs_interval;
-  ModuleInterfaceSet &interfaces;
   uint8_t web_server_ip[4];
   uint16_t web_server_port = 80;
   bool is_primary_master = true;
   
   // State
-  uint32_t last_settings = 0, last_outputs = millis();
-  MILastScanTimes last_scan_times;
   Client &client;
 
 public:
   MIHttpTransfer(ModuleInterfaceSet &module_interface_set,
                  Client &web_client,
-                 const uint8_t *web_server_address,
-                 const uint32_t settings_transfer_interval_ms = 10000, 
-                 const uint32_t outputs_transfer_interval_ms  = 10000) : 
-                 interfaces(module_interface_set), client(web_client) {
+                 const uint8_t *web_server_address) : 
+                 MITransferBase(module_interface_set),
+                 client(web_client) {
     if (web_server_address) memcpy(web_server_ip, web_server_address, 4);
-    settings_interval = settings_transfer_interval_ms;
-    outputs_interval = outputs_transfer_interval_ms;                   
   }
   
   void set_web_server_address(const uint8_t *server_address) { memcpy(web_server_ip, server_address, 4); }
@@ -650,37 +633,24 @@ public:
 
   void set_primary_master(bool is_primary) { is_primary_master = is_primary; }
 
-  void put_to_web_server() {
-    // Send values (outputs) to the web server
-    uint32_t start = millis();
-    send_values_to_web_server(interfaces, client, web_server_ip, &last_scan_times,
-      web_server_port, is_primary_master);
-    last_scan_times.last_set_values_usage_ms = (uint32_t)(millis() - start);
-
-    // If any setting has been modified in module, send it to the web server
-    start = millis();
-    send_settings_to_web_server(interfaces, client, web_server_ip, web_server_port);
-    last_scan_times.last_set_settings_usage_ms = (uint32_t)(millis() - start);
-  }
-
-  void get_from_web_server() {
+  void get_settings() {
     uint32_t start = millis();
     get_settings_from_web_server(interfaces, client, web_server_ip, web_server_port);
     last_scan_times.last_get_settings_usage_ms = (uint32_t)(millis() - start);
   }
 
-  void update() {
-    // Get settings for each module from the database via the web server
-    if (mi_interval_elapsed(last_settings, settings_interval)) {
-      send_settings_to_web_server(interfaces, client, web_server_ip, web_server_port);
-      get_settings_from_web_server(interfaces, client, web_server_ip, web_server_port);
-    }
-
-    // Store all measurements to the database via the web server
-    if (mi_interval_elapsed(last_outputs, outputs_interval)) {
-      // (set primary_master=false on all masters but one if there are more than one)
-      send_values_to_web_server(interfaces, client, web_server_ip, &last_scan_times, 
-        web_server_port, is_primary_master); 
-    }    
+  void put_settings() {
+    // If any setting has been modified in module, send it to the web server
+    uint32_t start = millis();
+    send_settings_to_web_server(interfaces, client, web_server_ip, web_server_port);
+    last_scan_times.last_set_settings_usage_ms = (uint32_t)(millis() - start);
   }
+
+  void put_values() {
+    // Send values (outputs) to the web server
+    uint32_t start = millis();
+    send_values_to_web_server(interfaces, client, web_server_ip, &last_scan_times,
+      web_server_port, is_primary_master);
+    last_scan_times.last_set_values_usage_ms = (uint32_t)(millis() - start);
+  }  
 };

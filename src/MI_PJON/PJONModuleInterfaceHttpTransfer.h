@@ -59,11 +59,8 @@ class PJONMIHttpTransfer : public MIHttpTransfer {
 public:
   PJONMIHttpTransfer(PJONModuleInterfaceSet &module_interface_set,
                  Client &web_client,
-                 const uint8_t *web_server_address,
-                 const uint32_t settings_transfer_interval_ms = 10000, 
-                 const uint32_t outputs_transfer_interval_ms  = 10000) : 
-                 MIHttpTransfer(module_interface_set, web_client, web_server_address, 
-                   settings_transfer_interval_ms, outputs_transfer_interval_ms) { }
+                 const uint8_t *web_server_address) : 
+                 MIHttpTransfer(module_interface_set, web_client, web_server_address) { }
   
   bool get_master_settings_from_server() {
     // Read the module list and other settings from the web server

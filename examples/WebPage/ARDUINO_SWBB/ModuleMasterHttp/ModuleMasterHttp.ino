@@ -43,9 +43,8 @@ void setup() {
 }
 
 void loop() {  
-  interfaces.update();    // Data exchange to and from and between the modules
-  http_transfer.update(); // Data exchange to and from web server    
-  flash_status_led();     // Show module status by flashing LED
+  interfaces.update(&http_transfer); // Do all data exchange
+  flash_status_led();                // Show module status by flashing LED
 }
 
 void flash_status_led() {

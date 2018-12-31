@@ -1,6 +1,7 @@
 #pragma once
 
 #include <MI/ModuleInterfaceSet.h>
+#include <MI/MITransferBase.h>
 #include <MI_PJON/PJONModuleInterface.h>
 
 typedef void (*mis_receive_function)(const uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info, const ModuleInterface *module_interface);
@@ -76,16 +77,53 @@ public:
     custom_receive_function = r; // Register custom/user callback function to receive non-ModuleInterface related messages
   }
 
-  void update_contracts() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_contract(sampling_time_outputs); }
-  void update_values() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_values(sampling_time_outputs); }
-  void update_settings() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_settings(sampling_time_settings); }
-  void update_statuses() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->update_status(sampling_time_outputs); }
-  void send_settings() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_settings(); }
-  void send_inputs() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_inputs(); }
+  void update_contracts() { 
+    for (uint8_t i = 0; i < num_interfaces; i++) {
+      ((PJONModuleInterface*) (interfaces[i]))->update_contract(1); 
+      check_incoming();
+    }
+  }
+  void update_values() { 
+    for (uint8_t i = 0; i < num_interfaces; i++) {
+      ((PJONModuleInterface*) (interfaces[i]))->update_values(1); 
+      check_incoming();
+    }
+  }
+  void update_settings() { 
+    for (uint8_t i = 0; i < num_interfaces; i++) {
+      ((PJONModuleInterface*) (interfaces[i]))->update_settings(1); 
+      check_incoming();
+    }
+  }
+  void update_statuses() {
+    for (uint8_t i = 0; i < num_interfaces; i++) {
+      ((PJONModuleInterface*) (interfaces[i]))->update_status(1);
+      check_incoming();
+    }
+  }
+  void send_settings() { 
+    for (uint8_t i = 0; i < num_interfaces; i++) {
+      ((PJONModuleInterface*) (interfaces[i]))->send_settings(); 
+      check_incoming();
+    }
+  }
+  void send_inputs() { 
+    for (uint8_t i = 0; i < num_interfaces; i++) {
+      ((PJONModuleInterface*) (interfaces[i]))->send_inputs(); 
+      check_incoming();
+    }
+  }
   void send_input_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_input_events(); }
 
   void clear_output_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->outputs.clear_events(); }
   void clear_input_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->inputs.clear_events(); }
+
+  // Check for incoming packets, send events immediately if present
+  void check_incoming() {
+    pjon->receive();
+    handle_events();
+    pjon->update();
+  }
 
   void handle_events() {
     if (!updated_intermodule_dependencies || !got_all_contracts()) return;
@@ -101,7 +139,7 @@ public:
     if (miTime::IsSynced()) {
       bool scheduled_sync = ((uint32_t)(millis() - last_time_sync) >= 60000); // Time for a scheduled broadcast?
       #ifdef DEBUG_PRINT
-        if (scheduled_sync) {DPRINT(F("Scheduled broadcast of time sync: ")); DPRINTLN(miTime::Get()); }
+        if (scheduled_sync) { DPRINT(F("Scheduled broadcast of time sync: ")); DPRINTLN(miTime::Get()); }
       #endif
       
       // Check if any local bus module has reported that is it missing time
@@ -161,79 +199,82 @@ public:
     uint32_t t = miTime::Get();
     memcpy(&buf[1], &t, 4);
     pjon->send_packet(id, bus_id, buf, 5, MI_REDUCED_SEND_TIMEOUT);
+    pjon->receive(); // Just called regularly to be responsive to events
   }
   #endif
   
-  void update() {
-    // Do PJON send and receive
-    pjon->update();
-    pjon->receive(100);
-
-    // Handle incoming events
-    handle_events();
-
-    // Broadcast time to all modules with a few minutes interval
-    #ifndef NO_TIME_SYNC
-    broadcast_time();
+  void update(MITransferBase *transfer = NULL) {
+    uint32_t start = millis();
+    update_frequent();
+    #ifdef DEBUG_PRINT_TIMES
+    uint32_t diff = (uint32_t)(millis() - start);
+    if (diff > 500) printf("Long time (%dms) in update_frequent!\n", diff);
+    static uint32_t last_print = millis();
     #endif
-
-    // Request the contract of each module if not received already
-    update_contracts();
-
-    // Send settings to each module
-    if (mi_interval_elapsed(last_settings_sent, sampling_time_settings)) send_settings();
-
-    // Get potential modified settings from each module
-    update_settings();
-
-    // Get fresh output values from each module
-    update_values();
-
-    // Deliver inputs to each module
-    if (mi_interval_elapsed(last_inputs_sent, sampling_time_outputs)) {
-      // Transfer outputs from modules to inputs of other modules
-      transfer_outputs_to_inputs();
-
-      send_inputs();
+    if (mi_interval_elapsed(last_sampled_outputs, sampling_time_outputs)) {
+      #ifdef DEBUG_PRINT_TIMES
+      uint32_t printdiff = (uint32_t)(millis() - last_print);
+      last_print = millis();
+      #endif
+      start = millis();
+      transfer_outputs(transfer); // Data exchange to and from and between the modules
+      transfer_settings(transfer); // Settings to and from the modules
+      last_total_usage_ms = (uint32_t)(millis()-start);
+      #ifdef DEBUG_PRINT_TIMES
+      printf("Spent %dms in interval_transfer, %dms since last.\n", last_total_usage_ms, printdiff);
+      #endif
     }
-
-    // Get fresh status from each module
-    update_statuses();
   }
 
-  // Return true if transferred values
+  // This should be called as often as possible, to handle events and other prioritized tasks
   void update_frequent() {
     // Do PJON send and receive
     pjon->update();
-    pjon->receive(100);
+    pjon->receive();
 
-    // Handle incoming events
+    // Request the contract of each module if not received already
+    update_contracts();
+
+    // Handle incoming+outgoing events
     handle_events();
+  }
+
+  void transfer_outputs(MITransferBase *transfer = NULL) {
+    // Get fresh status from each module
+    update_statuses();
+    update_frequent();
 
     // Broadcast time to all modules with a few minutes interval
     #ifndef NO_TIME_SYNC
     broadcast_time();
+    update_frequent();
     #endif
 
-    // Request the contract of each module if not received already
-    update_contracts();
-  }
-
-  void get_outputs() {
+    // Get outputs from modules
     update_values();
-  }
+    update_frequent();
 
-  void do_transfer() {
+    // Data exchange to web server or other system
+    if (transfer) transfer->put_values(); 
+
     // Transfer outputs from modules to inputs of other modules
     transfer_outputs_to_inputs();
+    update_frequent();
 
+    // Send updated inputs to all modules
     send_inputs();
+    update_frequent();
+  }
 
-    // Get fresh status from each module
-    update_statuses();
-
-    // Get potential modified settings from each module
+  void transfer_settings(MITransferBase *transfer = NULL) {
+    // Get potentially modified settings from each module
     update_settings();
+
+      // Data exchange from and to web server or other system
+    if (transfer) {
+      transfer->put_settings(); 
+      transfer->get_settings(); 
+    }
 
     // Send settings to each module
     send_settings();
@@ -260,10 +301,8 @@ public:
   }
 
   // These settings specify how often to transfer settings and outputs
-  uint16_t sampling_time_settings = 10000,
-           sampling_time_outputs = 10000;
-  uint32_t last_settings_sent = 0,
-           last_inputs_sent = 0;
+  uint16_t sampling_time_settings = 10000, sampling_time_outputs = 10000;
+  uint32_t last_sampled_settings = 0, last_sampled_outputs = 0;
 };
 
 // PJON receive callback function
