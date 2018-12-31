@@ -217,8 +217,8 @@ public:
       last_print = millis();
       #endif
       start = millis();
-      transfer_outputs(transfer); // Data exchange to and from and between the modules
-      transfer_settings(transfer); // Settings to and from the modules
+      transfer_outputs(transfer);  // Get outputs and send to subscribing modules
+      transfer_settings(transfer); // Transfer settings to and from the modules
       last_total_usage_ms = (uint32_t)(millis()-start);
       #ifdef DEBUG_PRINT_TIMES
       printf("Spent %dms in interval_transfer, %dms since last.\n", last_total_usage_ms, printdiff);
