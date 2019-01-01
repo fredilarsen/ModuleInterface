@@ -91,7 +91,6 @@ void setup(int argc, const char * const argv[]) {
 }
 
 void loop() {
-  uint32_t start = millis();
   interfaces.update(&http_transfer);
   delay(1);
 }

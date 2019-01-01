@@ -4,3 +4,5 @@ It has a different module list passed to the PJONModuleInterfaceSet constructor,
 
 Please make sure that you change the network setup to match your network, and set the web server IP address to what you have assigned to your web server.
 (You can call ipconfig/ifconfig in a command window on the web server to get its current IP address, if you are not familiar with this yet.)
+
+These ESP8266 examples have been built with the NodeMCU 0.9 board profile in the Arduino IDE.

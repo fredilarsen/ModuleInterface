@@ -29,10 +29,10 @@ EthernetClient web_client;
 
 // Module interfaces
 PJONModuleInterfaceSet interfaces(bus, "SensMon:sm:10 LightCon:lc:20", "m1");
-MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 10000);
+MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip);
 
 void setup() {
-  printf("Welcome to ModuleMasterHttp.\n");
+  printf("Welcome to ModuleMasterHttp (LocalUDP).\n");
   bus.bus.strategy.set_port(7200); // Must be the same for all devices
   bus.bus.begin();
 
@@ -42,8 +42,7 @@ void setup() {
 }
 
 void loop() {
-  interfaces.update();    // Data exchange to and from and between the modules
-  http_transfer.update(); // Data exchange to and from web server
+  interfaces.update(&http_transfer); // Do all data exchange
   delay(10);
 }
 

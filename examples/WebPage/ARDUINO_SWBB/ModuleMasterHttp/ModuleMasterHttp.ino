@@ -25,7 +25,7 @@ uint8_t ip[] = { 192, 1, 1, 181 };
 
 // Module interfaces
 PJONModuleInterfaceSet interfaces(bus, "SensMon:sm:10 LightCon:lc:20", "m1");
-MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip, 1000, 10000);
+MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip);
 
 void setup() {
   Ethernet.begin(mac, ip, gateway, gateway, subnet);

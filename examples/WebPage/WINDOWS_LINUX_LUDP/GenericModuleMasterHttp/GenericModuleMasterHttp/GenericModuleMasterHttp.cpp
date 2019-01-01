@@ -26,7 +26,7 @@ EthernetClient web_client;
 
 // Module interfaces
 PJONModuleInterfaceSet interfaces(bus, (const char *)NULL);
-PJONMIHttpTransfer http_transfer(interfaces, web_client, NULL, 1000, 10000);
+PJONMIHttpTransfer http_transfer(interfaces, web_client, NULL);
 
 void parse_ip_string(const char *ip_string, in_addr &ip) {
   if (!inet_pton(AF_INET, ip_string, &ip)) {
@@ -85,8 +85,7 @@ void setup(int argc, const char * const argv[]) {
 }
 
 void loop() {
-  interfaces.update();    // Data exchange to and from and between the modules
-  http_transfer.update(); // Data exchange to and from web server
+  interfaces.update(&http_transfer); // Do all data exchange
   delay(10);
 }
 
