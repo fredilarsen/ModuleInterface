@@ -10,15 +10,6 @@
 #define MI_HTTPCLIENT
 #include <MIMaster.h>
 
-// Ethernet configuration for this device
-IPAddress gateway = { 192, 1, 1, 1 };
-IPAddress subnet = { 255, 255, 255, 0 };
-IPAddress local_ip = { 192, 1, 1, 186 };
-
-// Address of modules
-uint8_t remote_ip10[] = { 192, 1, 1, 187 };
-uint8_t remote_ip20[] = { 192, 1, 1, 188 };
-
 // Web server related
 uint8_t web_server_ip[] = { 192, 1, 1, 143};
 WiFiClient web_client;
@@ -27,7 +18,7 @@ WiFiClient web_client;
 const char* ssid     = "MyNetworkSSID";
 const char* password = "MyPassword";
 
-PJONLink<GlobalUDP> link(1); // PJON device id 1
+PJONLink<DualUDP> link(1); // PJON device id 1
 
 // Module interfaces
 PJONModuleInterfaceSet interfaces(link, "SensMon:sm:10 LightCon:lc:20", "m1");
@@ -38,16 +29,12 @@ void setup() {
   Serial.println("ModuleMasterHttp started.");
   
   WiFi.mode(WIFI_STA); // Be a client and not an access point
-  WiFi.config(local_ip, gateway, subnet);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.printf("Now listening at IP %s\n", WiFi.localIP().toString().c_str());
-
-  link.bus.strategy.add_node(10, remote_ip10);
-  link.bus.strategy.add_node(20, remote_ip20);
   link.bus.begin();
   interfaces.sampling_time_outputs = 1000;
   interfaces.sampling_time_settings = 1000;

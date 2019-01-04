@@ -6,19 +6,11 @@
 #include <MIModule.h>
 #include <utils/MITime.h>
 
-// Ethernet configuration for this device
-IPAddress gateway = { 192, 1, 1, 1 };
-IPAddress subnet = { 255, 255, 255, 0 };
-IPAddress local_ip = { 192, 1, 1, 188 };
-
-// Address of master
-uint8_t remote_ip[] = { 192, 1, 1, 186 };
-
 // WiFi settings
 const char* ssid     = "MyNetworkSSID";
 const char* password = "MyPassword";
 
-PJONLink<GlobalUDP> link(20); // PJON device id 20
+PJONLink<DualUDP> link(20); // PJON device id 20
 
 PJONModuleInterface interface("LightCon",                             // Module name
                               link,                                   // PJON bus
@@ -44,15 +36,12 @@ void setup() {
   Serial.println("LightController started.");
   
   WiFi.mode(WIFI_STA); // Be a client and not an access point
-  WiFi.config(local_ip, gateway, subnet);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.printf("Now listening at IP %s\n", WiFi.localIP().toString().c_str());
-
-  link.bus.strategy.add_node(1, remote_ip);
   link.bus.begin();
 
   pinMode(LED_BUILTIN, OUTPUT);
