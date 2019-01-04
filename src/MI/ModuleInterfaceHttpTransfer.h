@@ -135,12 +135,12 @@ JsonObject& read_json_settings_from_server(
   }
   uint16_t pos = 0;
   uint32_t start = millis();
-  while (client.connected() && (millis()-start) < timeout_ms && pos==0) {
-    while (client.connected() && client.available()>0 && pos < buffer_size -1 && (millis()-start) < timeout_ms) { 
+  while ((client.connected() || client.available()) && (uint32_t)(millis()-start) < timeout_ms) {
+    if (pos >= buffer_size -1) break;
+    if (client.available()) {
       uint16_t len = client.read((uint8_t*) &buf[pos], buffer_size - pos -1); 
       if (len > 0) pos += len; else break;
-    }
-    if (pos == 0) delay(1);
+    } else delay(1);
   }
   buf[pos] = 0; // null-terminate
   client.stop();  // Finished using the socket, close it as soon as possible
@@ -181,7 +181,7 @@ bool read_json_settings(ModuleInterface &interface, Client &client,
     status = true;
   } else {
     #ifdef DEBUG_PRINT
-    DPRINTLN("Failed parsing settings JSON. Out of memory?");
+    DPRINTLN("Failed parsing settings JSON. Out of memory(1)?");
     #endif
   }
 
@@ -214,7 +214,7 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, Client &client,
   }
   else {
 #ifdef DEBUG_PRINT
-    DPRINTLN("Failed parsing settings JSON. Out of memory?");
+    DPRINTLN("Failed parsing settings JSON. Out of memory(2)?");
 #endif
   }
 
