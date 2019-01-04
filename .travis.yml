@@ -33,7 +33,7 @@ script:
   - pushd examples/WebPage/ARDUINO_SWBB/ModuleMasterHttp >/dev/null; build_platform mega2560; popd >/dev/null
   - pushd examples/WebPage/ARDUINO_SWBB/SensorMonitor >/dev/null; build_platform uno; popd >/dev/null
   - pushd examples/WebPage/ARDUINO_SWBB/TestModuleMaster >/dev/null; build_platform uno; popd >/dev/null
-  - pushd examples/WebPage/ESP8266_GUDP >/dev/null; build_platform esp8266; popd >/dev/null
+  - pushd examples/WebPage/ESP8266_DUDP >/dev/null; build_platform esp8266; popd >/dev/null
   # Linux examples
   - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp >/dev/null; make; popd >/dev/null
   - pushd examples/WebPage/WINDOWS_LINUX_LUDP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
