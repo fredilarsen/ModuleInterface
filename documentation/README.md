@@ -8,11 +8,13 @@ outside of the module and synchronized to the module when changed. Typically, co
 * _Inputs_ are measurements or results from other modules that may be used instead of a local measurement. For example, a module requiring a measured outdoor temperature can subscribe to receiving this from another module.
 * _Outputs_ are measurements and results that the device measures or produces, that are delivered so that other modules may subscribe to them, and so that they may be archived in a database and shown in a web page or plot.
 
+Also see the [Protocol description document](Protocol.md).
+
 ### The Master
 
 The principle is that one Master (or more) is the "hub" for exchanging values. This master may need more resources than the
 worker devices, that can be kept minimal, especially if communicating using PJON SWBB without extra hardware. Cheap and
-robust (at least if you feed them 5V and not depend on the built-in regulator, that is not extremely reliable) Arduino Nanos are ideal as workers for many tasks,
+robust (at least if you feed them 5V and not depend on the built-in regulator) Arduino Nanos are ideal as workers for many tasks,
 and a Mega can be used as master for controlling many workers and synchronize with a database that is used by web pages.
 
 The modules do not know about each other or the master. The master will have a list of device ids it shall manage, without
