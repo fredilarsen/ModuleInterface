@@ -42,7 +42,7 @@ The ModuleInterface library consists of a collection of classes, and some files 
 
 The ModuleInterface code in a master typically uses more storage space and RAM than within a module. It is still fine to run on an Arduino Uno or Nano, but when adding the HTTP client (and implicitly the large required Ethernet and ArduinoJson libraries), it is necessary to step up to an Arduino Mega or similar for the master. An ESP8266 based setup is also an alternative. The master can also be run on a RPI or on a Linux or Windows computer.
 
-Also read the [design principles](documentation/README.md) document.
+Also read the [protocol description](documentation/Protocol.md) and [design principles](documentation/README.md) documents.
 
 ## Module implementation
 Each module must declare a global object of a ModuleInterface derived class like the PJONModuleInterface that is part of the library. In the declaration of this object, the contracts (names and data types) for settings, input values and output values are specified as text parameters for simplicity.

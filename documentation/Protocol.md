@@ -1,5 +1,7 @@
 # Protocol description
-ModuleInterface is based on different types of packets being transferred on a communication bus like PJON.
+ModuleInterface is based on different types of packets being transferred on a communication bus like PJON. The repository is split into a _MI_ directory containing the algorithms and data structures making up the protocol as described below in a transport-agnostic way. Then there is a _MI_PJON_ directory containing the PJON-specific logic on top.
+
+Support for other packet delivery transports than PJON can be added, but there is no plan for doing so, as PJON has grown to cover all current needs on a lot of different media, and also has routing between different media. The PJON port feature is used by MI to be able to quickly separate MI packets from other packets, similar to using a dedicated TCP or UDP port. A solid PJON CRC implementation ensures packet integrity.
 
 ## Packet types
 The packet types are:
@@ -42,7 +44,7 @@ The value packet is sent from module to master for outputs and potentially setti
 This is a 7 byte packet sent from a module to the master, with the following data:
 * 1 byte packet type _mcSetStatus_.
 * 1 byte with status bits.
-* 1 byte boolean flagging out of memory conditions.
+* 1 byte boolean flagging out-of-memory conditions.
 * 4 byte uint containing the uptime in seconds.
 
 ### TimeSync packet
@@ -56,7 +58,7 @@ HTTP GET will be used to get values, and HTTP POST will be used to set values. V
 
 The different types of requests are:
 * Get settings for one module or all modules (depending on available memory in master, getting all at once is most efficient).
-* Set specific settings. This is only used where reverse transfer of settings is activated, for example if modules have their own user interface (perhaps only a button) so that the user can change settings locally.
+* Set specific settings. This is only used where reverse transfer of settings is activated, for example if modules have their own user interface (perhaps only a button) so that the user can change settings locally and see the changes in the web site shortly after.
 * Set outputs from one module or all modules.
 * Trigger storage from current values to the event table.
 
