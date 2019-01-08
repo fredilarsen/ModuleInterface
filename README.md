@@ -11,7 +11,7 @@ A simple setup can consist of multiple Arduino Nano devices connected with a sin
 
 Other platforms than Arduino are supported, and they can be connected with different media. A collection of ESP8266 devices can communicate using built-in WiFi both between themselves and the web server. The master can also run on a Windows or Linux computer (including Raspberry PI), communicating with modules over Ethernet or WiFi.
 
-Automatic persistence of module settings in EEPROM is supported, so that a module can continue working autonomously after a power failure even if it is isolated, if it has enough local input to meaningfully do so.
+Automatic persistence of module settings in EEPROM is supported, so that a module can continue working autonomously after a power failure even if it is isolated, if it has enough local input to meaningfully do so. This is useful for creating modules with a little "Edge Intelligence", with analysis and algorithms in the modules instead of the modules just being collectors and executors for a central intelligence.
 
 The terms _device_ and _module_ are used somewhat interchangeably in this text, with a device being a standalone Arduino, ESP8266 or similar, and a module usually being a programmed device with some attached equipment, capable of doing some actual work.
 
