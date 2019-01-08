@@ -26,7 +26,12 @@
 	#define Client TCPHelperClient
 #else
 	#ifdef PJON_ESP
-	  #define isfinite(x) std::isfinite(x)
+		#if defined(ESP32)
+		  #include <WiFi.h>
+		  #include <math.h>	
+		#else
+			#define isfinite(x) std::isfinite(x)
+		#endif		
 	#endif
 #endif
 

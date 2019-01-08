@@ -1,10 +1,10 @@
 #pragma once
 
-#include <MI_PJON/Link.h>
+#include <MI_PJON/MILink.h>
 #include <MI_PJON/PJONModuleInterface.h>
 
 template<typename Strategy>
-struct PJONPointerLink : public Link {
+struct PJONPointerLink : public MILink {
   PJON<Strategy> *bus_ptr = NULL;
 
   PJONPointerLink<Strategy>() { }

@@ -18,21 +18,25 @@ Have a look at the chapter "How to build the setup" further down to be able to b
 ![Arduino](ARDUINO_SWBB/WebPage_hardware_setup_bb.png)
 Arduino-based setup using PJON SWBB (SoftwareBitBang) on a single wire
 
-## ESP8266 based setup
+## ESP8266 or ESP32 based setup
 
-The modules and master for ESP8266 can be found in the ESP8266_GUDP folder. This has been tested on NodeMCU devices. The setup uses the PJON GlobalUDP strategy over WiFi, but could just as well run SWBB with a wire between the devices and WiFi only to the web server.
+The modules and master for ESP8266 or ESP32 can be found in the ESP8266_ESP32_DUDP folder. This has been tested on NodeMCU and Wemos ESP8266 devices and Heltec ESP32 devices. The setup uses the PJON DualUDP strategy over WiFi, but could just as well run SWBB with a wire between the devices and WiFi only to the web server.
 
-![ESP8266](ESP8266_GUDP/WebPage_hardware_setup_bb.png)
-ESP8266-based setup using PJON GUDP (GlobalUDP) over WiFi
+![ESP8266](ESP8266_ESP32_DUDP/WebPage_hardware_setup_bb.png)
+ESP8266-based setup using PJON DUDP (DualUDP) over WiFi
 
 
 ## ModuleMasterHttp on Windows, Linux or Raspberry
 
 As an alternative to having the ModuleMasterHttp on an Arduino Mega, it can be run on a computer, for example along with the web server. The master will communicate via Ethernet with the modules through some kind of bridge.
 
-If the master and the modules are connected through a LAN, the easiest solution is to let the master connect to a [Switch](https://github.com/gioblu/PJON/blob/master/examples/ARDUINO/Local/SoftwareBitBang/Tunneler/BlinkingRGBSwitch/BlinkingRGBSwitch.ino) using the LocalUDP strategy. This is efficient and requires little configuration. This version of the master is present in the WINDOWS_LINUX_LUDP directory. More switches can be added as the setup grows.
+If the master and the modules are connected through a LAN, the easiest solution is to let the master connect to a [Switch](https://github.com/gioblu/PJON/blob/master/examples/ARDUINO/Local/SoftwareBitBang/Tunneler/BlinkingRGBSwitch/BlinkingRGBSwitch.ino) using the LocalUDP or DualUDP strategies. These are efficient and require little configuration. This version of the master is present in the WINDOWS_LINUX_LUDP and WINDOWS_LINUX_DUDP directories. More switches can be added as the setup grows.
 
-If master and modules must communicate over multiple network segments, not on a single LAN where the LocalUDP broadcast based strategy can be used, the master has to use another strategy. GlobalUDP is a relevant choice, but requires static IP addresses in all devices. If there is only one group of modules, the EthernetTCP strategy has a one-to-one mode that is very efficient for letting the master communicate as if it was actually part of the SWBB bus. A switch-like Arduino device named [Surrogate](https://github.com/gioblu/PJON/blob/master/examples/ARDUINO/Local/EthernetTCP/SoftwareBitBangSurrogate/Surrogate/Surrogate.ino) is connected to the SWBB bus and has a permanent TCP connection to the master, virtually placing the master "inside the SWBB bus". This version of the master is present in the WINDOWS_LINUX_ETCP directory. If using this, a Nano or Uno with an Ethernet shield can run the PJON Surrogate sketch and be the translator between Ethernet and SWBB. Only the master needs a fixed IP with this setup, and the Surrogate will "phone home". If there is a firewall between the modules and the master, only a one-way opening / port forwarding is needed.
+The DualUDP strategy is newer than the LocalUDP strategy and is recommended because it is just as easy to configure, and it switches from broadcast to more efficient directed transfers in addition to supporting devices that are outside the LAN. The LocalUDP strategy is more lightweight with regards to device storage and RAM, though, if every byte counts. Examples for one of these two can be converted to the other simply by replacing occurrences of "LocalUDP" with "DualUDP" or the other way around.
+
+If master and modules must communicate over multiple network segments, not on a single LAN where the LocalUDP broadcast based strategy can be used, the master has to use another strategy. DualUDP or GlobalUDP are relevant choices, but GlobalUDP requires static IP addresses in all devices while DualUDP requires it only in devices outside the LAN. 
+
+If there is only one group of modules, the EthernetTCP strategy has a one-to-one mode that is very efficient for letting the master communicate as if it was actually part of the SWBB bus. A switch-like Arduino device named [Surrogate](https://github.com/gioblu/PJON/blob/master/examples/ARDUINO/Local/EthernetTCP/SoftwareBitBangSurrogate/Surrogate/Surrogate.ino) is connected to the SWBB bus and has a permanent TCP connection to the master, virtually placing the master "inside the SWBB bus". This version of the master is present in the WINDOWS_LINUX_ETCP directory. If using this, a Nano or Uno with an Ethernet shield can run the PJON Surrogate sketch and be the translator between Ethernet and SWBB. Only the master needs a fixed IP with this setup, and the Surrogate will "phone home". If there is a firewall between the modules and the master, only a one-way opening / port forwarding is needed.
 
 ## Pages
 The web page example consists of a Dashboard that is meant to show key information from all modules in one place, plus one page per module. This is how it is meant to look:
@@ -56,7 +60,7 @@ add a temporary push button between pin 4 and ground.
 ## Configuration of ModuleMasterHttp
  The master must have a correct network configuration for the network to which it is connected. This includes:
  - A unique MAC address, just fiddle with the MAC address in the sketch.
- - A unique IP address. The example use a fixed IP address for simplicity and to not be depending on a DHCP server being present. Make sure that the assigned IP address is outside any DHCP pool in your router if you want this as a permanent setup.
+ - A unique IP address. The Arduino example use a fixed IP address to demonstrate this and to not be depending on a DHCP server being present. Make sure that the assigned IP address is outside any DHCP pool in your router if you want this as a permanent setup.
  - The IP of your gateway, normally the router address. This is not strictly needed if the web server is on the same network segment.
  - The network mask for your network. Normally the mask is 255.255.255.0.
 
@@ -65,6 +69,8 @@ The master must also know the IP address of your web server.
 After modifying the network and IP addresses in the ModuleMasterHttp sketch, program a Mega with this.
 
 Then add an Ethernet shield to the Mega, connect a CAT5 cable between the shield and your network switch or router, then power on.
+
+The ModuleMasterHttp examples for other devices use DHCP.
 
 ## Installation of web server and database
 Follow a recipe as mentioned in point 4 of the Components section above. If you want a stable and uninterrupted system, use Linux or a server version of Windows to avoid the frequent updates and reboots of the desktop versions of Windows.

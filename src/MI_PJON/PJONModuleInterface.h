@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MI_PJON/Link.h>
+#include <MI_PJON/MILink.h>
 #include <MI/ModuleInterface.h>
 
 // A timeout to make sure a lost request or reply does not stop everything permanently
@@ -15,13 +15,13 @@
 class PJONModuleInterface : public ModuleInterface {
 friend class PJONModuleInterfaceSet;
 protected:
-  Link *pjon = NULL;
+  MILink *pjon = NULL;
   #ifdef IS_MASTER
   uint8_t remote_id = 0;
   uint8_t remote_bus_id[4];
   uint32_t status_requested_time = 0;
   #else
-  void set_link(Link &pjon) { this->pjon = &pjon; pjon.set_receiver(default_receiver_function, this); }
+  void set_link(MILink &pjon) { this->pjon = &pjon; pjon.set_receiver(default_receiver_function, this); }
   #endif
 public:
   // Constructors for Master side
@@ -31,7 +31,7 @@ public:
     init();
     set_name_prefix_and_address(module_name_prefix_and_address);
   }
-  PJONModuleInterface(const char *module_name, const char *prefix, Link &pjon, uint8_t remote_id, uint8_t remote_bus_id[])
+  PJONModuleInterface(const char *module_name, const char *prefix, MILink &pjon, uint8_t remote_id, uint8_t remote_bus_id[])
     : ModuleInterface(module_name, prefix) {
     init(); set_remote_device(pjon, remote_id, remote_bus_id);
   }
@@ -40,7 +40,7 @@ public:
   // Constructors for Module side
   #ifndef IS_MASTER
   #ifdef MI_NO_DYNAMIC_MEM
-  PJONModuleInterface(const char *module_name, Link &pjon,
+  PJONModuleInterface(const char *module_name, MILink &pjon,
     const uint8_t num_settings, ModuleVariable *setting_variables, const char *settingnames, // This string must be PROGMEM
     const uint8_t num_inputs,   ModuleVariable *input_variables,   const char *inputnames,   // This string must be PROGMEM
     const uint8_t num_outputs,  ModuleVariable *output_variables,  const char *outputnames)  // This string must be PROGMEM
@@ -51,7 +51,7 @@ public:
     set_contracts_P(module_name, settingnames, inputnames, outputnames);
     set_link(pjon);
   }
-  PJONModuleInterface(const char *module_name, Link &pjon,
+  PJONModuleInterface(const char *module_name, MILink &pjon,
     const uint8_t num_settings, ModuleVariable *setting_variables, MVS_getContractChar settingnames,
     const uint8_t num_inputs,   ModuleVariable *input_variables,   MVS_getContractChar inputnames,
     const uint8_t num_outputs,  ModuleVariable *output_variables,  MVS_getContractChar outputnames) {
@@ -62,30 +62,30 @@ public:
     set_link(pjon);
   }
   #else
-  PJONModuleInterface(const char *module_name, Link &pjon,
+  PJONModuleInterface(const char *module_name, MILink &pjon,
                       const char *settingnames, const char *inputnames, const char *outputnames) :
     ModuleInterface(module_name, settingnames, inputnames, outputnames) {
     set_link(pjon);
   }
-  PJONModuleInterface(const char *module_name, Link &pjon,
+  PJONModuleInterface(const char *module_name, MILink &pjon,
                       bool use_progmem, // Required to be true, just used to distinguish this function from the standard
                       const char * settingnames, const char *inputnames, const char *outputnames) :  // These strings must be PROGMEM
     ModuleInterface(module_name, use_progmem, settingnames, inputnames, outputnames) {
     set_link(pjon);
   }
-  PJONModuleInterface(const char *module_name, Link &pjon,
+  PJONModuleInterface(const char *module_name, MILink &pjon,
                       MVS_getContractChar settingnames, MVS_getContractChar inputnames, MVS_getContractChar outputnames) :
     ModuleInterface(module_name, settingnames, inputnames, outputnames) {
     set_link(pjon);
   }
   // This constructor is available only because the F() macro can only be used in a function.
   // So if RAM is tight, use this constructor and call set_contracts from setup()
-  PJONModuleInterface(Link &pjon, const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) :
+  PJONModuleInterface(MILink &pjon, const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) :
     ModuleInterface(num_settings, num_inputs, num_outputs) {
     set_link(pjon);
   }
   #endif
-  PJONModuleInterface(Link &pjon) : ModuleInterface() { set_link(pjon); }
+  PJONModuleInterface(MILink &pjon) : ModuleInterface() { set_link(pjon); }
 
   void update() {
     // Listen for packets for 1ms
@@ -106,10 +106,10 @@ public:
     #endif
   }
 
-  void set_bus(Link &bus) { pjon = &bus; }
+  void set_bus(MILink &bus) { pjon = &bus; }
 
   #ifdef IS_MASTER
-  void set_remote_device(Link &pjon, uint8_t remote_id, uint8_t remote_bus_id[]) {
+  void set_remote_device(MILink &pjon, uint8_t remote_id, uint8_t remote_bus_id[]) {
     this->pjon = &pjon; this->remote_id = remote_id; memcpy(this->remote_bus_id, remote_bus_id, 4);
   }
 

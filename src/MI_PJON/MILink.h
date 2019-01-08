@@ -1,6 +1,6 @@
 #pragma once
 
-struct Link {
+struct MILink {
   virtual uint16_t receive() = 0;
   virtual uint16_t receive(uint32_t duration) = 0;
 

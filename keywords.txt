@@ -14,11 +14,12 @@ ModuleInterfaceSet	KEYWORD1
 PJONModuleInterface	KEYWORD1
 PJONModuleInterfaceSet	KEYWORD1
 MIVariable	KEYWORD1
-Link	KEYWORD1
+MILink	KEYWORD1
 PJONLink	KEYWORD1
 BinaryBuffer	KEYWORD1
 MILastScanTimes	KEYWORD1
 MIHttpTransfer	KEYWORD1
+MITransferBase	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)

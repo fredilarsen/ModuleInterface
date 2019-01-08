@@ -10,10 +10,10 @@
 const char* ssid     = "MyNetworkSSID";
 const char* password = "MyPassword";
 
-PJONLink<DualUDP> link(20); // PJON device id 20
+PJONLink<DualUDP> pjonlink(20); // PJON device id 20
 
 PJONModuleInterface interface("LightCon",                             // Module name
-                              link,                                   // PJON bus
+                              pjonlink,                               // PJON bus
                               "Mode:u1 Limit:u2 TStartM:u2 TEndM:u2", // Settings
                               "smLightLP:f4",                         // Inputs                       
                               "LightOn:u1 UTC:u4");                   // Outputs (measurements)                         
@@ -42,7 +42,7 @@ void setup() {
     Serial.print(".");
   }
   Serial.printf("Now listening at IP %s\n", WiFi.localIP().toString().c_str());
-  link.bus.begin();
+  pjonlink.bus.begin();
 
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);  

@@ -6,10 +6,10 @@
 const char* ssid     = "MyNetworkSSID";
 const char* password = "MyPassword";
 
-PJONLink<DualUDP> link(10); // PJON device id 10
+PJONLink<DualUDP> pjonlink(10); // PJON device id 10
 
 PJONModuleInterface interface("Outdoor",                          // Module name
-                              link,                               // PJON bus
+                              pjonlink,                           // PJON bus
                               "",                                 // Settings
                               "",                                 // Inputs
                               "Light:u2 LightLP:f4 Motion:u1");   // Outputs (measurements)
@@ -33,7 +33,7 @@ void setup() {
     Serial.print(".");
   }
   Serial.printf("Now listening at IP %s\n", WiFi.localIP().toString().c_str());
-  link.bus.begin();  
+  pjonlink.bus.begin();  
   
   pinMode(PIN_LIGHTSENSOR, INPUT);
   pinMode(PIN_MOTIONSENSOR, INPUT);   

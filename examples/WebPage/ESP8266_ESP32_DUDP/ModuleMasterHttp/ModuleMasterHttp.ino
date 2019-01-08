@@ -18,10 +18,10 @@ WiFiClient web_client;
 const char* ssid     = "MyNetworkSSID";
 const char* password = "MyPassword";
 
-PJONLink<DualUDP> link(1); // PJON device id 1
+PJONLink<DualUDP> pjonlink(1); // PJON device id 1
 
 // Module interfaces
-PJONModuleInterfaceSet interfaces(link, "SensMon:sm:10 LightCon:lc:20", "m1");
+PJONModuleInterfaceSet interfaces(pjonlink, "SensMon:sm:10 LightCon:lc:20", "m1");
 MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip);
 
 void setup() {
@@ -35,7 +35,7 @@ void setup() {
     Serial.print(".");
   }
   Serial.printf("Now listening at IP %s\n", WiFi.localIP().toString().c_str());
-  link.bus.begin();
+  pjonlink.bus.begin();
   interfaces.sampling_time_outputs = 1000;
   interfaces.sampling_time_settings = 1000;
     

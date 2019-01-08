@@ -30,6 +30,7 @@
     "atmelavr",
     "atmelsam",
     "espressif8266",
+    "esp32",
     "teensy",
     "linux_x86_64",
     "windows_x86"

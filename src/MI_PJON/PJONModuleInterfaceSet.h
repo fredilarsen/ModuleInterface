@@ -11,12 +11,12 @@ void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_P
 class PJONModuleInterfaceSet : public ModuleInterfaceSet {
 protected:
   uint32_t last_time_sync = 0;
-  Link *pjon = NULL;
+  MILink *pjon = NULL;
   mis_receive_function custom_receive_function = NULL;
   friend void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info);
 public:
   PJONModuleInterfaceSet(const char *prefix = NULL) : ModuleInterfaceSet(prefix) { init(); }
-  PJONModuleInterfaceSet(Link &bus, const uint8_t num_interfaces, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
+  PJONModuleInterfaceSet(MILink &bus, const uint8_t num_interfaces, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
     init(); 
     this->num_interfaces = num_interfaces; 
     if (num_interfaces > 0) {
@@ -27,7 +27,7 @@ public:
     pjon->set_receiver(mis_global_receive_function, this);
   }
   // Specifying modules as textual list like "BlinkModule:bm:44 TestModule:tm:44:0.0.0.1":
-  PJONModuleInterfaceSet(Link &bus, const char *interface_list, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
+  PJONModuleInterfaceSet(MILink &bus, const char *interface_list, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
     init();
     pjon = &bus;
     pjon->set_receiver(mis_global_receive_function, this);
@@ -70,7 +70,7 @@ public:
     DPRINTLN("");
     #endif
   }
-  Link *get_link() { return pjon; }
+  MILink *get_link() { return pjon; }
 
   void set_receiver(mis_receive_function r) {
     pjon->set_receiver(mis_global_receive_function, this); // Make sure main receiver function is registered
@@ -240,16 +240,6 @@ public:
   }
 
   void transfer_outputs(MITransferBase *transfer = NULL) {
-    // Get fresh status from each module
-    update_statuses();
-    update_frequent();
-
-    // Broadcast time to all modules with a few minutes interval
-    #ifndef NO_TIME_SYNC
-    broadcast_time();
-    update_frequent();
-    #endif
-
     // Get outputs from modules
     update_values();
     update_frequent();
@@ -264,6 +254,16 @@ public:
     // Send updated inputs to all modules
     send_inputs();
     update_frequent();
+
+    // Get fresh status from each module
+    update_statuses();
+    update_frequent();
+
+    // Broadcast time to all modules with a few minutes interval
+    #ifndef NO_TIME_SYNC
+    broadcast_time();
+    update_frequent();
+    #endif
   }
 
   void transfer_settings(MITransferBase *transfer = NULL) {
