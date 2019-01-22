@@ -1,4 +1,4 @@
-# ModuleInterface v3.1
+# ModuleInterface v3.2
 Do you want to create a communication bus with inexpensive IoT devices in a simple way? 
 
 Would you like web pages to configure and inspect the devices, with trend plots and historical storage?
@@ -121,7 +121,7 @@ This library depends on the following libraries in addition to the Arduino stand
 
 ### License
 ```cpp
-/* Copyright 2016-2018 Fred Larsen
+/* Copyright 2016-2019 Fred Larsen
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
