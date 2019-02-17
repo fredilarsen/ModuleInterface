@@ -90,9 +90,9 @@ static void dummy_notification_function(NotificationType /*notification_type*/, 
 */
 
 #ifndef IS_MASTER
-extern const char *settings_contract, // Pointer to ordinary or PROGMEM string constant
-                  *inputs_contract,
-                  *outputs_contract;
+extern const char *mi_settings_contract, // Pointer to ordinary or PROGMEM string constant
+                  *mi_inputs_contract,
+                  *mi_outputs_contract;
 #endif
 
 
@@ -191,9 +191,9 @@ public:
                      const char *inputnames,
                      const char *outputnames) {
     // Remember pointers to the strings
-    settings_contract = settingnames;
-    inputs_contract   = inputnames;
-    outputs_contract  = outputnames;
+    mi_settings_contract = settingnames;
+    mi_inputs_contract   = inputnames;
+    mi_outputs_contract  = outputnames;
 
     // Register the callbacks that relate to an ordinary string
     set_contracts(module_name, settings_callback, inputs_callback, outputs_callback);
@@ -204,9 +204,9 @@ public:
                        const char *outputnames)  // Must be PROGMEM
   {
     // Remember pointers to the strings
-    settings_contract = settingnames;
-    inputs_contract   = inputnames;
-    outputs_contract  = outputnames;
+    mi_settings_contract = settingnames;
+    mi_inputs_contract   = inputnames;
+    mi_outputs_contract  = outputnames;
 
     // Register the callbacks that relate to a PROGMEM string
     set_contracts(module_name, settings_callback_P, inputs_callback_P, outputs_callback_P);
@@ -637,13 +637,13 @@ friend class ModuleInterfaceSet;
 
 #ifndef IS_MASTER
 // Callbacks for reading contracts from ordinary string constants
-static char settings_callback(uint16_t pos) { return settings_contract[pos]; }
-static char inputs_callback(uint16_t pos) { return inputs_contract[pos]; }
-static char outputs_callback(uint16_t pos) { return outputs_contract[pos]; }
+static char settings_callback(uint16_t pos) { return mi_settings_contract[pos]; }
+static char inputs_callback(uint16_t pos) { return mi_inputs_contract[pos]; }
+static char outputs_callback(uint16_t pos) { return mi_outputs_contract[pos]; }
 
 // Callbacks for reading contracts from PROGMEM string constants
-static char settings_callback_P(uint16_t pos) { return pgm_read_byte(&(settings_contract[pos])); }
-static char inputs_callback_P(uint16_t pos) { return pgm_read_byte(&(inputs_contract[pos])); }
-static char outputs_callback_P(uint16_t pos) { return pgm_read_byte(&(outputs_contract[pos])); }  
+static char settings_callback_P(uint16_t pos) { return pgm_read_byte(&(mi_settings_contract[pos])); }
+static char inputs_callback_P(uint16_t pos) { return pgm_read_byte(&(mi_inputs_contract[pos])); }
+static char outputs_callback_P(uint16_t pos) { return pgm_read_byte(&(mi_outputs_contract[pos])); }  
 #endif  
 };
