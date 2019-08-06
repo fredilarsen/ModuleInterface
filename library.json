@@ -22,8 +22,8 @@
     ],
   "frameworks": "arduino",
   "dependencies": {
-      "PJON" : "~11.2.0",
-      "ArduinoJson" : ">=5.0.0"
+      "PJON" : ">=11.2.0",
+      "ArduinoJson" : ">=6.0.0"
   },
   "platforms":
   [
