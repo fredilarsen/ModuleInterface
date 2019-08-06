@@ -52,7 +52,7 @@ extern uint32_t miTimeS,              // current time in UTC seconds, maintained
   #ifdef MI_USE_SYSTEMTIME
     return miTime::IsSynced();
   #else
-    miTime::Update(); return ((uint32_t)(millis() - miLastSyncedMs) <= limit_ms);
+    miTime::Update(); return (IsSynced() && (uint32_t)(millis() - miLastSyncedMs) <= limit_ms);
   #endif  
   }
 
