@@ -91,6 +91,11 @@ void setup(int argc, const char * const argv[]) {
 }
 
 void loop() {
+  // Check for new master settings regularly, to support dynamic addition of modules
+  uint32_t last_mastersettings_check = millis();
+  if (mi_interval_elapsed(last_mastersettings_check, 60000))
+    http_transfer.get_master_settings_from_server();
+
   interfaces.update(&http_transfer);
   delay(1);
 }

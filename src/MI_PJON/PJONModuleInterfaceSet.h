@@ -4,6 +4,10 @@
 #include <MI/MITransferBase.h>
 #include <MI_PJON/PJONModuleInterface.h>
 
+#if defined(LINUX) || defined(ANDROID) || defined(_WIN32)
+  #define MI_ALLOW_MODULELIST_CHANGES
+#endif 
+
 typedef void (*mis_receive_function)(const uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info, const ModuleInterface *module_interface);
 
 void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info);
@@ -14,6 +18,10 @@ protected:
   MILink *pjon = NULL;
   mis_receive_function custom_receive_function = NULL;
   friend void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info);
+  #ifdef MI_ALLOW_MODULELIST_CHANGES
+  // Remember the list of modules and allow it to change
+  char *module_list = NULL;
+  #endif
 public:
   PJONModuleInterfaceSet(const char *prefix = NULL) : ModuleInterfaceSet(prefix) { init(); }
   PJONModuleInterfaceSet(MILink &bus, const uint8_t num_interfaces, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
@@ -33,10 +41,37 @@ public:
     pjon->set_receiver(mis_global_receive_function, this);
     if (interface_list) set_interface_list(interface_list);
   }
+  ~PJONModuleInterfaceSet() {
+    #ifdef MI_ALLOW_MODULELIST_CHANGES
+    if (module_list != NULL) delete module_list;
+    #endif
+  }
   void init() { }
   void set_interface_list(const char *interface_list) {
+    #ifdef MI_ALLOW_MODULELIST_CHANGES
+    if (interface_list == NULL || strlen(interface_list) == 0) return;
+    if (num_interfaces > 0) {
+      // Just return if there are no changes
+      if (module_list != NULL && strcmp(module_list, interface_list)==0) return; 
+
+      // Clear all existing setup
+      for (uint8_t i = 0; i < num_interfaces; i++) {
+        if (interfaces[i] != NULL) delete interfaces[i];
+      }
+      delete[] interfaces;
+      num_interfaces = 0;
+      last_time_sync = 0;
+      updated_intermodule_dependencies = false;
+    }
+
+    // Remember module list
+    if (module_list != NULL) delete module_list;
+    module_list = strdup(interface_list);
+
+    #else
     // This function can only be called once after startup
     if (num_interfaces > 0) return;
+    #endif
 
     // Count number of interfaces
     const char *p = interface_list;
