@@ -3,12 +3,12 @@
 #include <MI/ModuleInterfaceHttpTransfer.h>
 
 bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &client,
-                        const uint16_t buffer_size = 800, const uint16_t timeout_ms = 3000) {
+                        const uint16_t buffer_size = MI_MAX_JSON_SIZE, const uint16_t timeout_ms = 3000) {
   char *buf = new char[buffer_size];
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& root = read_json_settings_from_server(client, jsonBuffer, buf, buffer_size, timeout_ms);
+  DynamicJsonDocument root(buffer_size);
+ auto error = read_json_settings_from_server(client, root, buf, buffer_size, timeout_ms);
   bool status = false;
-  if (root.success()) {
+  if (!error) {
     String key = interfaces.get_prefix(); key += "DevID";
     uint8_t device_id = (uint8_t) root[key];
     if (device_id != 0) interfaces.get_link()->set_id(device_id);
@@ -17,7 +17,7 @@ bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &clien
     String module_list = (const char*)root[key];
     interfaces.set_interface_list(module_list.c_str());
     #ifdef DEBUG_PRINT
-    DPRINT("Contract: '"); DPRINT(module_list.c_str()); DPRINTLN("'");
+    DPRINT("Modules: '"); DPRINT(module_list.c_str()); DPRINTLN("'");
     #endif
 
     key = interfaces.get_prefix(); key += "IntSettings";
@@ -31,7 +31,8 @@ bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &clien
     status = module_list.length() > 5;
   } else {
     #ifdef DEBUG_PRINT
-    DPRINTLN("Failed parsing master settings JSON. Out of memory?");
+    DPRINT("Failed parsing master settings JSON. Out of memory?: ");
+    DPRINTLN(error.c_str());
     #endif
   }
 

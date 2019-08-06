@@ -18,7 +18,7 @@
   #ifdef MI_SMALLMEM
     #define MI_MAX_JSON_SIZE 800
   #else
-    #define MI_MAX_JSON_SIZE 2000
+    #define MI_MAX_JSON_SIZE 3000
   #endif
 #endif
 
@@ -51,7 +51,7 @@ void buf_to_mvar(ModuleVariable &v, const uint32_t *value, const uint8_t size) {
 }
 
 // NOTE: The change management makes this function specific to settings.
-bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
+bool json_to_mv(ModuleVariable &v, const DynamicJsonDocument& root, const char *name) {
   uint32_t b;
   switch(v.get_type()) {
     // NOTE: boolean is transferred as 0/1 instead of true/false to enable plotting
@@ -72,7 +72,7 @@ bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
   return false;
 }
 
-bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) {
+bool mv_to_json(const ModuleVariable &v, DynamicJsonDocument& root, const char *name_in) {
   String name = name_in; // For some reason a char* will succeed but be forgotten. Probably added as a pointer in JSON enocder
   const float SYS_ZERO = -999.25; // Marker for missing value used in some proprietary systems
   switch(v.get_type()) {
@@ -92,7 +92,7 @@ bool mv_to_json(const ModuleVariable &v, JsonObject& root, const char *name_in) 
   return false;
 }
 
-void set_time_from_json(JsonObject& root, uint32_t delay_ms) {
+void set_time_from_json(DynamicJsonDocument& root, uint32_t delay_ms) {
  // Set time if received (as early as possible)
   uint32_t utc = (uint32_t)root["UTC"];
   if (utc != 0) {
@@ -111,7 +111,7 @@ void set_time_from_json(JsonObject& root, uint32_t delay_ms) {
   #endif
 }
 
-void decode_json_settings(ModuleInterface &interface, JsonObject& root) {
+void decode_json_settings(ModuleInterface &interface, DynamicJsonDocument& root) {
   if (!interface.settings.got_contract()) return;
 
   char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
@@ -122,8 +122,8 @@ void decode_json_settings(ModuleInterface &interface, JsonObject& root) {
   interface.settings.set_updated(); // Flag that settings are ready to be used
 }
 
-JsonObject& read_json_settings_from_server(
-    Client &client, DynamicJsonBuffer &jsonBuffer, char *buf, const uint16_t buffer_size, 
+DeserializationError read_json_settings_from_server(
+    Client &client, DynamicJsonDocument &root, char *buf, const uint16_t buffer_size, 
     const uint16_t timeout_ms = 3000) 
 {
   if (buf == NULL) {
@@ -131,7 +131,7 @@ JsonObject& read_json_settings_from_server(
     #ifdef DEBUG_PRINT
     DPRINTLN(F("read_json_settings OUT OF MEMORY"));
     #endif
-    return JsonObject::invalid();
+    return DeserializationError::NoMemory;
   }
   uint16_t pos = 0;
   uint32_t start = millis();
@@ -150,7 +150,7 @@ JsonObject& read_json_settings_from_server(
     #ifdef DEBUG_PRINT
     DPRINT(pos); DPRINTLN(F(" bytes, read_json_settings BUFFER TOO SMALL"));
     #endif
-    return JsonObject::invalid();
+    return DeserializationError::NoMemory;
   }
   if (pos > 0) {
     // Locate JSON part of reply
@@ -159,7 +159,7 @@ JsonObject& read_json_settings_from_server(
     if (jsonStart) jsonStart += strlen(jsonDecl) + 1;
     else jsonStart = buf;
   }
-  return jsonBuffer.parseObject(jsonStart);
+  return deserializeJson(root, jsonStart);
 }
 
 #ifdef MI_SMALLMEM
@@ -167,11 +167,11 @@ bool read_json_settings(ModuleInterface &interface, Client &client,
                         const uint16_t buffer_size = MI_MAX_JSON_SIZE, const uint16_t timeout_ms = 3000) 
 {
   char *buf = new char[buffer_size];
-  DynamicJsonBuffer jsonBuffer;
+  DynamicJsonDocument root(buffer_size);
   uint32_t start = millis();
-  JsonObject& root = read_json_settings_from_server(client, jsonBuffer, buf, buffer_size, timeout_ms);
+  auto error = read_json_settings_from_server(client, root, buf, buffer_size, timeout_ms);
   bool status = false;
-  if (root.success()) {
+  if (!error) {
     // Set system time if UTC was returned from server, exclude parsing time and half of retrieval time
     #ifdef DEBUG_PRINT
     uint32_t before_set = millis();
@@ -181,7 +181,8 @@ bool read_json_settings(ModuleInterface &interface, Client &client,
     status = true;
   } else {
     #ifdef DEBUG_PRINT
-    DPRINTLN("Failed parsing settings JSON. Out of memory(1)?");
+    DPRINT("Failed parsing settings JSON. Out of memory(1)?: ");
+    DPRINTLN(error.c_str());
     #endif
   }
 
@@ -197,11 +198,11 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, Client &client,
   if (interfaces.num_interfaces == 0) return false;
   const uint32_t buffer_size = buffer_size_per_module * interfaces.num_interfaces;
   char *buf = new char[buffer_size];
-  DynamicJsonBuffer jsonBuffer;
+  DynamicJsonDocument root(buffer_size_per_module);
   uint32_t start = millis();
-  JsonObject& root = read_json_settings_from_server(client, jsonBuffer, buf, buffer_size, timeout_ms);
+  auto error = read_json_settings_from_server(client, root, buf, buffer_size, timeout_ms);
   bool status = false;
-  if (root.success()) {
+  if (!error) {
     // Set system time if UTC was returned from server, exclude parsing time and half of retrieval time
 #ifdef DEBUG_PRINT
     uint32_t before_set = millis();
@@ -214,7 +215,8 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, Client &client,
   }
   else {
 #ifdef DEBUG_PRINT
-    DPRINTLN("Failed parsing settings JSON. Out of memory(2)?");
+    DPRINT("Failed parsing settings JSON. Out of memory(2)?: ");
+    DPRINTLN(error.c_str());
 #endif
   }
 
@@ -294,7 +296,7 @@ uint32_t difftime(const uint32_t start, const uint32_t end) {
   return diff > 600000 ? 0 : diff;
 }
 
-void add_module_status(ModuleInterface *interface, JsonObject &root) {
+void add_module_status(ModuleInterface *interface, DynamicJsonDocument &root) {
   // Add status values
   String name;
   int16_t age = interface->get_last_alive_age();
@@ -322,7 +324,7 @@ void add_module_status(ModuleInterface *interface, JsonObject &root) {
   root[name] = maxtime;
 }
 
-void add_json_values(ModuleInterface *interface, JsonObject &root) {
+void add_json_values(ModuleInterface *interface, DynamicJsonDocument &root) {
   
   if (!interface->outputs.got_contract() || !interface->outputs.is_updated()) return; // Values not available yet
 
@@ -337,7 +339,7 @@ void add_json_values(ModuleInterface *interface, JsonObject &root) {
   add_module_status(interface, root);
 }
 
-void add_json_settings(ModuleInterface *interface, JsonObject &root) {
+void add_json_settings(ModuleInterface *interface, DynamicJsonDocument &root) {
   
   if (!interface->settings.got_contract() || !interface->settings.is_updated()) return; // Values not available yet
 
@@ -351,7 +353,7 @@ void add_json_settings(ModuleInterface *interface, JsonObject &root) {
   }
 }
 
-void set_scan_columns(JsonObject &root,
+void set_scan_columns(DynamicJsonDocument &root,
                       MILastScanTimes *last_scan_times)
 {
   if (last_scan_times) {
@@ -383,7 +385,7 @@ void set_scan_columns(JsonObject &root,
   }
 }
 
-void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root, const MILastScanTimes &last_scan_times) {
+void add_master_status(ModuleInterfaceSet &interfaces, DynamicJsonDocument &root, const MILastScanTimes &last_scan_times) {
   // Add number of currently inactive (nonresponding) modules
   String name = interfaces.get_prefix(); name += F("InactCnt");
   root[name] = interfaces.get_inactive_module_count();
@@ -440,7 +442,7 @@ void add_master_status(ModuleInterfaceSet &interfaces, JsonObject &root, const M
 bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, const uint8_t *server_ip,
                                MILastScanTimes *last_scan_times, uint16_t port = 80,
                                bool primary_master = true, // (set primary_master=false on all masters but one if more than one)
-                               uint16_t json_buffer_size = 500) {
+                               uint16_t json_buffer_size = MI_MAX_JSON_SIZE) {
   int successCnt = 0;
   #ifdef DEBUG_PRINT
   uint32_t start_time = millis();
@@ -450,8 +452,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, c
     // Encode all settings to a JSON string
     String buf;
     { // Separate block to release JSON buffer as soon as possible
-      DynamicJsonBuffer jsonBuffer(json_buffer_size);
-      JsonObject& root = jsonBuffer.createObject();
+      DynamicJsonDocument root(json_buffer_size);
       add_json_values(interfaces[i], root);
 
       // Set scan columns in database if inserting (support for plotting with different resolutions)
@@ -459,7 +460,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, c
 
       // Add status for the master
       if (i == 0) add_master_status(interfaces, root, *last_scan_times);
-      root.printTo(buf);
+      serializeJson(root, buf);
     }
     if (buf.length() <= 2) continue; // Empty buffer, nothing to send, so not a failure
     #ifdef DEBUG_PRINT
@@ -504,15 +505,14 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, c
 bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, const uint8_t *server,
                                MILastScanTimes *last_scan_times, uint16_t port = 80,
                                bool primary_master = true, // (set primary_master=false on all masters but one if more than one)
-                               uint16_t json_buffer_size = 3000) {
+                               uint16_t json_buffer_size = MI_MAX_JSON_SIZE) {
   int successCnt = 0;
   #ifdef DEBUG_PRINT
   uint32_t start_time = millis();
   #endif
   String buf;  
   { // Separate block to release JSON buffer as soon as possible
-    DynamicJsonBuffer jsonBuffer(json_buffer_size);
-    JsonObject& root = jsonBuffer.createObject();
+    DynamicJsonDocument root(json_buffer_size);
 
     // Set scan columns in database if inserting (support for plotting with different resolutions)
     if (primary_master) set_scan_columns(root, last_scan_times);
@@ -524,7 +524,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, c
     for (int i=0; i<interfaces.num_interfaces; i++) add_json_values(interfaces[i], root);
     
     // Encode all settings to a JSON string
-    root.printTo(buf);
+    serializeJson(root, buf);
   }
   
   #ifdef DEBUG_PRINT
@@ -567,7 +567,7 @@ bool send_values_to_web_server(ModuleInterfaceSet &interfaces, Client &client, c
 #endif
 
 bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client, const uint8_t *server,
-                               uint16_t port = 80, uint16_t json_buffer_size = 3000) {
+                               uint16_t port = 80, uint16_t json_buffer_size = MI_MAX_JSON_SIZE) {
   // Quick check if there is anything to do                               
   bool changes = false;
   for (int i=0; i<interfaces.num_interfaces; i++) changes = changes || interfaces[i]->settings.is_changed();
@@ -579,14 +579,13 @@ bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client,
   #endif
   String buf;  
   { // Separate block to release JSON buffer as soon as possible
-    DynamicJsonBuffer jsonBuffer(json_buffer_size);
-    JsonObject& root = jsonBuffer.createObject();
+    DynamicJsonDocument root(json_buffer_size);
     
     // Add values from all modules
     for (int i=0; i<interfaces.num_interfaces; i++) add_json_settings(interfaces[i], root);
     
     // Encode all settings to a JSON string
-    root.printTo(buf);
+    serializeJson(root, buf);
   }
   
   #ifdef DEBUG_PRINT
