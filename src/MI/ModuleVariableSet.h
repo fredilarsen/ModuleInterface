@@ -404,10 +404,9 @@ public:
   const ModuleVariable &get_module_variable(const uint8_t ix) const { return variables[ix]; }
   ModuleVariable &get_module_variable(const uint8_t ix) { return variables[ix]; }
 
-  //const char *get_name(const uint8_t ix) const { return variables[ix].name; }
   ModuleVariableType get_type(const uint8_t ix) const { return variables[ix].get_type(); }
 
-  // Low-level setter and getter. Use these on module size where ix is constant.
+  // Low-level setter and getter. Use these on module side where ix is constant.
   void set_value(const uint8_t ix, const void *value, const uint8_t size) {
     if (ix < num_variables) variables[ix].set_value(value, size);
   }

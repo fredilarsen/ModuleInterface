@@ -18,7 +18,7 @@
   #ifdef MI_SMALLMEM
     #define MI_MAX_JSON_SIZE 800
   #else
-    #define MI_MAX_JSON_SIZE 3000
+    #define MI_MAX_JSON_SIZE 5000
   #endif
 #endif
 
@@ -296,6 +296,19 @@ uint32_t difftime(const uint32_t start, const uint32_t end) {
   return diff > 600000 ? 0 : diff;
 }
 
+uint32_t get_max_request_time(ModuleInterface *interface) {
+  // Find max time of request of outputs, settings or status
+  uint32_t statustime = difftime(interface->before_status_requested_time, interface->status_received_time),
+           outputtime = difftime(interface->outputs.before_requested_time, interface->outputs.get_updated_time_ms()),
+           maxtime = statustime > outputtime ? statustime : outputtime;
+
+  // NOTE: Settings are requested when the module flags that is has modified settings.
+  // Otherwise settings are retrived from the web server, not the module.
+  // Therefore we cannot use the time from request is sent until modification time because
+  // request time will stay static and modified time will be updated regularly.
+  return maxtime;
+}
+
 void add_module_status(ModuleInterface *interface, DynamicJsonDocument &root) {
   // Add status values
   String name;
@@ -315,13 +328,8 @@ void add_module_status(ModuleInterface *interface, DynamicJsonDocument &root) {
   root[name] = (uint8_t) interface->get_status_bits();
 
   // Find max time of request of outputs, settings or status
-  uint32_t statustime = difftime(interface->before_status_requested_time, interface->status_received_time),
-    outputtime = difftime(interface->outputs.before_requested_time, interface->outputs.get_updated_time_ms()),
-    settingstime = difftime(interface->settings.before_requested_time, interface->settings.get_updated_time_ms()),
-    maxtime = statustime > outputtime ? statustime : outputtime;
-  maxtime = maxtime > settingstime ? maxtime : settingstime;
   name = interface->get_prefix(); name += F("ReqTime");
-  root[name] = maxtime;
+  root[name] = get_max_request_time(interface);
 }
 
 void add_json_values(ModuleInterface *interface, DynamicJsonDocument &root) {
@@ -385,6 +393,18 @@ void set_scan_columns(DynamicJsonDocument &root,
   }
 }
 
+void FindMaxRequestTime(ModuleInterfaceSet &interfaces, uint32_t &req_time, uint8_t &req_ix) {
+  req_time = 0;
+  req_ix = 255;
+  for (uint8_t i=0; i<interfaces.num_interfaces; i++) {
+    uint32_t devicemaxtime = get_max_request_time(interfaces[i]);
+    if (devicemaxtime > req_time) {
+      req_time = devicemaxtime;
+      req_ix = i;
+    }
+  }
+}
+
 void add_master_status(ModuleInterfaceSet &interfaces, DynamicJsonDocument &root, const MILastScanTimes &last_scan_times) {
   // Add number of currently inactive (nonresponding) modules
   String name = interfaces.get_prefix(); name += F("InactCnt");
@@ -430,6 +450,15 @@ void add_master_status(ModuleInterfaceSet &interfaces, DynamicJsonDocument &root
 
   name = interfaces.get_prefix(); name += F("RSetTm"); // Read settings time
   root[name] = last_scan_times.last_get_settings_usage_ms;
+
+  // Register the longest request time and the responsible module
+  uint32_t req_time = 0;
+  uint8_t req_ix = 255;
+  FindMaxRequestTime(interfaces, req_time, req_ix);
+  name = interfaces.get_prefix(); name += F("MaxReqTm"); // Maximum response time across all modules
+  root[name] = req_time;
+  name = interfaces.get_prefix(); name += F("MaxReqIx"); // Array ix of module with max response time
+  root[name] = req_ix;
 
   // Total time spent in timed transfer for the last time
   // (Settings and outputs/inputs between modules and between modules and web server)
