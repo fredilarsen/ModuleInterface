@@ -103,7 +103,7 @@ public:
   ModuleVariableSet settings,  // Configuration parameters needed by the module to operate
                     inputs,    // Measurements / online values needed as input to the module
                     outputs;   // Measurements / online values delivered by the module
-  uint32_t last_alive = 0;     // time of last life-sign (reply but not ACK) for this module
+  uint32_t last_alive = 0;     // Time of last life-sign (reply but not ACK) for this module
   uint32_t up_time = 0;        // Uptime in seconds
   uint32_t last_uptime_millis = 0; // Millis when uptime was incremented last
   static ModuleInterface *singleton;
@@ -114,7 +114,7 @@ public:
   ModuleVariableSet *confirmed_settings = NULL; // Configuration parameters received from the module
   ModuleCommand last_incoming_cmd = mcUnknownCommand;  // Cmd in last received packet
   uint32_t before_status_requested_time = 0; // Not used internally, used by derived classes for statistics
-  uint32_t status_received_time = 0; // Time if last received status
+  uint32_t status_received_time = 0; // Time of last received status
   #endif
 
   // Time sync support

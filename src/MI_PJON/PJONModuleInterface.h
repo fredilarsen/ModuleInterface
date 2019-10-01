@@ -12,6 +12,11 @@
 // The well-known PJON port number for ModuleInterface packets, used to quickly separate ModuleInterface related messages from others
 #define MI_PJON_MODULE_INTERFACE_PORT 100
 
+// Time without requests from the master before sending a presence packet (directed or broadcast)
+// (To establish a new route through the network if routers are involved)
+#define IDLE_TIME_BEFORE_PRESENCE_BROADCAST_S 130
+
+
 class PJONModuleInterface : public ModuleInterface {
 friend class PJONModuleInterfaceSet;
 protected:
@@ -21,13 +26,18 @@ protected:
   uint8_t remote_bus_id[4];
   uint32_t status_requested_time = 0;
   #else
+  // Remember the latest master address
+  uint8_t master_id = 0;
+  uint8_t master_bus_id[4];
+
   void set_link(MILink &pjon) { this->pjon = &pjon; pjon.set_receiver(default_receiver_function, this); }
   #endif
 public:
   // Constructors for Master side
   #ifdef IS_MASTER
-  PJONModuleInterface() { init(); }
+  PJONModuleInterface() { ModuleInterface::init(); init(); }
   PJONModuleInterface(const char *module_name_prefix_and_address) {
+    ModuleInterface::init();
     init();
     set_name_prefix_and_address(module_name_prefix_and_address);
   }
@@ -45,6 +55,8 @@ public:
     const uint8_t num_inputs,   ModuleVariable *input_variables,   const char *inputnames,   // This string must be PROGMEM
     const uint8_t num_outputs,  ModuleVariable *output_variables,  const char *outputnames)  // This string must be PROGMEM
   {
+    ModuleInterface::init();
+    init();
     set_variables(num_settings, setting_variables,
                   num_inputs,   input_variables,
                   num_outputs,  output_variables);
@@ -55,6 +67,8 @@ public:
     const uint8_t num_settings, ModuleVariable *setting_variables, MVS_getContractChar settingnames,
     const uint8_t num_inputs,   ModuleVariable *input_variables,   MVS_getContractChar inputnames,
     const uint8_t num_outputs,  ModuleVariable *output_variables,  MVS_getContractChar outputnames) {
+    ModuleInterface::init();
+    init();
     set_variables(num_settings, setting_variables,
                   num_inputs,   input_variables,
                   num_outputs,  output_variables);
@@ -65,27 +79,34 @@ public:
   PJONModuleInterface(const char *module_name, MILink &pjon,
                       const char *settingnames, const char *inputnames, const char *outputnames) :
     ModuleInterface(module_name, settingnames, inputnames, outputnames) {
+    init();
     set_link(pjon);
   }
   PJONModuleInterface(const char *module_name, MILink &pjon,
                       bool use_progmem, // Required to be true, just used to distinguish this function from the standard
                       const char * settingnames, const char *inputnames, const char *outputnames) :  // These strings must be PROGMEM
     ModuleInterface(module_name, use_progmem, settingnames, inputnames, outputnames) {
+    init();
     set_link(pjon);
   }
   PJONModuleInterface(const char *module_name, MILink &pjon,
                       MVS_getContractChar settingnames, MVS_getContractChar inputnames, MVS_getContractChar outputnames) :
     ModuleInterface(module_name, settingnames, inputnames, outputnames) {
+    init();
     set_link(pjon);
   }
   // This constructor is available only because the F() macro can only be used in a function.
   // So if RAM is tight, use this constructor and call set_contracts from setup()
   PJONModuleInterface(MILink &pjon, const uint8_t num_settings, const uint8_t num_inputs, const uint8_t num_outputs) :
     ModuleInterface(num_settings, num_inputs, num_outputs) {
+    init();
     set_link(pjon);
   }
   #endif
-  PJONModuleInterface(MILink &pjon) : ModuleInterface() { set_link(pjon); }
+  PJONModuleInterface(MILink &pjon) : ModuleInterface() {
+    init();
+    set_link(pjon);
+  }
 
   void update() {
     // Listen for packets for 1ms
@@ -96,13 +117,17 @@ public:
 
     // If user sketch is posting packets to be sent, send them
     pjon->update();
+
+    // Send a broadcast packet to establish a route through the nearest routers
+    send_presence_broadcast();
   }
   #endif
 
   void init() {
-    ModuleInterface::init();
     #ifdef IS_MASTER
     memset(remote_bus_id, 0, 4);
+    #else
+    memset(master_bus_id, 0, 4);
     #endif
   }
 
@@ -285,6 +310,10 @@ public:
         #endif
         return false;
       }
+      #ifndef MASTER
+      get_master_address_from_last_packet();
+      #endif
+
       // Send an unbuffered reply
       return send(pjon->get_last_packet_info().sender_id, pjon->get_last_packet_info().sender_bus_id, response.get(), response_length);
     }
@@ -335,19 +364,50 @@ public:
   #endif
 
   #ifndef IS_MASTER
+  void get_master_address_from_last_packet() {
+    if (pjon->get_last_packet_info().sender_id != PJON_NOT_ASSIGNED && pjon->get_last_packet_info().sender_id != 0) {
+      master_id = pjon->get_last_packet_info().sender_id; 
+      memcpy(master_bus_id, pjon->get_last_packet_info().sender_bus_id, 4);
+    }
+  }
+
   // If any output is flagged as an event, send it immediately to the master (breaking the master-slave pattern)
   void send_output_events() {
     BinaryBuffer response;
     uint8_t response_length;
     outputs.get_values(response, response_length, mcSetOutputs, true);
-    // TODO: Do not assume that the latest packet is from master!
-    if (response_length > 0 && pjon->get_last_packet_info().sender_id != PJON_NOT_ASSIGNED && pjon->get_last_packet_info().sender_id != 0) {
+    if (response_length > 0 && master_id != PJON_NOT_ASSIGNED && master_id != 0) {
       #ifdef DEBUG_PRINT
       dname(); DPRINT("send_output_events, length "); DPRINT(response_length); DPRINT(", master id ");
-      DPRINTLN(pjon->get_last_packet_info().sender_id);
+      DPRINTLN(master_id);
       #endif
-      if (send(pjon->get_last_packet_info().sender_id, pjon->get_last_packet_info().sender_bus_id, response.get(), response_length))
+      if (send(master_id, master_bus_id, response.get(), response_length))
         outputs.clear_events();
+    }
+  }
+
+  // If module is receiving no requests, send a broadcast to update the nearest router.
+  // (If module has been moved from one router to another this will change the registered route)
+  void send_presence_broadcast() {
+    int32_t age = get_last_alive_age(); // In seconds
+    static uint32_t last_presence = 0;
+    uint32_t nowtime = millis();
+    if (age > IDLE_TIME_BEFORE_PRESENCE_BROADCAST_S && 
+       (uint32_t)(nowtime - last_presence) > (uint32_t)IDLE_TIME_BEFORE_PRESENCE_BROADCAST_S*1000) {
+      last_presence = nowtime;
+      // Send an (unrequested) status packet
+      BinaryBuffer response;
+      notify(ntSampleStatus, this);
+      uint8_t response_length = 0;
+      get_status(response, response_length);
+      if (master_id != PJON_NOT_ASSIGNED && master_id != 0)
+        // We know the address of the master, so send directed. This will potentially
+        // establish a route through multiple layers of routers.
+        send(master_id, master_bus_id, response.get(), response_length);
+      else
+        // We have not had any communication from the master yet, so send a broadcast.
+        // This will establish a route through the nearest router.
+        send(PJON_BROADCAST, PJONTools::localhost(), response.get(), response_length);
     }
   }
 
