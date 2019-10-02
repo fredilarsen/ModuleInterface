@@ -21,8 +21,8 @@ install:
   - rm master.zip
   # Put libraries where the Linux Makefile expects them
   - sudo cp -R PJON-master ../PJON
-  - sudo cp -R $HOME/Arduino/libraries/PJON ..
-  - sudo cp -R $HOME/Arduino/libraries/ArduinoJson ..
+  #- sudo cp -R $HOME/Arduino/libraries/PJON ..
+  #- sudo cp -R $HOME/Arduino/libraries/ArduinoJson ..
   #- sudo mv PJON-master $HOME/Arduino/libraries/PJON
 script:
   # Arduino based examples
@@ -42,6 +42,7 @@ script:
   - pushd examples/WebPage/WINDOWS_LINUX_LUDP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
   - pushd examples/WebPage/WINDOWS_LINUX_LUDP/TestModuleMaster/TestModuleMaster >/dev/null; make; popd >/dev/null
   - pushd examples/WebPage/WINDOWS_LINUX_ETCP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMasterHttp/GenericModuleMasterHttp >/dev/null; make; popd >/dev/null
 notifications:
   email:
     on_success: change
