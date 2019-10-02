@@ -310,7 +310,7 @@ public:
         #endif
         return false;
       }
-      #ifndef MASTER
+      #ifndef IS_MASTER
       get_master_address_from_last_packet();
       #endif
 
