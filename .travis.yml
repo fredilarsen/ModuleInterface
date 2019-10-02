@@ -15,12 +15,12 @@ before_install:
 install:
   - arduino --install-library "ArduinoJson:6.11.3"
   # Use PJON master, not a release for now
-  - arduino --install-library "PJON"
-  #- wget https://github.com/gioblu/PJON/archive/master.zip
-  #- unzip master.zip
-  #- rm master.zip
+  #- arduino --install-library "PJON"
+  - wget https://github.com/gioblu/PJON/archive/master.zip
+  - unzip master.zip
+  - rm master.zip
   # Put libraries where the Linux Makefile expects them
-  #- sudo cp -R PJON-master ../PJON
+  - sudo cp -R PJON-master ../PJON
   - sudo cp -R $HOME/Arduino/libraries/PJON ..
   - sudo cp -R $HOME/Arduino/libraries/ArduinoJson ..
   #- sudo mv PJON-master $HOME/Arduino/libraries/PJON
