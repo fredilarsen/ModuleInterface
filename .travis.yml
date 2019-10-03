@@ -22,6 +22,7 @@ install:
   - sudo cp -R PJON-master $HOME/Arduino/libraries/PJON
   # Put libraries where the Linux Makefile expects them
   - mv PJON-master ../PJON
+  - cp -R $HOME/Arduino/libraries/ArduinoJson ..
 script:
   # Arduino based examples
   - pushd examples/BlinkAdvanced >/dev/null && build_platform uno && popd >/dev/null
