@@ -14,13 +14,14 @@ before_install:
   - source <(curl -SLs https://raw.githubusercontent.com/adafruit/travis-ci-arduino/master/install.sh)
 install:
   - arduino --install-library "ArduinoJson:6.11.3"
-  # Use PJON master, not a release for now
   #- arduino --install-library "PJON:12.0"
+  # Use PJON master, not a release for now
   - wget https://github.com/gioblu/PJON/archive/master.zip
   - unzip master.zip
   - rm master.zip
+  - sudo cp -R PJON-master $HOME/Arduino/libraries/PJON
   # Put libraries where the Linux Makefile expects them
-  - sudo mv PJON-master $HOME/Arduino/libraries/PJON
+  - mv PJON-master ../PJON
 script:
   # Arduino based examples
   - pushd examples/BlinkAdvanced >/dev/null && build_platform uno && popd >/dev/null
