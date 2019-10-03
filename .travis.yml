@@ -20,9 +20,6 @@ install:
   - unzip master.zip
   - rm master.zip
   # Put libraries where the Linux Makefile expects them
-  #- sudo cp -R PJON-master ../PJON
-  #- sudo cp -R $HOME/Arduino/libraries/PJON ..
-  #- sudo cp -R $HOME/Arduino/libraries/ArduinoJson ..
   - sudo mv PJON-master $HOME/Arduino/libraries/PJON
 script:
   # Arduino based examples
