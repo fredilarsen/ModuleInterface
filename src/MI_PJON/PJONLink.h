@@ -11,7 +11,7 @@ struct PJONLink : public MILink {
   PJONLink<Strategy>(uint8_t device_id) { bus.set_id(device_id); }
   PJONLink<Strategy>(const uint8_t *bus_id, uint8_t device_id) {
     bus.set_id(device_id); PJONTools::copy_bus_id(bus.bus_id, bus_id);
-    if(!PJONTools::bus_id_equality(bus_id, bus.localhost)) bus.set_shared_network(true);
+    if(!PJONTools::bus_id_equality(bus_id, PJONTools::localhost())) bus.set_shared_network(true);
   }
 
   // These functions are required by the base class:
