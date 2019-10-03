@@ -4,10 +4,10 @@
    that is forwarded with blue and green for each direction respectively, 
    plus errors in red.
    RED (pin 4)   - Packet delivery attempted but failed
-   GREEN (pin 5) - Forwarded packet from SWBB bus to LUDP bus
-   BLUE (pin 6)  - Forwarded packet from LUDP bus to SWBB bus
+   GREEN (pin 5) - Forwarded packet from bus B to bus A
+   BLUE (pin 6)  - Forwarded packet from bus A to bus B
 
-   Every 10s the LED will flash green as a "heartbeat",
+   Every 15s the LED will flash green as a "heartbeat",
    if no other traffic has passed.
    
    This ModuleInterface version of the BlinkingRGBSwitch will
@@ -27,9 +27,10 @@
 // Pins for blinking RGB LED for showing traffic in each direction
 // (Use resistors approximately R:3.3k G:33k, B:8.2k)
 // A clear, not diffuse, RGB LED lets the individual colors be seen directly.
-const int ERROR_LED_PIN = 4, SWBB_LED_PIN = 5, LUDP_LED_PIN = 6;
+const int ERROR_LED_PIN = 4, BUS_B_LED_PIN = 5, BUS_A_LED_PIN = 6;
 
-const char PROGMEM output_names[]  = "Uptime:u4 Elapsed:u4 CntToSW:uf4 CntFrSW:f4 BytToSW:f4 BytFrSW:f4 SockFree:u1",
+const char PROGMEM output_names[]  = "Uptime:u4 Elapsed:u4 CntToSW:f4 CntFrSW:f4 BytToSW:f4 BytFrSW:f4 "
+                                     "SockFree:u1 MaxWA:u2 MaxWB:u2 MaxDA:u1 MaxDB:u1",
                    setting_names[] = "", input_names[] = ""; 
 
 class ModuleInterfaceRGBSwitch : public PJONModuleInterface, public PJONVirtualBusRouter<PJONSwitch> {
@@ -47,15 +48,25 @@ class ModuleInterfaceRGBSwitch : public PJONModuleInterface, public PJONVirtualB
   void send_packet(const uint8_t *payload, const uint16_t length,
                    const uint8_t receiver_bus, const uint8_t sender_bus,
                    bool &ack_sent, const PJON_Packet_Info &packet_info) {
+    uint8_t p = sender_bus == 1 ? BUS_B_LED_PIN : BUS_A_LED_PIN;
+
+    // Return if there are packets in queue already, wait until all have been sent
+    if (PJONVirtualBusRouter<PJONSwitch>::get_bus(receiver_bus).get_packets_count() > 0) return;
                     
-    uint8_t p = sender_bus == 1 ? SWBB_LED_PIN : LUDP_LED_PIN;
     digitalWrite(p, HIGH);
+    uint32_t start = millis();
     PJONVirtualBusRouter<PJONSwitch>::send_packet(payload, length, receiver_bus, sender_bus, ack_sent, packet_info);
-    digitalWrite(p, LOW);
+    uint32_t t = (uint32_t)(millis()-start);
+    if (t > send_wait_ms[receiver_bus]) {
+      // Remember the device slowest to respond, and how long it took
+      send_wait_ms[receiver_bus] = (uint16_t) min(t, (uint32_t)0xFFFF);
+      send_wait_id[receiver_bus] = packet_info.receiver_id;
+    }
     packet_count[current_bus]++;
     byte_count[current_bus] += length;
     digitalWrite(ERROR_LED_PIN, LOW);
     last_led_activity = millis();
+    digitalWrite(p, LOW);
   }
   void dynamic_error_function(uint8_t code, uint16_t data) {
     uint8_t p = ERROR_LED_PIN; // RED
@@ -67,6 +78,7 @@ class ModuleInterfaceRGBSwitch : public PJONModuleInterface, public PJONVirtualB
 
     void restart_statistics() { 
     packet_count[0] = packet_count[1] = byte_count[0] = byte_count[1] = 0;
+    send_wait_ms[0] = send_wait_ms[1] = send_wait_id[0] = send_wait_id[1] = 0;
     statistics_start = millis();
   }
 
@@ -75,8 +87,10 @@ class ModuleInterfaceRGBSwitch : public PJONModuleInterface, public PJONVirtualB
            statistics_start;
 
   // Statistics
-  uint16_t packet_count[2], byte_count[2];
-  uint8_t free_sockets = 0;
+  uint16_t packet_count[2], byte_count[2],
+           send_wait_ms[2]; // Longest ACK time in ms
+  uint8_t free_sockets = 0,
+          send_wait_id[2]; // Device id of the device taking longest to ACK
   uint32_t sock_scan_time = 0;
 
   PJONPointerLink<Any> link;
@@ -102,23 +116,23 @@ public:
 
     // Init pins for external LEDs
     pinMode(ERROR_LED_PIN, OUTPUT);
-    pinMode(SWBB_LED_PIN, OUTPUT);
-    pinMode(LUDP_LED_PIN, OUTPUT);
+    pinMode(BUS_B_LED_PIN, OUTPUT);
+    pinMode(BUS_A_LED_PIN, OUTPUT);
   }
   
   void update() {
-    if (mi_interval_elapsed(sock_scan_time, 10000)) free_sockets = get_free_socket_count();
+    if (mi_interval_elapsed(sock_scan_time, 600000)) free_sockets = get_free_socket_count();
 
     PJONVirtualBusRouter<PJONSwitch>::loop();
     PJONModuleInterface::send_output_events();
     // Turn off LEDs
     //digitalWrite(ERROR_LED_PIN, LOW);
-    digitalWrite(SWBB_LED_PIN, LOW);
-    digitalWrite(LUDP_LED_PIN, LOW);
+    digitalWrite(BUS_B_LED_PIN, LOW);
+    digitalWrite(BUS_A_LED_PIN, LOW);
     
     // Show a heartbeat blink if there has been no activity for a while
-    if (mi_interval_elapsed(last_led_activity, 10000)) {
-      digitalWrite(SWBB_LED_PIN, HIGH); // Green
+    if (mi_interval_elapsed(last_led_activity, 15000)) {
+      digitalWrite(BUS_B_LED_PIN, HIGH); // Green
       delay(100);
     }
   }
@@ -134,6 +148,10 @@ public:
       outputs.set_value(ix++, elapsed_time == 0 ? 0 : float(60000.0*byte_count[0])/elapsed_time);
       outputs.set_value(ix++, elapsed_time == 0 ? 0 : float(60000.0*byte_count[1])/elapsed_time);
       outputs.set_value(ix++, free_sockets);
+      outputs.set_value(ix++, send_wait_ms[0]);
+      outputs.set_value(ix++, send_wait_ms[1]);
+      outputs.set_value(ix++, send_wait_id[0]);
+      outputs.set_value(ix++, send_wait_id[1]);
       outputs.set_updated(); // Flag as completely updated
       restart_statistics();
     }
