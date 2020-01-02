@@ -138,7 +138,7 @@ public:
   }
 
   uint16_t count_active_contracts() {
-	uint16_t count = 0;  
+    uint16_t count = 0;  
     for (uint8_t i = 0; i < num_interfaces; i++) {
       if (interfaces[i]->got_contract() && interfaces[i]->is_active()) count++;
     }
@@ -155,6 +155,8 @@ public:
     return true;
   }
   
+  uint8_t get_module_count() const { return num_interfaces; }
+
   // If a device gets unplugged or dies, it will register as inactive after a while.
   // Get the count of inactive modules
   uint8_t get_inactive_module_count() {
@@ -168,7 +170,21 @@ public:
   void set_notification_callback(notify_function n) { 
     for (uint8_t i = 0; i < num_interfaces; i++) interfaces[i]->set_notification_callback(n);
   }
-  
+
+  // Locate the interface that has the specified name.
+  uint8_t find_interface_by_name(const char *name) const {
+    for (uint8_t i = 0; i < num_interfaces; i++)
+      if (strncmp(name, interfaces[i]->module_name, MAX_MODULE_NAME_LENGTH) == 0) return i;
+    return NO_MODULE;
+  }
+
+  // Locate the interface that has the specified name but ignore case
+  uint8_t find_interface_by_name_ignorecase(const char *name) const {
+    for (uint8_t i = 0; i < num_interfaces; i++)
+      if (mi_compare_ignorecase(name, interfaces[i]->module_name, MAX_MODULE_NAME_LENGTH)) return i;
+    return NO_MODULE;
+  }
+
   // Locate the interface that has the specified prefix. Only the start of the given string will be checked,
   // so it can be a full prefixed variable name.
   uint8_t find_interface_by_prefix(const char *prefix) const {

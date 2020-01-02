@@ -23,4 +23,5 @@
 #include <MI/ModuleInterface.cpp>
 #include <utils/MITime.cpp>
 #include <utils/MIUptime.cpp>
+#include <MI/MITransferBase.cpp>
 #endif

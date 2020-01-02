@@ -1,6 +1,7 @@
 #pragma once
 
 #include <MI/ModuleVariable.h>
+#include <utils/MIUtilities.h>
 
 // Value returned by get_variable_ix when variable name not found. Means that max 255 variables may be used.
 #define NO_VARIABLE 0xFF
@@ -308,8 +309,19 @@ public:
       } // else // Not changed on module side, so update with new value from master
       #endif
       if (set_value) {
+        #if defined(IS_MASTER) && defined(MASTER_MULTI_TRANSFER)
+        // Detect change
+        bool was_changed = variables[varpos].is_changed();
+        variables[varpos].set_changed(false);
+        #endif
         variables[varpos].set_value(p, len);
-        #ifndef IS_MASTER
+        #ifdef IS_MASTER
+        #ifdef MASTER_MULTI_TRANSFER
+        // Set change-bits if changed now
+        if (variables[varpos].is_changed()) variables[varpos].set_change_bits();
+        if (was_changed) variables[varpos].set_changed(true);
+        #endif
+        #else
         variables[varpos].set_changed(false); // Normal flow of values shall not set changed-flag
         #endif
         p += len;
@@ -400,6 +412,14 @@ public:
     #endif
     return NO_VARIABLE;
   }
+
+  #ifdef IS_MASTER
+  uint8_t get_variable_ix_ignorecase(const char *variable_name) const {
+    for (uint8_t i = 0; i < num_variables; i++)
+      if (mi_compare_ignorecase(variable_name, variables[i].name, MVAR_MAX_NAME_LENGTH)) return i;
+    return NO_VARIABLE;
+  }
+  #endif
 
   const ModuleVariable &get_module_variable(const uint8_t ix) const { return variables[ix]; }
   ModuleVariable &get_module_variable(const uint8_t ix) { return variables[ix]; }

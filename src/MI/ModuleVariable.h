@@ -52,6 +52,16 @@ private:
 public:
   #ifdef IS_MASTER
   char name[MVAR_MAX_NAME_LENGTH + 1];
+  #ifdef MASTER_MULTI_TRANSFER
+  uint8_t change_bits = 0; // Used for managing reverse settings to multiple transfers at the same time (HTTP, MQTT, ...)
+  bool get_change_bit(uint8_t bit) const { return (change_bits & (1 << bit)) > 0; }
+  void clear_change_bit(uint8_t bit) { change_bits &= ~(1 << bit); }
+  void set_change_bits() { change_bits = 0xFF; }
+  bool any_change_bit(uint8_t bitcount) const {
+    for (uint8_t t = 0; t < bitcount; t++) if (get_change_bit(t)) return true;
+    return false;
+  }
+  #endif
   #endif
 
   ModuleVariable() {
@@ -60,6 +70,14 @@ public:
     #endif
     memset(value.array, 0, 4);
   }
+
+  #ifdef IS_MASTER
+  ModuleVariable(const ModuleVariable &source) {
+    memcpy(name, source.name, sizeof name);
+    memcpy(value.array, source.value.array, 4);
+    memcpy(&type, &source.type, sizeof type);
+  }
+  #endif
 
   // Setters and getters for serializing (type,length,name)
   void set_variable(const uint8_t *name_and_type) {
@@ -73,7 +91,7 @@ public:
   }
 
   // Setting from text
-  void set_variable(const char *s) { // Format like "lightOn:b1"
+  void set_variable(const char *s) { // Format like "LightOn:b1"
     // Read name length byte
     const char *pos1 = strchr(s, ':'), *pos2 = strchr(s, ' ');
     if (pos1 == NULL || (pos2 != NULL && pos2 < pos1)) { // No colon in this variable declaration, use float as default
@@ -176,6 +194,38 @@ public:
   int32_t get_int32() const {  return *(int32_t*) get_value_pointer(); }
   float get_float() const {  return *(float*) get_value_pointer(); }
 
+  bool get_value_as_text(char *text, uint8_t maxlen) const {
+    if (!text || maxlen < 10) return false;
+    switch(get_type()) {
+    case mvtBoolean: strcpy(text, get_bool() ? "true" : "false"); return true;
+    case mvtUint8: sprintf(text, "%d", get_uint8()); return true;
+    case mvtInt8: sprintf(text, "%d", get_int8()); return true;
+    case mvtUint16: sprintf(text, "%d", get_uint16()); return true;
+    case mvtInt16: sprintf(text, "%d", get_int16()); return true;
+    case mvtUint32: sprintf(text, "%ld", get_uint32()); return true;
+    case mvtInt32: sprintf(text, "%ld", get_int32()); return true;
+    case mvtFloat32: sprintf(text, "%f", get_float()); return true;
+    case mvtUnknown: return false;
+    }
+    return false;
+  }
+
+  bool set_value_from_text(const char *text) {
+    if (!text) return false;
+    switch(get_type()) {
+    case mvtBoolean: set_value(text[0]=='1' || text[0]=='t' || text[0]=='T'); return true;
+    case mvtUint8: set_value((uint8_t)atoi(text)); return true;
+    case mvtInt8: set_value((int8_t)atoi(text)); return true;
+    case mvtUint16: set_value((uint16_t)atoi(text)); return true;
+    case mvtInt16: set_value((int16_t)atoi(text)); return true;
+    case mvtUint32: set_value((uint32_t)atol(text)); return true;
+    case mvtInt32: set_value((int32_t)atol(text)); return true;
+    case mvtFloat32: set_value((float)atof(text)); return true;
+    case mvtUnknown: return false;
+    }
+    return false;
+  }
+
   // Memory management
   uint8_t get_size() const {
     switch(get_type()) {
@@ -209,5 +259,5 @@ public:
     name[0] = pgm_read_byte(&(get_mv_type_names()[pos]));
     name[1] = pgm_read_byte(&(get_mv_type_names()[pos + 1]));
     name[2] = 0;
-  }   
+  }
 };

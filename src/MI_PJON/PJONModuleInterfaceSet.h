@@ -209,9 +209,9 @@ public:
         if ((scheduled_sync || interfaces[i]->status_bits & MISSING_TIME) && !has_local_bus(i)) {
           send_timesync(((PJONModuleInterface*)interfaces[i])->remote_id, ((PJONModuleInterface*)interfaces[i])->remote_bus_id);
           #ifdef DEBUG_PRINT
-            if (interfaces[i]->status_bits & MISSING_TIME) DPRINT(F("Module missing time. ")); 
-            DPRINT(F("Sending directed sync to "));DPRINT(interfaces[i]->module_name);
-            DPRINT(F(": ")); DPRINTLN(miTime::Get());
+          if (interfaces[i]->status_bits & MISSING_TIME) DPRINT(F("Module missing time. ")); 
+          DPRINT(F("Sending directed sync to "));DPRINT(interfaces[i]->module_name);
+          DPRINT(F(": ")); DPRINTLN(miTime::Get());
           #endif
 
           // Clear time-missing bit to avoid this triggering continuous time sync to this device
@@ -238,28 +238,54 @@ public:
   }
   #endif
   
+  // For backward compatibility
   void update(MITransferBase *transfer = NULL) {
+    update(transfer ? 1 : 0, transfer ? &transfer : NULL);
+  }
+
+#ifndef MASTER_MULTI_TRANSFER
+// Do not expose this update function unless this predefine has been set
+private:
+#endif
+
+  void update(uint8_t arraylen, MITransferBase *transfer[] = NULL) {
     uint32_t start = millis();
     update_frequent();
+    bool initiated = got_all_contracts();
+    if (initiated && arraylen && transfer) {
+      #ifdef MASTER_MULTI_TRANSFER
+      MITransferBase::transfer_count = arraylen;
+      #endif
+      for (uint8_t t = 0; t < arraylen; t++) {
+        #ifdef MASTER_MULTI_TRANSFER
+        transfer[t]->transfer_ix = t; // Associate with a changed-bit in ModuleVariables
+        #endif
+        transfer[t]->update();
+      }
+    }
     #ifdef DEBUG_PRINT_TIMES
     uint32_t diff = (uint32_t)(millis() - start);
     if (diff > 500) printf("Long time (%dms) in update_frequent!\n", diff);
     static uint32_t last_print = millis();
     #endif
-    if (mi_interval_elapsed(last_sampled_outputs, sampling_time_outputs)) {
+    if (initiated && mi_interval_elapsed(last_sampled_outputs, sampling_time_outputs)) {
       #ifdef DEBUG_PRINT_TIMES
       uint32_t printdiff = (uint32_t)(millis() - last_print);
       last_print = millis();
       #endif
       start = millis();
-      transfer_outputs(transfer);  // Get outputs and send to subscribing modules
-      transfer_settings(transfer); // Transfer settings to and from the modules
+      transfer_outputs(arraylen, transfer);  // Get outputs and send to subscribing modules
+      transfer_settings(arraylen, transfer); // Transfer settings to and from the modules
       last_total_usage_ms = (uint32_t)(millis()-start);
       #ifdef DEBUG_PRINT_TIMES
       printf("Spent %dms in interval_transfer, %dms since last.\n", last_total_usage_ms, printdiff);
       #endif
     }
   }
+
+#ifndef MASTER_MULTI_TRANSFER
+public:
+#endif
 
   // This should be called as often as possible, to handle events and other prioritized tasks
   void update_frequent() {
@@ -274,13 +300,13 @@ public:
     handle_events();
   }
 
-  void transfer_outputs(MITransferBase *transfer = NULL) {
+  void transfer_outputs(uint8_t arraylen = 0, MITransferBase *transfer[] = NULL) {
     // Get outputs from modules
     update_values();
     update_frequent();
 
     // Data exchange to web server or other system
-    if (transfer) transfer->put_values(); 
+    if (arraylen && transfer) for (uint8_t t = 0; t < arraylen; t++) transfer[t]->put_values();
 
     // Transfer outputs from modules to inputs of other modules
     transfer_outputs_to_inputs();
@@ -301,14 +327,29 @@ public:
     #endif
   }
 
-  void transfer_settings(MITransferBase *transfer = NULL) {
+  void transfer_settings(uint8_t arraylen = 0, MITransferBase *transfer[] = NULL) {
     // Get potentially modified settings from each module
     update_settings();
 
       // Data exchange from and to web server or other system
-    if (transfer) {
-      transfer->put_settings(); 
-      transfer->get_settings(); 
+    if (arraylen && transfer) {
+      for (uint8_t t = 0; t < arraylen; t++) transfer[t]->put_settings();
+      for (uint8_t t = 0; t < arraylen; t++) transfer[t]->get_settings();
+      #ifdef MASTER_MULTI_TRANSFER
+      // Clear changed-flag if all transfer targets have received the upward change back down
+      for (uint8_t i = 0; i < num_interfaces; i++) {
+        for (uint8_t v = 0; v < interfaces[i]->settings.get_num_variables(); v++) {
+          ModuleVariable &mv = interfaces[i]->settings.get_module_variable(v);
+          if (!mv.any_change_bit(arraylen)) {
+            #ifdef DEBUG_PRINT_SETTINGSYNC
+            if (mv.is_changed())
+              printf("CLEAR CHANGED VALUE %ld cbits: %d\n", mv.get_uint32(), mv.change_bits);
+            #endif
+            mv.set_changed(false);
+          }
+        }
+      }
+      #endif
     }
 
     // Send settings to each module

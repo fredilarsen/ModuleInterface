@@ -42,3 +42,13 @@ float mi_lowpass(float new_value, float previous_lowpass, float factor, uint32_t
   }
   return previous_lowpass;
 }
+
+bool mi_compare_ignorecase(const char *a, const char *b, uint16_t len) {
+  const char *pa = a, *pb = b;
+  for (; pa-a < len && *pa != 0 && (*pa == *pb || tolower(*pa) == tolower(*pb)); pa++, pb++) ;
+  return (pa-a == len || *pa == *pb);
+}
+void mi_lowercase(char *buf) { for (char *p = buf; *p != 0; p++) *p = tolower(*p); }
+
+template<class X> X mi_max(const X &a, const X &b) { return a > b ? a : b; }
+template<class X> X mi_min(const X &a, const X &b) { return a < b ? a : b; }

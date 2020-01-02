@@ -23,7 +23,9 @@ public:
   
   uint8_t *get() const { return buffer; }
   uint8_t *get() { return buffer; }
-  
+  const char *chars() const { return (const char*)buffer; }
+  char *chars() { return (char*)buffer; }
+
   uint8_t operator [] (const uint16_t ix) const { return buffer[ix]; }
   uint8_t &operator [] (const uint16_t ix) { return buffer[ix]; }
   

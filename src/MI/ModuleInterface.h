@@ -315,7 +315,7 @@ public:
         outputs.set_variables(&message[1], length-1);
         notify(ntNewOutputContract, this);
         break;
-      case mcSetOutputs:      
+      case mcSetOutputs:
         outputs.set_values(&message[1], length-1);
         if (outputs.is_updated()) notify(ntNewOutputs, this);
         break;

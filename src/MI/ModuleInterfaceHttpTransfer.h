@@ -18,7 +18,7 @@
   #ifdef MI_SMALLMEM
     #define MI_MAX_JSON_SIZE 800
   #else
-    #define MI_MAX_JSON_SIZE 5000
+    #define MI_MAX_JSON_SIZE 15000
   #endif
 #endif
 
@@ -36,27 +36,16 @@ void write_http_settings_request(const char *module_prefix, Client &client) {
 template <class T> void val_to_buf(uint32_t *buf, T value) { memcpy(buf, &value, sizeof value); }
 
 void buf_to_mvar(ModuleVariable &v, const uint32_t *value, const uint8_t size) {
-  if (v.is_changed()) {
-    // Discard changes from database if changes from module are present and not registered yet.
-    // Reset changed-flag if value from database matches the current value, meaning that the change
-    // from the module has been transported to the database and back.
-    #ifdef DEBUG_PRINT
-    DPRINT("Changed, equal="); DPRINT(v.is_equal(value, size)); DPRINT(", val="); DPRINTLN(*(const float*)value);   
-    #endif
-    if (v.is_equal(value, size)) v.set_changed(false);
-  } else {
-    v.set_value(value, size);
-    v.set_changed(false); // Do not set changed-flag when set from database, only in the opposite direction
-  }
+  MITransferBase::set_mv_and_changed_flags(v, value, size, 0); // HTTP transfer MUST be the first if multiple!
 }
 
-// NOTE: The change management makes this function specific to settings.
-bool json_to_mv(ModuleVariable &v, const DynamicJsonDocument& root, const char *name) {
+
+bool json_to_mv(ModuleVariable &v, const JsonObject& root, const char *name) {
   uint32_t b;
   switch(v.get_type()) {
     // NOTE: boolean is transferred as 0/1 instead of true/false to enable plotting
-    case mvtBoolean: { 
-      val_to_buf(&b, (uint8_t) root[name]); 
+    case mvtBoolean: {
+      val_to_buf(&b, (uint8_t) root[name]);
       bool bv = *(uint8_t*)&b != 0;
       buf_to_mvar(v, (uint32_t*)&bv, sizeof(bool)); return true;
     }
@@ -72,24 +61,35 @@ bool json_to_mv(ModuleVariable &v, const DynamicJsonDocument& root, const char *
   return false;
 }
 
-bool mv_to_json(const ModuleVariable &v, DynamicJsonDocument& root, const char *name_in) {
+bool json_to_mv(ModuleVariable &v, DynamicJsonDocument& root, const char *name) {
+  JsonObject obj = root.as<JsonObject>();
+  return json_to_mv(v, obj, name);
+}
+
+bool mv_to_json(const ModuleVariable &v, JsonObject& parent, const char *name_in) {
   String name = name_in; // For some reason a char* will succeed but be forgotten. Probably added as a pointer in JSON enocder
   const float SYS_ZERO = -999.25; // Marker for missing value used in some proprietary systems
-  switch(v.get_type()) {
-    case mvtBoolean: root[name] = (uint8_t) (v.get_bool() ? 1 : 0); return true;
-    case mvtUint8: root[name] = v.get_uint8(); return true;
-    case mvtInt8: root[name] = v.get_int8(); return true;
-    case mvtUint16: root[name] = v.get_uint16(); return true;
-    case mvtInt16: root[name] = v.get_int16(); return true;
-    case mvtUint32: root[name] = v.get_uint32(); return true;
-    case mvtInt32: root[name] = v.get_int32(); return true;
-    case mvtFloat32:
-      if (v.get_float() != SYS_ZERO && !isnan(v.get_float()) && !isinf(v.get_float())) {
-        root[name] = v.get_float(); return true;
-      } else return false;
-    case mvtUnknown: return false;
+  switch (v.get_type()) {
+  case mvtBoolean: parent[name] = (uint8_t)(v.get_bool() ? 1 : 0); return true;
+  case mvtUint8: parent[name] = v.get_uint8(); return true;
+  case mvtInt8: parent[name] = v.get_int8(); return true;
+  case mvtUint16: parent[name] = v.get_uint16(); return true;
+  case mvtInt16: parent[name] = v.get_int16(); return true;
+  case mvtUint32: parent[name] = v.get_uint32(); return true;
+  case mvtInt32: parent[name] = v.get_int32(); return true;
+  case mvtFloat32:
+    if (v.get_float() != SYS_ZERO && !isnan(v.get_float()) && !isinf(v.get_float())) {
+      parent[name] = v.get_float(); return true;
+    }
+    else return false;
+  case mvtUnknown: return false;
   }
   return false;
+}
+
+bool mv_to_json(const ModuleVariable &v, DynamicJsonDocument& root, const char *name_in) {
+  JsonObject obj = root.as<JsonObject>();
+  return mv_to_json(v, obj, name_in);
 }
 
 void set_time_from_json(DynamicJsonDocument& root, uint32_t delay_ms) {
@@ -117,7 +117,17 @@ void decode_json_settings(ModuleInterface &interface, DynamicJsonDocument& root)
   char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
   for (int j=0; j<interface.settings.get_num_variables(); j++) {
     interface.settings.get_module_variable(j).get_prefixed_name(interface.get_prefix(), prefixed_name, sizeof prefixed_name);
+    #if defined(MASTER_MULTI_TRANSFER) && defined(DEBUG_PRINT_SETTINGSYNC)
+    ModuleVariable &mv = interface.settings.get_module_variable(j);
+    bool prev_changed = mv.is_changed();
+    uint8_t prev_bits = mv.change_bits;
+    #endif
     json_to_mv(interface.settings.get_module_variable(j), root, prefixed_name);
+    #if defined(MASTER_MULTI_TRANSFER) && defined(DEBUG_PRINT_SETTINGSYNC)
+    if (prev_bits != mv.change_bits) 
+      printf("FROM HTML '%s' VAL %ld cbits: %d->%d changed:%d->%d\n", prefixed_name, mv.get_uint32(), 
+        prev_bits, mv.change_bits, prev_changed, mv.is_changed());
+     #endif
   }
   interface.settings.set_updated(); // Flag that settings are ready to be used
 }
@@ -198,15 +208,15 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, Client &client,
   if (interfaces.num_interfaces == 0) return false;
   const uint32_t buffer_size = buffer_size_per_module * interfaces.num_interfaces;
   char *buf = new char[buffer_size];
-  DynamicJsonDocument root(buffer_size_per_module);
+  DynamicJsonDocument root(buffer_size);
   uint32_t start = millis();
   auto error = read_json_settings_from_server(client, root, buf, buffer_size, timeout_ms);
   bool status = false;
   if (!error) {
     // Set system time if UTC was returned from server, exclude parsing time and half of retrieval time
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     uint32_t before_set = millis();
-#endif
+    #endif
     set_time_from_json(root, (uint32_t)(millis() - start));
     for (int i = 0; i < interfaces.num_interfaces; i++) {
       decode_json_settings(*interfaces[i], root);
@@ -214,10 +224,10 @@ bool read_json_settings(ModuleInterfaceSet &interfaces, Client &client,
     status = true;
   }
   else {
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     DPRINT("Failed parsing settings JSON. Out of memory(2)?: ");
     DPRINTLN(error.c_str());
-#endif
+    #endif
   }
 
   // Deallocate buffer
@@ -253,9 +263,9 @@ bool get_settings_from_web_server(ModuleInterfaceSet &interfaces, Client &client
     write_http_settings_request(NULL, client);
     success = read_json_settings(interfaces, client);
   }
-#ifdef DEBUG_PRINT
+  #ifdef DEBUG_PRINT
   else { DPRINT("Connection to web server failed with code "); DPRINTLN(code); }
-#endif
+  #endif
   client.stop();
   if (success) cnt++;
 #endif
@@ -354,9 +364,19 @@ void add_json_settings(ModuleInterface *interface, DynamicJsonDocument &root) {
   // Add output values
   char prefixed_name[MVAR_MAX_NAME_LENGTH + MVAR_PREFIX_LENGTH + 1];
   for (int i=0; i<interface->settings.get_num_variables(); i++) {
-    if (interface->settings.get_module_variable(i).is_changed()) {
+    if (MITransferBase::is_mv_changed(interface->settings.get_module_variable(i), 0)) {
       interface->settings.get_module_variable(i).get_prefixed_name(interface->get_prefix(), prefixed_name, sizeof prefixed_name);
+      #if defined(MASTER_MULTI_TRANSFER) && defined(DEBUG_PRINT_SETTINGSYNC)
+      ModuleVariable &mv = interface->settings.get_module_variable(i);
+      bool prev_changed = mv.is_changed();
+      uint8_t prev_bits = mv.change_bits;
+      #endif
       mv_to_json(interface->settings.get_module_variable(i), root, prefixed_name);
+      #if defined(MASTER_MULTI_TRANSFER) && defined(DEBUG_PRINT_SETTINGSYNC)
+      if (MITransferBase::is_mv_changed(mv, 0)) 
+        printf("TO HTML '%s' VAL %ld cbits: %d->%d changed:%d->%d\n", prefixed_name, mv.get_uint32(), 
+          prev_bits, mv.change_bits, prev_changed, mv.is_changed());
+      #endif
     }
   }
 }
@@ -599,7 +619,7 @@ bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client,
                                uint16_t port = 80, uint16_t json_buffer_size = MI_MAX_JSON_SIZE) {
   // Quick check if there is anything to do                               
   bool changes = false;
-  for (int i=0; i<interfaces.num_interfaces; i++) changes = changes || interfaces[i]->settings.is_changed();
+  for (int i=0; i<interfaces.num_interfaces; i++) changes = changes || MITransferBase::is_mvs_changed(interfaces[i]->settings, 0);
   if (!changes) return false;  
 
   int successCnt = 0;
@@ -611,6 +631,7 @@ bool send_settings_to_web_server(ModuleInterfaceSet &interfaces, Client &client,
     DynamicJsonDocument root(json_buffer_size);
     
     // Add values from all modules
+    root["Updated"] = (uint32_t)millis(); // With ArduinoJson 6 it is necessary to set something here, otherwise mv_to_json will fail O_O
     for (int i=0; i<interfaces.num_interfaces; i++) add_json_settings(interfaces[i], root);
     
     // Encode all settings to a JSON string
@@ -655,6 +676,8 @@ public:
     if (web_server_address) memcpy(web_server_ip, web_server_address, 4);
   }
   
+  void update() {}
+
   void set_web_server_address(const uint8_t *server_address) { memcpy(web_server_ip, server_address, 4); }
 
   void set_web_server_port(uint16_t server_port) { web_server_port = server_port; }
@@ -673,6 +696,8 @@ public:
     send_settings_to_web_server(interfaces, client, web_server_ip, web_server_port);
     last_scan_times.last_set_settings_usage_ms = (uint32_t)(millis() - start);
   }
+
+  void get_values() {} // Getting values (inputs) from web server not supported for now
 
   void put_values() {
     // Send values (outputs) to the web server
