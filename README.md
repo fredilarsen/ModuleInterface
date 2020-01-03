@@ -1,3 +1,5 @@
+**Breaking news** Newly added MQTT support, allowing ModuleInterface setups to use services in other systems like Home Assistant and OpenHAB through a MQTT broker, or to be controlled from such systems. ModuleInterface outputs can go to both the HTTP server (the ModuleInterface web pages) and MQTT broker in parallel (for example for controlling Home Assistant attached devices), inputs can be received from MQTT (for example with power prices retrieved by Home Assistant plugins), and settings can be set through MQTT as well as from the web pages. Parts of or the whole ModuleInterface setup can also be controlled from Home Assistant or similar. The ModuleInterface modules, the web pages and the MQTT broker will be kept in sync, so setting changes done in one of the three will be syncrhonized to the others.
+
 # ModuleInterface v3.3
 Do you want to create a communication bus with inexpensive IoT devices in a simple way? 
 
