@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MI/ModuleInterface.h>
+#include <MI/ModuleInterfaceSet.h>
 #include <utils/MITime.h>
 
 #define NUM_SCAN_INTERVALS 4
