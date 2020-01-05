@@ -122,6 +122,7 @@ This library depends on the following libraries in addition to the Arduino stand
 
 * [PJON](https://github.com/gioblu/PJON) for communication between modules
 * [ArduinoJSON](https://github.com/bblanchon/ArduinoJson) for communication between master and web server
+* [ReconnectingMqttClient](https://github.com/fredilarsen/ReconnectingMqttClient) for MQTT support
 
 ### License
 ```cpp
