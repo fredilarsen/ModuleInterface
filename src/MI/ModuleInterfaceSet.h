@@ -134,7 +134,7 @@ public:
           }
         }
       }
-    }    
+    }
   }
 
   uint16_t count_active_contracts() {
@@ -234,4 +234,8 @@ public:
     setting_ix = NO_VARIABLE;
     return false;
   }
+
+  void clear_output_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->outputs.clear_events(); }
+  void clear_input_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->inputs.clear_events(); }
+  void clear_settings_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->settings.clear_events(); }
 };
