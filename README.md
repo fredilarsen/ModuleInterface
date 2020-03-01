@@ -2,7 +2,9 @@
 
 The MQTT support is using the portable [ReconnectingMqttClient](https://github.com/fredilarsen/ReconnectingMqttClient) library which works on Linux, Windows, Arduino, ESP8266, ESP32 and other Arduino compatible devices.
 
-# ModuleInterface v3.3
+The MQTT support is present in the [GenericModuleMasterHttp](https://github.com/fredilarsen/ModuleInterface/tree/master/examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMasterHttp) which does all the transfer between modules, web pages and a MQTT broker.
+
+# ModuleInterface v3.4
 Do you want to create a communication bus with inexpensive IoT devices in a simple way? 
 
 Would you like web pages to configure and inspect the devices, with trend plots and historical storage?
@@ -122,6 +124,7 @@ This library depends on the following libraries in addition to the Arduino stand
 
 * [PJON](https://github.com/gioblu/PJON) for communication between modules
 * [ArduinoJSON](https://github.com/bblanchon/ArduinoJson) for communication between master and web server
+* [ReconnectingMqttClient](https://github.com/fredilarsen/ReconnectingMqttClient) for MQTT support
 
 ### License
 ```cpp
