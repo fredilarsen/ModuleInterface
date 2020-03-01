@@ -202,6 +202,13 @@ public:
     else { DPRINT(F("IGNORED DUPLICATE CONTRACT ")); DPRINTLN(contract_id); }
     #endif
   }
+
+  #ifdef MASTER_MULTI_TRANSFER
+  bool is_initialized() {
+    for (uint8_t i = 0; i < num_variables; i++) if (!variables[i].is_initialized()) return false;
+    return true;
+  }
+  #endif
   #endif
 
   #ifndef IS_MASTER
@@ -320,6 +327,7 @@ public:
         // Set change-bits if changed now
         if (variables[varpos].is_changed()) variables[varpos].set_change_bits();
         if (was_changed) variables[varpos].set_changed(true);
+        variables[varpos].set_initialized();
         #endif
         #else
         variables[varpos].set_changed(false); // Normal flow of values shall not set changed-flag
@@ -330,6 +338,9 @@ public:
     }
     // Flag as updated / ready for use only after we have got a full set
     if (numvar == num_variables) set_updated();
+    #if defined(IS_MASTER) && defined(MASTER_MULTI_TRANSFER)
+    else if (numvar > 0 && is_initialized()) set_updated();
+    #endif
     return true;
   }
 
@@ -533,7 +544,7 @@ public:
   void get_value(const uint8_t ix, int8_t &v) const { get_value(ix, &v, 1); }
   void get_value(const uint8_t ix, int16_t &v) const { get_value(ix, &v, 2); }
   void get_value(const uint8_t ix, int32_t &v) const { get_value(ix, &v, 4); }
-  void get_value(const uint8_t ix, float &v) const { get_value(ix, &v, 1); }
+  void get_value(const uint8_t ix, float &v) const { get_value(ix, &v, 4); }
 
   // More specialized convenience getters
   bool     get_bool(const uint8_t ix) const { return *(bool*)get_value_pointer(ix); }
@@ -572,6 +583,12 @@ public:
     if (!got_contract()) return;
     values_received_time = millis();
     if (values_received_time==0) values_received_time = 1;
+    // If asked to flag all as updated at once, then also set initialized-bit for all,
+    // for example when getting values from HTTP. When getting values one by one from for
+    // example MQTT, set_updated will not be called but individual initialized-bits will be set.
+    #if defined(IS_MASTER) && defined(MASTER_MULTI_TRANSFER)
+    for (uint8_t i = 0; i < num_variables; i++) variables[i].set_initialized();
+    #endif
   }
   uint32_t get_updated_time_ms() const { return values_received_time; }
   void clear_updated_if_too_old(uint32_t age_limit_ms = 3600000) {
