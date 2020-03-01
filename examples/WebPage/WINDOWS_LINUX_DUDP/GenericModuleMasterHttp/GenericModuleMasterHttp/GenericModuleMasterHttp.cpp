@@ -56,8 +56,6 @@ void parse_ip_string(const char *ip_string, in_addr &ip) {
   }  
 }
 
-//void notification_function(NotificationType notification_type, const ModuleInterface *interface);
-
 void setup(int argc, const char * const argv[]) {
   printf("Welcome to GenericModuleMaster (DualUDP+HTTP+MQTT).\n");
 
@@ -119,12 +117,12 @@ void setup(int argc, const char * const argv[]) {
 #ifdef MI_USE_MQTT
   // Set up MQTT connection
   if (!mqtt_address.empty()) {
-//    interfaces.set_notification_callback(notification_function);
     //mqtt_transfer.set_address("tcp://192.1.1.71:1883"); // TODO: Support URL syntax
     mqtt_transfer.set_broker_address((uint8_t*)&web_server_ip, 1883);
     mqtt_transfer.start();
   }
 #endif
+  interfaces.set_external_transfer(sizeof transfers / sizeof transfers[0], transfers);
 }
 
 void loop() {
@@ -133,7 +131,7 @@ void loop() {
   if (mi_interval_elapsed(last_mastersettings_check, 60000))
     http_transfer.get_master_settings_from_server();
 
-  interfaces.update(sizeof transfers / sizeof transfers[0], transfers);
+  interfaces.update();
   delay(1);
 }
 
@@ -143,20 +141,5 @@ int main(int argc, const char * const argv[]) {
   return 0;
 }
 
-/*
-void notification_function(NotificationType notification_type, const ModuleInterface *interface) {
-  if (!interface) return;
-  if (notification_type == ntNewOutputs) { // New output from a module
-#ifdef MI_USE_MQTT
-    mqtt_transfer.put_values(*interface); // Publish module outputs to MQTT topic
-#endif
-  }
-  else if (notification_type == ntNewSettings) { // New settings from a module
-#ifdef MI_USE_MQTT
-    mqtt_transfer.put_settings(*interface); // Publish module settings to MQTT topic
-#endif
-  }
-}
-*/
 
 
