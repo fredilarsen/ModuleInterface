@@ -22,6 +22,9 @@ protected:
   // Remember the list of modules and allow it to change
   char *module_list = NULL;
   #endif
+  // External systems to transfer to/from
+  uint8_t external_count = 0;
+  MITransferBase **external_transfer = NULL;
 public:
   PJONModuleInterfaceSet(const char *prefix = NULL) : ModuleInterfaceSet(prefix) { init(); }
   PJONModuleInterfaceSet(MILink &bus, const uint8_t num_interfaces, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
@@ -112,6 +115,13 @@ public:
     custom_receive_function = r; // Register custom/user callback function to receive non-ModuleInterface related messages
   }
 
+  // Register an array of pointers to MITransferBase objects existing on the outside.
+  // We do NOT take over the memory management, they will be deallocated on the outside.
+  void set_external_transfer(uint8_t count, MITransferBase *transfer[]) {
+    external_count = count;
+    external_transfer = transfer;
+  }
+
   void update_contracts() { 
     for (uint8_t i = 0; i < num_interfaces; i++) {
       ((PJONModuleInterface*) (interfaces[i]))->update_contract(1); 
@@ -149,9 +159,7 @@ public:
     }
   }
   void send_input_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_input_events(); }
-
-  void clear_output_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->outputs.clear_events(); }
-  void clear_input_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->inputs.clear_events(); }
+  void send_setting_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->send_setting_events(); }
 
   // Check for incoming packets, send events immediately if present
   void check_incoming() {
@@ -161,11 +169,27 @@ public:
   }
 
   void handle_events() {
-    if (!updated_intermodule_dependencies || !got_all_contracts()) return;
-    transfer_events_from_outputs_to_inputs();
-    send_input_events();
-    clear_output_events();
-    clear_input_events();
+    if (!got_all_contracts()) return;
+
+    if (updated_intermodule_dependencies) {
+      // Get inputs and send them to modules
+      transfer_events_from_outputs_to_inputs(); // Copy received module outputs to module inputs
+      get_input_events_from_external();         // Get from external to inputs- TODO happens async when received?
+//TODO check input events, how does it work?    
+      send_input_events();                      // Send to modules
+      clear_input_events();                     // Clear after sending
+    }
+
+    // Send output and setting events to MITransferBases
+    put_events_to_external();   // Send to external
+    clear_output_events();      // Clear after sending
+
+   // TODO: Check setting events, must be an event flag for each direction?
+//    clear_setting_events(true); // Clear setting events from modules
+
+    // Send settings events to modules
+    send_setting_events();
+    clear_setting_events(); // Clear setting events to modules
   }
 
   // Time will be broadcast to all modules unless NO_TIME_SYNC is defined or master itself is not timesynced
@@ -239,8 +263,17 @@ public:
   #endif
   
   // For backward compatibility
-  void update(MITransferBase *transfer = NULL) {
-    update(transfer ? 1 : 0, transfer ? &transfer : NULL);
+  void update(MITransferBase *transfer) {
+    external_count = transfer == NULL ? 0 : 1;
+    external_transfer = &transfer;
+    update();
+  }
+
+  // For backward compatibility
+  void update(int count, MITransferBase *transfer[]) {
+    external_count = transfer == NULL ? 0 : count;
+    external_transfer = transfer;
+    update();
   }
 
 #ifndef MASTER_MULTI_TRANSFER
@@ -248,19 +281,19 @@ public:
 private:
 #endif
 
-  void update(uint8_t arraylen, MITransferBase *transfer[] = NULL) {
+  void update() {
     uint32_t start = millis();
     update_frequent();
     bool initiated = got_all_contracts();
-    if (initiated && arraylen && transfer) {
+    if (initiated && external_count && external_transfer) {
       #ifdef MASTER_MULTI_TRANSFER
-      MITransferBase::transfer_count = arraylen;
+      MITransferBase::transfer_count = external_count;
       #endif
-      for (uint8_t t = 0; t < arraylen; t++) {
+      for (uint8_t t = 0; t < external_count; t++) {
         #ifdef MASTER_MULTI_TRANSFER
-        transfer[t]->transfer_ix = t; // Associate with a changed-bit in ModuleVariables
+        external_transfer[t]->transfer_ix = t; // Associate with a changed-bit in ModuleVariables
         #endif
-        transfer[t]->update();
+        external_transfer[t]->update();
       }
     }
     #ifdef DEBUG_PRINT_TIMES
@@ -274,8 +307,8 @@ private:
       last_print = millis();
       #endif
       start = millis();
-      transfer_outputs(arraylen, transfer);  // Get outputs and send to subscribing modules
-      transfer_settings(arraylen, transfer); // Transfer settings to and from the modules
+      transfer_outputs();  // Get outputs and send to subscribing modules
+      transfer_settings(); // Transfer settings to and from the modules
       last_total_usage_ms = (uint32_t)(millis()-start);
       #ifdef DEBUG_PRINT_TIMES
       printf("Spent %dms in interval_transfer, %dms since last.\n", last_total_usage_ms, printdiff);
@@ -296,21 +329,24 @@ public:
     // Request the contract of each module if not received already
     update_contracts();
 
+    // Get anything coming in, and send events if any to external
+    update_external();
+
     // Handle incoming+outgoing events
     handle_events();
   }
 
-  void transfer_outputs(uint8_t arraylen = 0, MITransferBase *transfer[] = NULL) {
+  void transfer_outputs() {
     // Get outputs from modules
     update_values();
     update_frequent();
 
-    // Data exchange to web server or other system
-    if (arraylen && transfer) for (uint8_t t = 0; t < arraylen; t++) transfer[t]->put_values();
-
     // Transfer outputs from modules to inputs of other modules
     transfer_outputs_to_inputs();
     update_frequent();
+
+    // Data exchange to web server or other system
+    send_to_external();
 
     // Send updated inputs to all modules
     send_inputs();
@@ -327,20 +363,50 @@ public:
     #endif
   }
 
-  void transfer_settings(uint8_t arraylen = 0, MITransferBase *transfer[] = NULL) {
+  void send_to_external() {
+    if (external_count && external_transfer) 
+      for (uint8_t t = 0; t < external_count; t++) external_transfer[t]->put_values();
+  }
+
+  void update_external() {
+    if (external_count && external_transfer) 
+      for (uint8_t t = 0; t < external_count; t++) external_transfer[t]->update();
+  }
+
+//TODO:
+  void get_input_events_from_external() {
+    // External inputs mapped directly to module inputs will set the event flag when received.
+    // But add support for the external source having a set of outputs, and route these to
+    // module inputs matching the names.
+    
+  }
+
+  void put_events_to_external() {
+    if (external_count && external_transfer) {
+      for (uint8_t t = 0; t < external_count; t++) external_transfer[t]->put_events();
+/*      
+      for (uint8_t i = 0; i < num_interfaces; i++) {
+          interfaces[i]->outputs.clear_events();
+          interfaces[i]->settings.clear_events();
+      }
+*/      
+    }
+  }
+
+  void transfer_settings() {
     // Get potentially modified settings from each module
     update_settings();
 
-      // Data exchange from and to web server or other system
-    if (arraylen && transfer) {
-      for (uint8_t t = 0; t < arraylen; t++) transfer[t]->put_settings();
-      for (uint8_t t = 0; t < arraylen; t++) transfer[t]->get_settings();
+    // Data exchange from and to web server or other system
+    if (external_count && external_transfer) {
+      for (uint8_t t = 0; t < external_count; t++) external_transfer[t]->put_settings();
+      for (uint8_t t = 0; t < external_count; t++) external_transfer[t]->get_settings();
       #ifdef MASTER_MULTI_TRANSFER
       // Clear changed-flag if all transfer targets have received the upward change back down
       for (uint8_t i = 0; i < num_interfaces; i++) {
         for (uint8_t v = 0; v < interfaces[i]->settings.get_num_variables(); v++) {
           ModuleVariable &mv = interfaces[i]->settings.get_module_variable(v);
-          if (!mv.any_change_bit(arraylen)) {
+          if (!mv.any_change_bit(external_count)) {
             #ifdef DEBUG_PRINT_SETTINGSYNC
             if (mv.is_changed())
               printf("CLEAR CHANGED VALUE %ld cbits: %d\n", mv.get_uint32(), mv.change_bits);

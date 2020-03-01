@@ -114,6 +114,7 @@ public:
 
     // Module-initiated event support
     send_output_events();
+    send_setting_events();
 
     // If user sketch is posting packets to be sent, send them
     pjon->update();
@@ -361,8 +362,21 @@ public:
       if (send(remote_id, remote_bus_id, response.get(), response_length)) inputs.clear_events();
     }
   }
+  // If any setting is flagged as an event, send it immediately to the module from master
+  void send_setting_events() {
+    BinaryBuffer response;
+    uint8_t response_length;
+    settings.get_values(response, response_length, mcSetSettings, true);
+    if (response_length > 0) {
+      #ifdef DEBUG_PRINT
+      dname(); DPRINT("send_setting_events, length "); DPRINT(response_length); DPRINT(", module id ");
+      DPRINTLN(remote_id);
+      #endif
+      if (send(remote_id, remote_bus_id, response.get(), response_length)) settings.clear_events();
+    }
+  }
   #endif
-
+  
   #ifndef IS_MASTER
   void get_master_address_from_last_packet() {
     if (pjon->get_last_packet_info().sender_id != PJON_NOT_ASSIGNED && pjon->get_last_packet_info().sender_id != 0) {
@@ -383,6 +397,20 @@ public:
       #endif
       if (send(master_id, master_bus_id, response.get(), response_length))
         outputs.clear_events();
+    }
+  }
+
+  // If any setting is flagged as an event, send it immediately to the master (breaking the master-slave pattern)
+  void send_setting_events() {
+    BinaryBuffer response;
+    uint8_t response_length;
+    settings.get_values(response, response_length, mcSetSettings, true);
+    if (response_length > 0) {
+#ifdef DEBUG_PRINT
+      dname(); DPRINT("send_setting_events, length "); DPRINT(response_length); DPRINT(", module id ");
+      DPRINTLN(remote_id);
+#endif
+      if (send(master_id, master_bus_id, response.get(), response_length)) settings.clear_events();
     }
   }
 

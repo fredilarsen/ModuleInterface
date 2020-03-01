@@ -95,4 +95,7 @@ public:
 
   // Put (export) values from module outputs to external target
   virtual void put_values() = 0;
+
+  // Put (export) any values marked as events immediately
+  virtual void put_events() {}
 };

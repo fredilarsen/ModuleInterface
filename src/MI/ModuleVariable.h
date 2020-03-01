@@ -53,7 +53,8 @@ public:
   #ifdef IS_MASTER
   char name[MVAR_MAX_NAME_LENGTH + 1];
   #ifdef MASTER_MULTI_TRANSFER
-  uint8_t change_bits = 0; // Used for managing reverse settings to multiple transfers at the same time (HTTP, MQTT, ...)
+  // Used for managing reverse settings to multiple (max 7) transfers at the same time (HTTP, MQTT, ...)
+  uint8_t change_bits = 0;
   bool get_change_bit(uint8_t bit) const { return (change_bits & (1 << bit)) > 0; }
   void clear_change_bit(uint8_t bit) { change_bits &= ~(1 << bit); }
   void set_change_bits() { change_bits = 0xFF; }
@@ -61,6 +62,11 @@ public:
     for (uint8_t t = 0; t < bitcount; t++) if (get_change_bit(t)) return true;
     return false;
   }
+  // The 8th bit, bit 7, is reserved to detect if the value has ever been set after startup.
+  // (If set from a source like MQTT that transports one value at a time, this flag can be checked
+  // to determine if a whole ModuleVariableSet has been set or if only some variables have been set.)
+  void set_initialized() { change_bits |= (1 << 7); }
+  bool is_initialized() { return (change_bits & (1 << 7)) != 0; }
   #endif
   #endif
 
@@ -148,6 +154,9 @@ public:
     if (get_size() == size) {
       if (memcmp(value.array, v, size) != 0) set_changed(true);
       memcpy(value.array, v, size);
+      #if defined(IS_MASTER) && defined(MASTER_MULTI_TRANSFER)
+      set_initialized();
+      #endif
     }
   }
   void get_value(void *v, const uint8_t size) const { if (get_size() == size) memcpy(v, value.array, size); }

@@ -6,12 +6,16 @@
 //    the measurements and states as input, or to use Home Assistant to execute actions like
 //    sending notifications and turning on/off smart switches not directly attached to the 
 //    ModuleInterface setup.
-// 2. Get inputs from MQTT topics, to allow input like power prices to be collected by
-//    and forwarded by systems like Home Assistant, or to let Home Assistant control or request 
-//    ModuleInterfaces actions. Inputs starting with mq, and inputs not available from
-//    any other module will be used if available in the MQTT broker input topic.
-// 3. Get settings from MQTT topics. Any setting written as a topic will override 
-//    the corresponding setting in any module.
+// 2. Get values from a topic "moduleinterface/external/input" and expose them as if they were 
+//    outputs from a module, so that modules can subscribe to them by name. This allows input 
+//    like power prices to be collected by and forwarded by systems like Home Assistant, or to
+//    let Home Assistant control or request ModuleInterfaces actions.
+// 3. Expose settings for modules via MQTT. A setting change in a module or in web pages 
+//    will be synchronized to the corresponding MQTT topic.
+// 4. Get changed settings from MQTT topics. Any change in a setting will be synchronized 
+//    to the corresponding setting in any module and any other MITransferBase (including 
+//    the web server/database). This allows ModuleInterface setups to be configured via
+//    MQTT in addition to / instead of the web pages.
 
 #include <MI/ModuleInterface.h>
 #include <MI/MITransferBase.h>
@@ -63,9 +67,12 @@ public:
 
   void stop() { client.stop(); }
 
-  void update() { client.update(); }
+  void update() { 
+    put_events();
+    client.update(); 
+  }
 
-  void get_settings() { update(); }
+  void get_settings() { client.update(); }
 
   void put_settings() {
     // If any setting has been modified in module, send it to the broker
@@ -74,7 +81,7 @@ public:
     last_scan_times.last_set_settings_usage_ms = (uint32_t)(millis() - start);
   }
 
-  void get_values() { update(); }
+  void get_values() { client.update(); }
 
   // Publish for all modules
   void put_values() {
@@ -93,28 +100,36 @@ public:
   }
 
   // Publish changed settings for only one module
-  void put_settings(ModuleInterface &mi) {
+  void put_settings(ModuleInterface &mi, bool events_only) {
     // Send values (outputs) to the broker
     BinaryBuffer buf(MI_MAX_JSON_SIZE), namebuf(1 + mi_max(MAX_MODULE_NAME_LENGTH, MVAR_COMPOSITE_NAME_LENGTH));
-    publish_to_mqtt(mi, client, true, buf, namebuf, transfer_ix);
+    publish_to_mqtt(mi, client, true, buf, namebuf, transfer_ix, events_only);
   }
 
   // Publish outputs for only one module
-  void put_values(ModuleInterface &mi) {
+  void put_values(ModuleInterface &mi, bool events_only) {
     // Send values (outputs) to the broker
     BinaryBuffer buf(MI_MAX_JSON_SIZE), namebuf(1 + mi_max(MAX_MODULE_NAME_LENGTH, MVAR_COMPOSITE_NAME_LENGTH));
-    publish_to_mqtt(mi, client, false, buf, namebuf, transfer_ix);
+    publish_to_mqtt(mi, client, false, buf, namebuf, transfer_ix, events_only);
+  }
+
+  void put_events() {
+    // Send events to MQTT
+    for (uint8_t m = 0; m < interfaces.get_module_count(); m++) {
+      if (interfaces[m]->outputs.has_events()) put_values(*interfaces[m], true);
+      if (interfaces[m]->settings.has_events()) put_settings(*interfaces[m], true);
+    }
   }
 
   static void publish_to_mqtt(ModuleInterfaceSet &interfaces, ReconnectingMqttClient &client, bool settings, uint8_t transfer_ix) {
     BinaryBuffer buf(MI_MAX_JSON_SIZE), namebuf(1 + mi_max(MAX_MODULE_NAME_LENGTH, MVAR_COMPOSITE_NAME_LENGTH));
     for (uint8_t m = 0; m < interfaces.get_module_count(); m++) {
-      publish_to_mqtt(*interfaces[m], client, settings, buf, namebuf, transfer_ix);
+      publish_to_mqtt(*interfaces[m], client, settings, buf, namebuf, transfer_ix, false);
     }
   }
 
   static void publish_to_mqtt(ModuleInterface &mi, ReconnectingMqttClient &client, bool settings, 
-                              BinaryBuffer &buf, BinaryBuffer &namebuf, uint8_t transfer_ix) {
+                              BinaryBuffer &buf, BinaryBuffer &namebuf, uint8_t transfer_ix, bool events_only) {
     #ifdef MIMQTT_USE_JSON
     DynamicJsonDocument root(MI_MAX_JSON_SIZE * 2);
     #endif
@@ -139,12 +154,11 @@ public:
     topic += (settings ? "/setting" : "/output");
     #ifdef MIMQTT_USE_JSON
     client.publish(topic.c_str(), buf.chars(), true, 0);
-printf("Posted to MQTT topic %s: %s\n", topic.c_str(), buf.chars());
     #else // Publish each variable by itself
     String t, name;
     for (uint8_t i = 0; i < mvs.get_num_variables(); i++) {
       ModuleVariable &v = mvs.get_module_variable(i);
-      if (is_mv_changed(v, transfer_ix)) {
+      if (is_mv_changed(v, transfer_ix) && (!events_only || v.is_event())) {
         strncpy(namebuf.chars(), v.name, namebuf.length());
         mi_lowercase(namebuf.chars());
         t = topic; t += "/"; t += namebuf.chars();
@@ -176,11 +190,31 @@ printf("Posted to MQTT topic %s: %s\n", topic.c_str(), buf.chars());
     // Locate the correct ModuleInterface
     uint8_t module_ix = interfaces.find_interface_by_name_ignorecase(modulename.c_str());
     ModuleInterface *mi = (module_ix == NO_MODULE ? NULL : interfaces[module_ix]);
+
+/*
+    // Support a dummy ModuleInterface named "external" to receive values from
+    if (!mi && modulename == "external") {
+       module_ix = interfaces.find_interface_by_name_ignorecase(modulename.c_str());
+       if (module_ix == NO_MODULE) module_ix = interfaces.add_module("external", "ex");
+       mi = (module_ix == NO_MODULE ? NULL : interfaces[module_ix]);
+        if (mi) {
+          // Find variable ix
+          // Add if not present, also update dependencies
+           if (variable_ix == NO_VARIABLE) {
+             // Find a user (so far unconnected)
+             // Finn type from user
+             // Add variable if the type is known
+             variable_ix = mi->outputs.add(variable_name, type); // Hvilken type?
+           }
+        }
+    }
+*/
     if (!mi) return;
 
     // Locate the correct ModuleVariableSet
     ModuleVariableSet *mvs = NULL;
-    if (strcmp(category.c_str(), "setting")==0) mvs = &mi->settings;
+    bool settings = false;
+    if (strcmp(category.c_str(), "setting") == 0) { mvs = &mi->settings; settings = true; }
     else if (strcmp(category.c_str(), "input")==0) mvs = &mi->inputs;
     if (!mvs) return;
 
@@ -192,15 +226,15 @@ printf("Posted to MQTT topic %s: %s\n", topic.c_str(), buf.chars());
     if (contenttype == "ModuleInterface") {
       String name = root["ModuleName"];
       if (name != modulename) return; // Payload meant for another module
-printf("MQTT to %s\n", name.c_str());
       JsonObject values = root["Values"];
       for (auto kv : values) {
-        //String key = kv.key;
-        // TODO: Remember topic will be lowercase, do case insensitive comparison
-        uint8_t varpos = mvs->get_variable_ix(kv.key().c_str());
+        String key = kv.key;
+        bool is_event = find_and_remove_suffix(key, "_event");
+        uint8_t varpos = mvs->get_variable_ix_ignorecase(key().c_str());
         if (varpos != NO_VARIABLE) {
-          json_to_mv(mvs->get_module_variable(varpos), kv.value(), kv.key().c_str());
-          //            interfaces.interfaces[mod]->inputs.get_module_variable(varpos).set_value(atoi(kv.value().as<char*>()));
+          json_to_mv(mvs->get_module_variable(varpos), kv.value(), key().c_str());
+          if (mv.changed() && is_event) mv.set_event(true);
+          // interfaces.interfaces[mod]->inputs.get_module_variable(varpos).set_value(atoi(kv.value().as<char*>()));
         }
       }
     }
@@ -209,6 +243,7 @@ printf("MQTT to %s\n", name.c_str());
     if (!p3) return;
     p3++;
     String variable_name = p3;
+    bool is_event = find_and_remove_suffix(variable_name, "_event");
     // Locate and set the variable
     uint8_t varpos = mvs->get_variable_ix_ignorecase(variable_name.c_str());
     if (varpos != NO_VARIABLE) {
@@ -219,7 +254,13 @@ printf("MQTT to %s\n", name.c_str());
       #endif
       // Do not allow change from the server if a change is coming from module
       mv_new.set_value_from_text(data);
+      if (!settings) mv.set_changed(false); // Input only travel to modules
       set_mv_and_changed_flags(mv, mv_new.get_value_pointer(), mv_new.get_size(), transfer_ix);
+      if (mv.is_changed() && is_event) mv.set_event(true); // Trigger immediate transfer to modules
+      #if defined(MASTER_MULTI_TRANSFER)
+      mv.set_initialized();
+      if (mvs->is_initialized()) mvs->set_updated(); // All variables have been set, and one was just updated
+      #endif
       #if defined(MASTER_MULTI_TRANSFER) && defined(DEBUG_PRINT_SETTINGSYNC)
       if (prev_bits != mv.change_bits) 
         printf("FROM MQTT '%s' ix: %d VALUE %ld cbits: %d->%d changed:%d->%d->%d\n", variable_name.c_str(), varpos, 
@@ -227,6 +268,15 @@ printf("MQTT to %s\n", name.c_str());
       #endif
     }
     #endif
+  }
+
+  static bool find_and_remove_suffix(String &s, const char *suffix) {
+    uint8_t l = (uint8_t) strlen(suffix), l2 = (uint8_t) s.length();
+    if (l2 > l && strcmp(&s[l2 - l], suffix) == 0) {
+      s[l2 - l] = 0; // Remove suffix
+      return true;
+    }
+    return false;
   }
 };
 

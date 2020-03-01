@@ -9,9 +9,9 @@
 #endif
 
 #ifdef MI_POSIX
-	#include <math.h>
+  #include <math.h>
+  #include <string>
 
-	#define IS_MASTER
 	#define ARDUINOJSON_ENABLE_PROGMEM 0
 	typedef std::string String;
 

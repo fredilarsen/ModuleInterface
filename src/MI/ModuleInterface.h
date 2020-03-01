@@ -330,6 +330,7 @@ public:
           if (settings.is_updated()) {
             status_bits &= ~MISSING_SETTINGS & ~MODIFIED_SETTINGS; // Clear "missing" and "modified" flags
             notify(ntNewSettings, this);
+            settings.clear_events();
           }
         }
         #endif
@@ -343,6 +344,7 @@ public:
            if (inputs.is_updated()) {
              status_bits &= ~MISSING_INPUTS; // Clear "missing inputs" flag
              notify(ntNewInputs, this);
+             inputs.clear_events();
            }
          }
          break;

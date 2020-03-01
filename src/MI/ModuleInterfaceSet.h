@@ -58,7 +58,7 @@ public:
   void update_intermodule_dependencies() {
 	  uint16_t count = count_active_contracts();
 	  if (count != active_contract_count) updated_intermodule_dependencies = false;
-    if (!updated_intermodule_dependencies && count > 1) {
+    if (!updated_intermodule_dependencies && count > 0) {
       for (uint8_t i = 0; i < num_interfaces; i++) {
         interfaces[i]->allocate_source_arrays();
         for (int j=0; j<interfaces[i]->inputs.get_num_variables(); j++) {
@@ -237,5 +237,5 @@ public:
 
   void clear_output_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->outputs.clear_events(); }
   void clear_input_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->inputs.clear_events(); }
-  void clear_settings_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->settings.clear_events(); }
+  void clear_setting_events() { for (uint8_t i = 0; i < num_interfaces; i++) ((PJONModuleInterface*) (interfaces[i]))->settings.clear_events(); }
 };
