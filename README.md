@@ -124,7 +124,6 @@ Here is a snapshot of a responsive home automation web site in production, runni
 ![Web Page Example](images/WebPageExample.png)
 
 ### MQTT connectivity
-
 Keeping your ModuleInterface setup connected to MQTT opens up for a lot of possibilities. Instead of creating a big "closed" system of ModuleInterface modules to automate everything, you can connect the setup to other popular systems like Home Assistant, OpenHAB or similar. In this way you remove the borders and can let everything cooperate.
 
 You can use the voice control of Google Home or Alexa to let Home Assistant set MQTT inputs or settings to trigger actions or changes in your ModuleInterface setup. You can use Home Assistant to execute actions commanded by your ModuleInterface setup. And so on.
@@ -146,6 +145,28 @@ The MQTT support is using the portable [ReconnectingMqttClient](https://github.c
 
 All tests and live systems are using the [Mosquitto](https://mosquitto.org/) MQTT broker which is very lightweight.
 
+#### MQTT topic structure
+Two different topic structures are supported. All parts of the topic names are lower case even if the variable names are mixed case or uppercase.
+Outputs and settings are published with the retain flag on. When other systems publish to settings or to inputs, please set the retain flag. This has to do with the design policy of ModuleInterface being a state based system, so all input should be available at startup.
+
+The default topic structure is like:
+```cpp
+topic: moduleinterface/room1/output/temp
+value: 32
+```
+With this structure variables are updated one by one, only when changed.
+
+The alternative topic structure is based on JSON payloads like this:
+```json
+topic: moduleinterface/room1/output
+value: {"Name":"EvtTest","Prefix":"et","Event":false,"Values":{"Temp":15.00098991,"TTarg":15,"UTC":1583621049,"ETempOut":9}}
+```
+All variables for the module will be included in every publish even if only one variable has changed. This should also be the case if modifying settings or inputs from another system.
+If any of the variables in the payload are marked as an event by the source module, the "Event" flag for the whole packet will be set to true.
+Likewise, to request quick transfer of settings or inputs when set by another system, set Event to true in the JSON payload.
+
+This alternative topic structure can be selected by defining the MIMQTT_USE_JSON preprocessor definition before including any header files in the master.
+
 ### Dependencies and credits
 This library depends on the following libraries in addition to the Arduino standard libraries:
 
@@ -155,7 +176,7 @@ This library depends on the following libraries in addition to the Arduino stand
 
 ### License
 ```cpp
-/* Copyright 2016-2019 Fred Larsen
+/* Copyright 2016-2020 Fred Larsen
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
