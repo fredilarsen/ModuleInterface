@@ -1,15 +1,11 @@
-**Breaking news** Newly added MQTT support, allowing ModuleInterface setups to use services in other systems like Home Assistant and OpenHAB through a MQTT broker (tested with [Mosquitto](https://mosquitto.org/)), or to be controlled from such systems. ModuleInterface outputs can go to both the HTTP server (the ModuleInterface web pages) and MQTT broker in parallel (for example for controlling Home Assistant attached devices), inputs can be received from MQTT (for example with power prices retrieved by Home Assistant plugins), and settings can be set through MQTT as well as from the web pages. Parts of or the whole ModuleInterface setup can also be controlled from Home Assistant or similar. The ModuleInterface modules, the web pages and the MQTT broker will be kept in sync, so setting changes done in one of the three will be synchronized to the others.
-
-The MQTT support is using the portable [ReconnectingMqttClient](https://github.com/fredilarsen/ReconnectingMqttClient) library which works on Linux, Windows, Arduino, ESP8266, ESP32 and other Arduino compatible devices.
-
-The MQTT support is present in the [GenericModuleMasterHttp](https://github.com/fredilarsen/ModuleInterface/tree/master/examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMasterHttp) which does all the transfer between modules, web pages and a MQTT broker.
-
-# ModuleInterface v3.4
+# ModuleInterface v3.5
 Do you want to create a communication bus with inexpensive IoT devices in a simple way? 
 
 Would you like web pages to configure and inspect the devices, with trend plots and historical storage?
 
-This library enables fast and efficient setup of automation systems based on a collection of devices ("modules") controlled through a dynamic and responsive web interface. All under your control running locally with no subscriptions or cloud access required. The web interface can be easily extended and adapted to your use, or replaced with your own design.
+Would you also like your system to have easy connectivity via MQTT to and from other systems?
+
+This library enables fast and efficient setup of automation systems based on a collection of devices ("modules") controlled through a dynamic and responsive web interface. All under your control running locally with no subscriptions or cloud access required. The web interface can be easily extended and adapted to your use, or replaced with your own design. And there is easy connectivity with other automation system via MQTT.
 
 ModuleInterface takes care of automatic transfer of settings (module configuration) and values between devices, with very little programming needed for each device. It is built on top of the [PJON](https://github.com/gioblu/PJON) communication library, allowing a wide range of devices to be connected with a single wire (no extra hardware!), Ethernet or WiFi, ASK/FSK/OOK/LoRa radio transceivers, serial, RS485 or light using LEDs or lasers.
 
@@ -29,7 +25,16 @@ The terms _device_ and _module_ are used somewhat interchangeably in this text, 
 - HTTP client lets the master transfer settings between a database and the modules, for configuration in web pages and/or in the modules themselves.
 - HTTP client lets the master save output values from the modules into a database, for time series trending and inspection in web pages
 - Optional persistence lets each module remember its last received settings at startup, for autonomous operation even if it has been disconnected from the master
+- MQTT connectivity allows your system to use other systems like Home Assistant or OpenHAB to execute actions or retrieve data, or you can let let your system to be controlled by external systems via MQTT.
 - Coarse clock synchronization of all modules (within a few seconds)
+
+## Design philosophy
+
+ModuleInterface is based on _state_, not _event_. To open a door you do not send a command "OPEN" but change a setting from CLOSED to OPEN. The settings will be transferred repeatedly, and only changes should trigger actions. This repeated transfer uses some more bandwidth but makes sure everything has the latest settings even if there has been downtime or communication problems. A flag can be set to have a setting transferred immediately in addition to the scheduled repeated transfers.
+
+To make something turn on/off at a specific time, a setting containing the epoch time for the action can be used.
+
+To trigger repeated actions, a counter can be used. Increasing the value will trigger an action.
 
 ## How it works
 It is a master-slave based system where a master can relate to multiple devices (modules) using the ModuleInterface library.
@@ -118,6 +123,28 @@ Here is a snapshot of a responsive home automation web site in production, runni
 
 ![Web Page Example](images/WebPageExample.png)
 
+### MQTT connectivity
+
+Keeping your ModuleInterface setup connected to MQTT opens up for a lot of possibilities. Instead of creating a big "closed" system of ModuleInterface modules to automate everything, you can connect the setup to other popular systems like Home Assistant, OpenHAB or similar. In this way you remove the borders and can let everything cooperate.
+
+You can use the voice control of Google Home or Alexa to let Home Assistant set MQTT inputs or settings to trigger actions or changes in your ModuleInterface setup. You can use Home Assistant to execute actions commanded by your ModuleInterface setup. And so on.
+
+You can integrate all other systems into your ModuleInterface web pages if you like, to have historical plots of key parameters from all systems. Or you can skip using the ModuleInterface web pages and storage and just control your ModuleInterface setup through MQTT. Or find another combination that suits your purpose.
+
+The example GenericModuleMasterHttp is a Windows/Linux/RPI program that will synchronize modules with the web page. It can also be told to connect to a MQTT broker and keep it synchronized.
+
+- Outputs from modules will be visible in the web page and also automatically created and kept synchronized in the MQTT broker. This can be used to for example let modules send mobile noticfications or trigger other actions in your Home Assistant/OpenHAB setup.
+- Inputs can come from the MQTT broker instead of other modules. This allows input to come from MQTT connected smart switches or online sources like the weather forecast and so on.
+- Settings will be updated in modules and in the MQTT broker when changed in the web pages. If changed in the MQTT broker from another system, the modules and the web pages will be updated automatically. If a module has user input (buttons, keypad or rotary switch etc) and a setting is changed there, it will be updated in the web pages and in the MQTT broker.
+- _Events_ are supported, allowing outputs or setting changes from a module to be transported to the MQTT broker faster than by the normal timer based synchronization. And in the opposite direction, setting changes or inputs from external systems via MQTT can be flagged as events to be transported to modules quickly. Events make it possible to get fast reactions, like movement detected by your ModuleInterface hardware quickly turning on a smart bulb via Home Assistant, or something in the opposite direction.
+
+The MQTT support is present in the [GenericModuleMasterHttp](https://github.com/fredilarsen/ModuleInterface/tree/master/examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMasterHttp) which does all the transfer between modules, web pages and a MQTT broker.
+
+There is also an example GenericModuleMasterMqtt that shows how to not use the web page part of the system but only synchronize all modules with the MQTT broker. This could be usable if you have a full Home Assistant (or similar) setup but wish to easily extend with modules you build yourself.
+
+The MQTT support is using the portable [ReconnectingMqttClient](https://github.com/fredilarsen/ReconnectingMqttClient) library which works on Linux, Windows, Arduino, ESP8266, ESP32 and other Arduino compatible devices.
+
+All tests and live systems are using the [Mosquitto](https://mosquitto.org/) MQTT broker which is very lightweight.
 
 ### Dependencies and credits
 This library depends on the following libraries in addition to the Arduino standard libraries:
