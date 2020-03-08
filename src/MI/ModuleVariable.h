@@ -66,7 +66,7 @@ public:
   // (If set from a source like MQTT that transports one value at a time, this flag can be checked
   // to determine if a whole ModuleVariableSet has been set or if only some variables have been set.)
   void set_initialized() { change_bits |= (1 << 7); }
-  bool is_initialized() { return (change_bits & (1 << 7)) != 0; }
+  bool is_initialized() const { return (change_bits & (1 << 7)) != 0; }
   #endif
   #endif
 

@@ -130,31 +130,46 @@ public:
 
   static void publish_to_mqtt(ModuleInterface &mi, ReconnectingMqttClient &client, bool settings, 
                               BinaryBuffer &buf, BinaryBuffer &namebuf, uint8_t transfer_ix, bool events_only) {
-    #ifdef MIMQTT_USE_JSON
-    DynamicJsonDocument root(MI_MAX_JSON_SIZE * 2);
-    #endif
+    // Scan for changes and events
     ModuleVariableSet &mvs = settings ? mi.settings : mi.outputs;
-    #ifdef MIMQTT_USE_JSON
-    // Build JSON text
-    root["ContentType"] = "ModuleInterface";
-    root["ModuleName"] = mi.module_name;
-    root["ModulePrefix"] = mi.module_prefix;
-    JsonObject o = root["Values"];
+    bool some_events = false, some_changes = false;
     for (uint8_t i = 0; i < mvs.get_num_variables(); i++) {
       const ModuleVariable &v = mvs.get_module_variable(i);
+      if (v.is_event()) some_events = true;
+      if (v.is_changed()) some_changes = true;
+    }
+    if (events_only && !some_events) return;
+    if (!some_changes) return;
+
+    #ifdef MIMQTT_USE_JSON
+    // Build JSON text
+    DynamicJsonDocument root(MI_MAX_JSON_SIZE * 2);
+    root["Name"] = mi.module_name;
+    root["Prefix"] = mi.module_prefix;
+    //if (some_events) root["Event"] = true; // Avoid this, it causes a temporary fast feedback loop
+    JsonObject o = root.createNestedObject("Values");
+    for (uint8_t i = 0; i < mvs.get_num_variables(); i++) {
+      const ModuleVariable &v = mvs.get_module_variable(i);
+      #ifdef MASTER_MULTI_TRANSFER
+      if (v.is_initialized())
+      #endif
       mv_to_json(v, o, v.name);
     }
     serializeJson(root, (char *)buf.get(), buf.length());
     #endif
-    // Publish JSON packet to broker
+
+    // Build topic
     String topic = "moduleinterface/";
     strncpy(namebuf.chars(), mi.module_name, namebuf.length());
     mi_lowercase(namebuf.chars());
     topic += namebuf.chars();
     topic += (settings ? "/setting" : "/output");
+
     #ifdef MIMQTT_USE_JSON
-    client.publish(topic.c_str(), buf.chars(), true, 0);
-    #else // Publish each variable by itself
+    // Publish JSON packet to broker
+    client.publish(topic.c_str(), buf.chars(), true, 1);
+    #else 
+    // Publish each variable by itself
     String t, name;
     for (uint8_t i = 0; i < mvs.get_num_variables(); i++) {
       ModuleVariable &v = mvs.get_module_variable(i);
@@ -191,7 +206,7 @@ public:
     uint8_t module_ix = interfaces.find_interface_by_name_ignorecase(modulename.c_str());
     ModuleInterface *mi = (module_ix == NO_MODULE ? NULL : interfaces[module_ix]);
 
-/*
+/* TODO: Investigate this idea
     // Support a dummy ModuleInterface named "external" to receive values from
     if (!mi && modulename == "external") {
        module_ix = interfaces.find_interface_by_name_ignorecase(modulename.c_str());
@@ -214,30 +229,38 @@ public:
     // Locate the correct ModuleVariableSet
     ModuleVariableSet *mvs = NULL;
     bool settings = false;
+    #ifdef MIMQTT_USE_JSON
+    // For topic moduleinterface/evttest/setting_event, change "setting_event" to "setting"
+    #endif
     if (strcmp(category.c_str(), "setting") == 0) { mvs = &mi->settings; settings = true; }
     else if (strcmp(category.c_str(), "input")==0) mvs = &mi->inputs;
     if (!mvs) return;
 
     #ifdef MIMQTT_USE_JSON
     // Parse JSON
-    DynamicJsonDocument root(MI_MAX_JSON_SIZE * 2);
+    int capacity = JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(255);
+    DynamicJsonDocument root(capacity);
     DeserializationError result = deserializeJson(root, data);
-    String contenttype = root["ContentType"];
-    if (contenttype == "ModuleInterface") {
-      String name = root["ModuleName"];
-      if (name != modulename) return; // Payload meant for another module
-      JsonObject values = root["Values"];
-      for (auto kv : values) {
-        String key = kv.key;
-        bool is_event = find_and_remove_suffix(key, "_event");
-        uint8_t varpos = mvs->get_variable_ix_ignorecase(key().c_str());
-        if (varpos != NO_VARIABLE) {
-          json_to_mv(mvs->get_module_variable(varpos), kv.value(), key().c_str());
-          if (mv.changed() && is_event) mv.set_event(true);
-          // interfaces.interfaces[mod]->inputs.get_module_variable(varpos).set_value(atoi(kv.value().as<char*>()));
-        }
+    String name = root["Name"];    if (!mi_compare_ignorecase(name.c_str(), modulename.c_str(), modulename.length())) return; // Payload meant for another module
+    bool is_event = root["Event"];
+    JsonObject values = root["Values"];
+    for (JsonPair kv : values) {
+      String key = kv.key().c_str();
+      uint8_t varpos = mvs->get_variable_ix_ignorecase(key.c_str());
+      if (varpos != NO_VARIABLE) {
+        ModuleVariable &mv = mvs->get_module_variable(varpos), mv_new(mv);
+        json_to_mv(mv_new, values, key.c_str());
+        if (!settings) mv.set_changed(false); // Input only travel to modules
+        set_mv_and_changed_flags(mv, mv_new.get_value_pointer(), mv_new.get_size(), transfer_ix);
+        if (mv.is_changed() && is_event) mv.set_event(true); // Trigger immediate transfer to modules
+        #ifdef MASTER_MULTI_TRANSFER
+        mv.set_initialized();
+        #endif
       }
     }
+    #if defined(MASTER_MULTI_TRANSFER)
+    if (mvs->is_initialized()) mvs->set_updated(); // All variables have been set, and one was just updated
+    #endif
     #else // Read a single variable by itself
     // Extract variable name from topic
     if (!p3) return;
