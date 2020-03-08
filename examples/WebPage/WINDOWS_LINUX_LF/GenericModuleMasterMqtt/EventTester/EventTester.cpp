@@ -7,6 +7,7 @@
 #define MI_USE_SYSTEMTIME
 #define DEBUG_PRINT_TIMES
 //#define DEBUG_PRINT_SETTINGSYNC
+//#define MIMQTT_USE_JSON
 
 #ifdef _WIN32
   // MS compiler does not like PJON_MAX_PACKETS=0 in PJON
@@ -24,7 +25,7 @@ PJONModuleInterface interface("LightCon", // Module name
   bus,                                    // PJON bus
   "Target:f4",                            // Settings
   "ETemp:f4",                             // Inputs                       
-  "Temp:f4 TTarg:f4 UTC:u4");             // Outputs (measurements)                         
+  "Temp:f4 TTarg:f4 UTC:u4 ETempOut:f4"); // Outputs (measurements)                         
 
 // Settings
 #define s_target_ix       0
@@ -36,6 +37,7 @@ PJONModuleInterface interface("LightCon", // Module name
 #define o_temp_ix         0
 #define o_target_ix       1
 #define o_utc_ix          2
+#define o_externaltemp_ix 3
 
 uint32_t last_out_event_time = 0, last_setting_event_time = 0, last_control_time = 0;
 
@@ -63,10 +65,12 @@ void lightcontrol() {
     }
 */
     // Step controller towards target temp every second
-    if (mi_interval_elapsed(last_control_time, 1000)) { 
-      temp += (target - temp) / 50.0; 
-      interface.outputs.set_value(o_temp_ix, temp);
-      interface.outputs.set_event(o_temp_ix);
+    if (mi_interval_elapsed(last_control_time, 1000)) {
+      if (abs(target - temp) > 0.001f) {
+        temp += (target - temp) / 50.0f;
+        interface.outputs.set_value(o_temp_ix, temp);
+        interface.outputs.set_event(o_temp_ix);
+      }
     }
   }
 }
@@ -77,6 +81,7 @@ void notification_function(NotificationType notification_type, const ModuleInter
     interface.outputs.set_value(o_temp_ix, temp);
     interface.outputs.set_value(o_target_ix, target);
     interface.outputs.set_value(o_utc_ix, interface.get_time_utc_s());
+    interface.outputs.set_value(o_externaltemp_ix, interface.inputs.get_float(i_externaltemp_ix));
     interface.outputs.set_updated();
   }
   else if (notification_type == ntNewInputs) {
