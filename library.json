@@ -1,7 +1,7 @@
 {
   "name": "ModuleInterface",
   "description": "ModuleInterface is an open-source library for simplifying data exchange between devices",
-  "keywords": "communication,protocol,synchronization,database,web page,network,MQTT,PJON",
+  "keywords": "communication,protocol,synchronization,database,web page,network,MQTT,PJON,arduino,esp8266,esp32",
   "license": "Apache-2.0",
   "authors":
   {
@@ -22,7 +22,7 @@
     ],
   "frameworks": "arduino",
   "dependencies": {
-      "PJON" : ">=11.2.0",
+      "PJON" : ">=12.1.0",
       "ArduinoJson" : ">=6.0.0"
   },
   "platforms":
