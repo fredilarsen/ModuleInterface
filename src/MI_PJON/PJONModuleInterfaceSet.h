@@ -276,11 +276,6 @@ public:
     update();
   }
 
-#ifndef MASTER_MULTI_TRANSFER
-// Do not expose this update function unless this predefine has been set
-private:
-#endif
-
   void update() {
     uint32_t start = millis();
     update_frequent();
@@ -315,10 +310,6 @@ private:
       #endif
     }
   }
-
-#ifndef MASTER_MULTI_TRANSFER
-public:
-#endif
 
   // This should be called as often as possible, to handle events and other prioritized tasks
   void update_frequent() {
