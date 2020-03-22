@@ -20,8 +20,14 @@ install:
   - unzip master.zip
   - rm master.zip
   - sudo cp -R PJON-master $HOME/Arduino/libraries/PJON
+  # Use ReconnectingMqttClient master, not a release for now
+  - wget https://github.com/fredilarsen/ReconnectingMqttClient/archive/master.zip
+  - unzip master.zip
+  - rm master.zip
+  - sudo cp -R ReconnectingMqttClient-master $HOME/Arduino/libraries/ReconnectingMqttClient
   # Put libraries where the Linux Makefile expects them
   - mv PJON-master ../PJON
+  - mv ReconnectingMqttClient-master ../ReconnectingMqttClient
   - cp -R $HOME/Arduino/libraries/ArduinoJson ..
 script:
   # Arduino based examples
