@@ -211,8 +211,8 @@ public:
     case mvtInt8: sprintf(text, "%d", get_int8()); return true;
     case mvtUint16: sprintf(text, "%d", get_uint16()); return true;
     case mvtInt16: sprintf(text, "%d", get_int16()); return true;
-    case mvtUint32: sprintf(text, "%ld", get_uint32()); return true;
-    case mvtInt32: sprintf(text, "%ld", get_int32()); return true;
+    case mvtUint32: sprintf(text, "%u", get_uint32()); return true;
+    case mvtInt32: sprintf(text, "%d", get_int32()); return true;
     case mvtFloat32: sprintf(text, "%f", get_float()); return true;
     case mvtUnknown: return false;
     }
