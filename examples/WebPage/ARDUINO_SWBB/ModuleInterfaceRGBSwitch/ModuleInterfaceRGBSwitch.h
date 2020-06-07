@@ -18,6 +18,7 @@
 //#define DEBUG_PRINT
 #define PJON_MAX_PACKETS 0
 #define PJON_PACKET_MAX_LENGTH 180
+#define PJON_INCLUDE_PORT true
 #include <PJONInteractiveRouter.h>
 #include <MIModule.h>
 #include <MI_PJON/PJONPointerLink.h>
@@ -38,10 +39,10 @@ class ModuleInterfaceRGBSwitch : public PJONModuleInterface, public PJONVirtualB
   void dynamic_receiver_function(uint8_t *payload, uint16_t length, const PJON_Packet_Info &packet_info) {
     // Is this a MI packet for me?  
 // TODO: Support packets with bus id
-    if (current_bus == 0 && (packet_info.receiver_id == link.get_id() || packet_info.receiver_id == 0)) {
-      if (packet_info.receiver_id != 0) link.get_bus()->strategy.send_response(PJON_ACK);
+    if (current_bus == 0 && (packet_info.rx.id == link.get_id() || packet_info.rx.id == 0)) {
+      if (packet_info.rx.id != 0) link.get_bus()->strategy.send_response(PJON_ACK);
       PJONModuleInterface::handle_message(payload, length, packet_info);
-      if (packet_info.receiver_id != 0) return;
+      if (packet_info.rx.id != 0) return;
     }
     PJONVirtualBusRouter<PJONSwitch>::dynamic_receiver_function(payload, length, packet_info);
   }
@@ -60,7 +61,7 @@ class ModuleInterfaceRGBSwitch : public PJONModuleInterface, public PJONVirtualB
     if (t > send_wait_ms[receiver_bus]) {
       // Remember the device slowest to respond, and how long it took
       send_wait_ms[receiver_bus] = (uint16_t) min(t, (uint32_t)0xFFFF);
-      send_wait_id[receiver_bus] = packet_info.receiver_id;
+      send_wait_id[receiver_bus] = packet_info.rx.id;
     }
     packet_count[current_bus]++;
     byte_count[current_bus] += length;

@@ -11,8 +11,8 @@ struct PJONPointerLink : public MILink {
   PJONPointerLink<Strategy>(PJON<Strategy> &bus, uint8_t device_id) { this->bus_ptr = &bus; bus_ptr->set_id(device_id); }
   PJONPointerLink<Strategy>(PJON<Strategy> &bus, const uint8_t *bus_id, uint8_t device_id) {
     this->bus_ptr = &bus;
-    bus_ptr->set_id(device_id); PJONTools::copy_bus_id(bus_ptr->bus_id, bus_id);
-    if(!PJONTools::bus_id_equality(bus_id, bus_ptr->localhost)) bus_ptr->set_shared_network(true);
+    bus_ptr->set_id(device_id); bus_ptr->set_bus_id(bus_id);
+    if(memcmp(bus_id, bus_ptr->localhost, 4)) bus_ptr->set_shared_network(true);
   }
 
   // Allow setting the bus
@@ -34,10 +34,10 @@ struct PJONPointerLink : public MILink {
   const PJON_Packet_Info &get_last_packet_info() const { return bus_ptr->last_packet_info; }
   
   uint8_t get_id() const { return bus_ptr->device_id(); }
-  const uint8_t *get_bus_id() const { return bus_ptr->bus_id; }
+  const uint8_t *get_bus_id() const { return bus_ptr->tx.bus_id; }
 
   void set_id(uint8_t id) { bus_ptr->set_id(id); }
-  void set_bus_id(const uint8_t *bus_id) { PJONTools::copy_bus_id(bus_ptr->bus_id, bus_id); }
+  void set_bus_id(const uint8_t *bus_id) { bus_ptr->set_bus_id(bus_id); }
   
   void set_receiver(PJON_Receiver r, void *custom_pointer = NULL) {
     if (bus_ptr) {

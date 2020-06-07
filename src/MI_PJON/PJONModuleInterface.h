@@ -316,7 +316,7 @@ public:
       #endif
 
       // Send an unbuffered reply
-      return send(pjon->get_last_packet_info().sender_id, pjon->get_last_packet_info().sender_bus_id, response.get(), response_length);
+      return send(pjon->get_last_packet_info().tx.id, pjon->get_last_packet_info().tx.bus_id, response.get(), response_length);
     }
     return false;
   }
@@ -379,9 +379,9 @@ public:
   
   #ifndef IS_MASTER
   void get_master_address_from_last_packet() {
-    if (pjon->get_last_packet_info().sender_id != PJON_NOT_ASSIGNED && pjon->get_last_packet_info().sender_id != 0) {
-      master_id = pjon->get_last_packet_info().sender_id; 
-      memcpy(master_bus_id, pjon->get_last_packet_info().sender_bus_id, 4);
+    if (pjon->get_last_packet_info().tx.id != PJON_NOT_ASSIGNED && pjon->get_last_packet_info().tx.id != 0) {
+      master_id = pjon->get_last_packet_info().tx.id; 
+      memcpy(master_bus_id, pjon->get_last_packet_info().tx.bus_id, 4);
     }
   }
 

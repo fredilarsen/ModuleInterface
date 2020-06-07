@@ -30,7 +30,7 @@ StrategyLink<DualUDP> link1;
 StrategyLink<SoftwareBitBang> link2;
 
 PJONAny bus1(&link1, PJON_ID);
-PJONAny bus2(&link2, PJON_NOT_ASSIGNED, 10000);
+PJONAny bus2(&link2, PJON_NOT_ASSIGNED);
 
 ModuleInterfaceRGBSwitch router(2, (PJONAny*[2]){&bus1, &bus2});
 

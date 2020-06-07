@@ -10,8 +10,8 @@ struct PJONLink : public MILink {
   PJONLink<Strategy>() { }
   PJONLink<Strategy>(uint8_t device_id) { bus.set_id(device_id); }
   PJONLink<Strategy>(const uint8_t *bus_id, uint8_t device_id) {
-    bus.set_id(device_id); PJONTools::copy_bus_id(bus.bus_id, bus_id);
-    if(!PJONTools::bus_id_equality(bus_id, PJONTools::localhost())) bus.set_shared_network(true);
+    bus.set_id(device_id); bus.set_bus_id(bus_id);
+    if(memcmp(bus_id, PJONTools::localhost(), 4)) bus.set_shared_network(true);
   }
 
   // These functions are required by the base class:
@@ -27,10 +27,10 @@ struct PJONLink : public MILink {
   const PJON_Packet_Info &get_last_packet_info() const { return bus.last_packet_info; }
   
   uint8_t get_id() const { return bus.device_id(); }
-  const uint8_t *get_bus_id() const { return bus.bus_id; }
+  const uint8_t *get_bus_id() const { return bus.tx.bus_id; }
 
   void set_id(uint8_t id) { bus.set_id(id); }
-  void set_bus_id(const uint8_t *bus_id) { PJONTools::copy_bus_id(bus.bus_id, bus_id); }
+  void set_bus_id(const uint8_t *bus_id) { bus.set_bus_id(bus_id); }
   
   void set_receiver(PJON_Receiver r, void *custom_pointer = NULL) {
     bus.set_receiver(r);

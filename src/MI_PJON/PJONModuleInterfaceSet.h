@@ -426,7 +426,7 @@ public:
 
   bool handle_message(const uint8_t *payload, const uint16_t length, const PJON_Packet_Info &packet_info) {
     // Locate the relevant module based on packet info (device id and bus id)
-    uint8_t ix = locate_module(packet_info.sender_id, packet_info.sender_bus_id);
+    uint8_t ix = locate_module(packet_info.tx.id, packet_info.tx.bus_id);
     if (ix == NO_MODULE) return false;
 
     // Let the interface handle the message
@@ -444,7 +444,7 @@ void mis_global_receive_function(uint8_t *payload, uint16_t length, const PJON_P
     PJONModuleInterfaceSet *mis = (PJONModuleInterfaceSet*) packet_info.custom_pointer;
 
     // Find out which module is sending
-    uint8_t ix = mis->locate_module(packet_info.sender_id, packet_info.sender_bus_id);
+    uint8_t ix = mis->locate_module(packet_info.tx.id, packet_info.tx.bus_id);
     PJONModuleInterface *interface = NULL;
     if (ix != NO_MODULE) {
       interface = (PJONModuleInterface*) mis->interfaces[ix];

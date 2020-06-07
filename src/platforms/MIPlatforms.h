@@ -11,6 +11,8 @@
   #define SWBB_RESPONSE_TIMEOUT 2000
 #endif
 
+#define PJON_INCLUDE_PORT true
+
 #include <PJON.h>
 #include "platforms/MISystemDefines.h"
 
