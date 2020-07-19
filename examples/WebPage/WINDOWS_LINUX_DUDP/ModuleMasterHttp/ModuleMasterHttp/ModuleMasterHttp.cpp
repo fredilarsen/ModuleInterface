@@ -9,7 +9,6 @@
 */
 
 #define DEBUG_PRINT
-#define PJON_INCLUDE_LUDP
 #define MI_USE_SYSTEMTIME
 
 #ifdef _WIN32
@@ -18,9 +17,10 @@
 #endif
 
 #include <MIMaster.h>
+#include <PJONDualUDP.h>
 
 // PJON related
-PJONLink<LocalUDP> bus(1); // PJON device id 1
+PJONLink<DualUDP> bus(1); // PJON device id 1
 
 // Web server related
 const uint8_t web_server_ip[4] = { 192, 1, 1, 169 };
@@ -32,13 +32,11 @@ PJONModuleInterfaceSet interfaces(bus, "SensMon:sm:10 LightCon:lc:20", "m1");
 MIHttpTransfer http_transfer(interfaces, web_client, web_server_ip);
 
 void setup() {
-  printf("Welcome to ModuleMasterHttp (LocalUDP).\n");
-  bus.bus.strategy.set_port(7200); // Must be the same for all devices
+  printf("Welcome to ModuleMasterHttp (DualUDP).\n");
   bus.bus.begin();
 
   // Set frequency of transfer between modules
-  interfaces.sampling_time_settings = 2000;
-  interfaces.sampling_time_outputs = 2000;
+  interfaces.set_transfer_interval(2000);
 }
 
 void loop() {

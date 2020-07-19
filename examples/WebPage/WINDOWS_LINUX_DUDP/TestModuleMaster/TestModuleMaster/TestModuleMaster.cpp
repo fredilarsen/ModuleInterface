@@ -1,12 +1,11 @@
 /* This is a simplified master for the ModuleInterface example setup which includes:
 * 1. A master (Linux or Windows) with NO connection to a web server / database
-* 2. A LUDP<->SWBB switch (Nano or Uno with Ethernet shield and BlinkingRGBSwitch PJON example)
+* 2. A DUDP<->SWBB switch (Nano or Uno with Ethernet shield and BlinkingRGBSwitch PJON example)
 * 3. A module reading the ambient light level (Nano, Uno, ...)
 * 4. A module which turns the light on and off (on-board LED for now) (Nano, Uno, ...)
 */
 
 #define DEBUG_PRINT
-#define PJON_INCLUDE_LUDP
 #define USE_MIVARIABLE
 #define MI_USE_SYSTEMTIME
 
@@ -16,9 +15,10 @@
 #endif
 
 #include <MIMaster.h>
+#include <PJONDualUDP.h>
 
 // PJON related
-PJONLink<LocalUDP> bus(1); // PJON device id 1
+PJONLink<DualUDP> bus(1); // PJON device id 1
 
 // Module interfaces
 PJONModuleInterfaceSet interfaces(bus, "SensMon:sm:10 LightCon:lc:20", "m1");
@@ -62,13 +62,11 @@ void set_modulesettings() {
 }
 
 void setup() {
-  printf("Welcome to TestModuleMasterHttp (LUDP).\n");
-  bus.bus.strategy.set_port(7200); // Must be the same for all devices
+  printf("Welcome to TestModuleMasterHttp (DUDP).\n");
   bus.bus.begin();
 
   // Set frequency of transfer between modules
-  interfaces.sampling_time_settings = 2000;
-  interfaces.sampling_time_outputs = 2000;
+  interfaces.set_transfer_interval(2000);
   
   // Register a callback function for printing incoming values
   interfaces.set_notification_callback(notification_function);
