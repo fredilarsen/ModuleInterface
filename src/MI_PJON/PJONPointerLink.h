@@ -27,8 +27,9 @@ struct PJONPointerLink : public MILink {
 
   uint8_t update() { return 0; /*bus.update();*/ }
   uint16_t send_packet(uint8_t id, const uint8_t *b_id, const char *string, uint16_t length, uint32_t timeout) {
-    return bus_ptr->send_packet_blocking(id, b_id, (char *)string, length, 
-           bus_ptr->config | PJON_PORT_BIT, 0, MI_PJON_MODULE_INTERFACE_PORT, timeout);
+    PJON_Packet_Info pi = bus_ptr->fill_info(id, bus_ptr->config | PJON_PORT_BIT, 0, MI_PJON_MODULE_INTERFACE_PORT);
+    memcpy(&pi.rx.bus_id, b_id, 4);
+    return bus_ptr->send_packet_blocking(pi, (char *)string, length, timeout);
   }
 
   const PJON_Packet_Info &get_last_packet_info() const { return bus_ptr->last_packet_info; }

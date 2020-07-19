@@ -4,6 +4,7 @@
  */
 //#define DEBUG_PRINT
 #include <MIModule.h>
+#include <PJONSoftwareBitBang.h>
 #include <utils/MITime.h>
 
 // Settings

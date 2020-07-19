@@ -4,6 +4,7 @@
  */
 
 #include <MIModule.h>
+#include <PJONDualUDP.h>
 #include <utils/MITime.h>
 
 // WiFi settings

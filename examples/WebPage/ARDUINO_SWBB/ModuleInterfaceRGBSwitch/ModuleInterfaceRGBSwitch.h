@@ -23,6 +23,7 @@
 #include <MIModule.h>
 #include <MI_PJON/PJONPointerLink.h>
 #include <utils/MIUptime.h>
+#include <Ethernet.h>
 #include <utility/w5100.h>
 
 // Pins for blinking RGB LED for showing traffic in each direction

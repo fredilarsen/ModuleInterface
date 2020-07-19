@@ -9,6 +9,7 @@
 */
 
 #include <MIModule.h>
+#include <PJONSoftwareBitBang.h>
 
 PJONLink<SoftwareBitBang> link(4); // PJON device id 4
 

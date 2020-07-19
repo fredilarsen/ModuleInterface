@@ -10,6 +10,7 @@
  */
 
 #include <MIModule.h>
+#include <PJONSoftwareBitBang.h>
 
 // Settings
 #define s_time_interval_ix 0

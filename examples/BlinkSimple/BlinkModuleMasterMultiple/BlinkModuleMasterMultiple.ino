@@ -13,6 +13,7 @@
 #define USE_MIVARIABLE // For named access to variables, constant even if contract changes
 
 #include <MIMaster.h>
+#include <PJONSoftwareBitBang.h>
 
 // Modules
 #define BLINKMODULE  0 // index of the BlinkModule interface if we need to access it directly
@@ -29,8 +30,7 @@ MIVariable s_interval("TimeInt");
 
 void setup() {
   bus.bus.strategy.set_pin(7);
-  interfaces.sampling_time_settings = 3000; // Transfer settings a little faster than default
-  interfaces.sampling_time_outputs = 3000;  // Transfer outputs and inputs faster too
+  interfaces.set_transfer_interval(3000); // Transfer a little faster than default
 }
 
 void loop() { 

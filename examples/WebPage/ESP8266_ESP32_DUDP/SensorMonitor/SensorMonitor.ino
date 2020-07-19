@@ -1,6 +1,7 @@
 /* This ModuleInterface example sketch simply reads and reports some sensor values */
 
 #include <MIModule.h>
+#include <PJONDualUDP.h>
 
 // WiFi settings
 const char* ssid     = "MyNetworkSSID";

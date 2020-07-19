@@ -11,6 +11,7 @@
 //#define DEBUG_PRINT
 #define USE_MIVARIABLE
 #include <MIMaster.h>
+#include <PJONSoftwareBitBang.h>
 
 // PJON related
 PJONLink<SoftwareBitBang> bus(1); // PJON device id 1
@@ -31,8 +32,7 @@ void setup() {
   bus.bus.begin();
   
   // Set frequency of transfer between modules
-  interfaces.sampling_time_settings = 2000;
-  interfaces.sampling_time_outputs = 2000;
+  interfaces.set_transfer_interval(2000); // Transfer a little faster than default
   
   // Register a callback function for printing incoming values
   interfaces.set_notification_callback(notification_function);

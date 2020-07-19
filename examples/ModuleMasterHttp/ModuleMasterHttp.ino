@@ -35,6 +35,7 @@
 
 #define MI_HTTPCLIENT
 #include <MIMaster.h>
+#include <PJONSoftwareBitBang.h>
 
 // PJON related
 PJONLink<SoftwareBitBang> bus(1); // PJON device id 1

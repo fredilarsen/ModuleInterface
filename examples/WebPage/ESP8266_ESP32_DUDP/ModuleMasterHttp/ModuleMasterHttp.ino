@@ -9,6 +9,7 @@
 
 #define MI_HTTPCLIENT
 #include <MIMaster.h>
+#include <PJONDualUDP.h>
 
 // Web server related
 uint8_t web_server_ip[] = { 192, 1, 1, 143};
@@ -36,8 +37,7 @@ void setup() {
   }
   Serial.printf("Now listening at IP %s\n", WiFi.localIP().toString().c_str());
   pjonlink.bus.begin();
-  interfaces.sampling_time_outputs = 1000;
-  interfaces.sampling_time_settings = 1000;
+  interfaces.set_transfer_interval(1000); // Transfer a little faster than default
     
   // Init on-board LED
   pinMode(LED_BUILTIN, OUTPUT);

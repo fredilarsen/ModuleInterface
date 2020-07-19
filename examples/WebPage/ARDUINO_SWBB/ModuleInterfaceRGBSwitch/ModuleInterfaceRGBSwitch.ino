@@ -19,6 +19,8 @@
 */
 
 #include "ModuleInterfaceRGBSwitch.h"
+#include <PJONDualUDP.h>
+#include <PJONSoftwareBitBang.h>
 
 // Ethernet configuration for this device, MAC must be unique!
 byte mac[] = {0xDE, 0x34, 0x34, 0xEF, 0xFE, 0xE1};

@@ -10,7 +10,6 @@
 * from the database in the generic master example.
 */
 
-#define PJON_INCLUDE_LF
 #define MI_USE_SYSTEMTIME
 #define DEBUG_PRINT_TIMES
 #define MI_USE_MQTT
@@ -25,6 +24,7 @@
 #endif
 
 #include <MIMaster.h>
+#include <PJONLocalFile.h>
 #include <MI/ModuleInterfaceMqttTransfer.h>
 
 // PJON related
@@ -81,7 +81,7 @@ void setup(int argc, const char * const argv[]) {
 
   bus.bus.begin();
   interfaces.set_prefix(master_prefix.c_str());
-  interfaces.sampling_time_outputs = interfaces.sampling_time_settings = 20000;
+  interfaces.set_transfer_interval(20000);
   interfaces.set_interface_list("EvtTest:et:20");  
 
   // Set up MQTT connection

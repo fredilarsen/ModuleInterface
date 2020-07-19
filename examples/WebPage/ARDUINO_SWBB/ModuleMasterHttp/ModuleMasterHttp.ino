@@ -9,6 +9,7 @@
 
 #define MI_HTTPCLIENT
 #include <MIMaster.h>
+#include <PJONSoftwareBitBang.h>
 
 // PJON related
 PJONLink<SoftwareBitBang> bus(1); // PJON device id 1
@@ -34,8 +35,7 @@ void setup() {
   bus.bus.begin();
   
   // Set frequency of transfer between modules
-  interfaces.sampling_time_settings = 1000;
-  interfaces.sampling_time_outputs = 1000;
+  interfaces.set_transfer_interval(1000); // Transfer a little faster than default
   
   // Init on-board LED
   pinMode(LED_BUILTIN, OUTPUT);

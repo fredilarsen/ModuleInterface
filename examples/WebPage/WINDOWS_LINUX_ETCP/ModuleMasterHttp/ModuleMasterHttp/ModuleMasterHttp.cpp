@@ -11,14 +11,13 @@
 #define ETCP_SINGLE_DIRECTION
 //#define ETCP_SINGLE_SOCKET_WITH_ACK
 
-#define PJON_INCLUDE_ETCP
-
 #ifdef _WIN32
   // MS compiler does not like PJON_MAX_PACKETS=0 in PJON
   #define PJON_MAX_PACKETS 1
 #endif
 
 #include <MIMaster.h>
+#include <PJONEthernetTCP.h>
 
 // PJON related
 PJONLink<EthernetTCP> bus(45); // PJON device id 1
@@ -46,8 +45,7 @@ void setup() {
   bus.bus.begin();
 
   // Set frequency of transfer between modules
-  interfaces.sampling_time_settings = 1000;
-  interfaces.sampling_time_outputs = 1000;
+  interfaces.set_transfer_interval(1000); // Transfer a little faster than default
 }
 
 void loop() {

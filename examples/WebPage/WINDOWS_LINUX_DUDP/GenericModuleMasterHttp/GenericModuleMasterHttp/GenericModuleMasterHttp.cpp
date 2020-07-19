@@ -10,7 +10,6 @@
 *    connection to/from systems like Home Assistant and OpenHAB.
 */
 
-#define PJON_INCLUDE_DUDP
 #define MI_USE_SYSTEMTIME
 #define DEBUG_PRINT_TIMES
 #define MI_USE_MQTT
@@ -30,6 +29,7 @@
 #endif
 
 #include <MIMaster.h>
+#include <PJONDualUDP.h>
 
 // PJON related
 PJONLink<DualUDP> bus; // PJON device id 1

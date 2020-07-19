@@ -3,7 +3,6 @@
    flagged to be transferred earlier than the first scheduled transfer.
 */
 
-#define PJON_INCLUDE_LF
 #define MI_USE_SYSTEMTIME
 #define DEBUG_PRINT_TIMES
 //#define DEBUG_PRINT_SETTINGSYNC
@@ -15,6 +14,7 @@
 #endif
 
 #include <MIModule.h>
+#include <PJONLocalFile.h>
 #include <utils/MITime.h>
 #include <utils/MIUtilities.h>
 

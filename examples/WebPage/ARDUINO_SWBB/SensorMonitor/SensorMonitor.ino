@@ -1,6 +1,7 @@
 /* This ModuleInterface example sketch simply reads and reports some sensor values */
 
 #include <MIModule.h>
+#include <PJONSoftwareBitBang.h>
 
 PJONLink<SoftwareBitBang> link(10); // PJON device id 10
 

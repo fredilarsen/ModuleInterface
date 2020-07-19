@@ -20,6 +20,7 @@
 #define USE_MIVARIABLE // For named access to variables, constant even if contract changes
  
 #include <MIMaster.h>
+#include <PJONSoftwareBitBang.h>
 
 // Modules
 #define BLINKMODULE 0 // index of the BlinkModule interface if we need to access it directly
@@ -46,7 +47,7 @@ void setup() {
   bus.bus.strategy.set_pin(7);
   interfaces.set_receiver(receive_function);
   interfaces.set_notification_callback(notification_function);
-  interfaces.sampling_time_outputs = 1000;
+  interfaces.set_transfer_interval(1000);
   
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);

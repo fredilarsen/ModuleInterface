@@ -8,6 +8,7 @@
  */
 
 #include <MIModule.h>
+#include <PJONSoftwareBitBang.h>
 
 // Settings
 #define iTimeIntervalIx 0
