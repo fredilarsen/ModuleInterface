@@ -8,6 +8,9 @@
 
 #include <ArduinoJson.h>
 
+// Include correct definition of the Client class
+#include <strategies/EthernetTCP/EthernetTCP.h>
+
 // See if we have to minimize memory usage by splitting operations into smaller parts
 #if defined(ARDUINO) && !defined(PJON_ESP)
 #define MI_SMALLMEM
