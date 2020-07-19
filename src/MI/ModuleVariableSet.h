@@ -260,15 +260,16 @@ public:
   uint32_t get_contract_id() const { return contract_id; }
 
   // Returns true if values registered, false if the values do not conform to the current contract id
-  bool set_values(const uint8_t *values, const uint8_t length) { // contract_id(4), num_variables(1), <variables>
+  bool set_values(const uint8_t *values, const uint8_t length, uint8_t *read_length = NULL) { // contract_id(4), num_variables(1), <variables>
     // Get number of variables and contract id
+    if (read_length) *read_length = 0;
     if (length < 5) return false; // Invalid message
     const uint8_t *p = values;
     uint8_t numvar = *(p+4);
     bool event = (numvar & 0b10000000) != 0;
     if (event) numvar = (uint8_t) (numvar & 0b01111111); // Remove event bit
     uint32_t c_id;
-    memcpy(&c_id, p, sizeof c_id);    
+    memcpy(&c_id, p, sizeof c_id);
     if (c_id != contract_id || (numvar > num_variables)) {
       invalidate_contract();
       #ifdef DEBUG_PRINT
@@ -276,12 +277,14 @@ public:
       #endif
       return false;
     }
+    p += 5; // Skip over contract id and variable count
     if (numvar == 0) {
       #ifdef DEBUG_PRINT
 	    if (num_variables > 0) {
         DPRINT(F("--> set_values got no values, not updated on sender side yet. Length = ")); DPRINTLN(length);
 	    }
       #endif
+      if (read_length) *read_length = (p - values);
       return true; // Conforms to contract, but values not available yet
     }
     #ifdef DEBUG_PRINT
@@ -291,7 +294,6 @@ public:
     #endif
 
     // Data corresponds to current contract, so parse values
-    p += 5; // Skip over contract id and variable count
     for (uint8_t i = 0; i < numvar && p - values < length; i++) {
       uint8_t varpos = i;
       if (numvar != num_variables) { varpos = *p; p++; } // Variable number included
@@ -336,6 +338,8 @@ public:
         if (event) variables[varpos].set_event(); // Set event flag on receiving side
       }
     }
+    if (read_length) *read_length = (p - values);
+    
     // Flag as updated / ready for use only after we have got a full set
     if (numvar == num_variables) set_updated();
     #if defined(IS_MASTER) && defined(MASTER_MULTI_TRANSFER)
@@ -346,9 +350,10 @@ public:
 
   // Get serialized values, usually all, but can be limited to values marked as events
   // and/or values marked as changed. If setting both events_only and changes_only,
-  // both will be included.
+  // both will be included. The alloc_extra can be specified to make sure that if a buffer
+  // has to be allocated, extra space is included to avoid expanding later.
   void get_values(BinaryBuffer &values, uint8_t &length, uint8_t header_byte,
-                  bool events_only = false, bool changes_only = false) const {
+                  bool events_only = false, bool changes_only = false, uint8_t alloc_extra = 0) const {
     length = 0;
 
     // Determine the number of variables to be serialized, all or a subset
@@ -366,7 +371,7 @@ public:
     }
 
     // Serialize
-    if (values.allocate(6 + total_len)) {
+    if (values.allocate(6 + total_len + alloc_extra)) {
       // Header
       length = 6 + total_len;
       uint8_t *p = values.get();

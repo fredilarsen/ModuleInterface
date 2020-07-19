@@ -15,16 +15,16 @@ enum ModuleCommand {
   mcSetOutputContract,
 
   mcSendSettings,         // 7
-  mcSendInputs,
-  mcSendOutputs,
+//  mcSendInputs,
+//  mcSendOutputs, // deactivated, now outputs are sent along with status, as response to settings
   mcSendStatus, // Master is asking regularly if the module has anything to report that is not available in the variable sets
 
-  mcSetSettings,          // 11
+  mcSetSettings,          // 9
   mcSetInputs,
   mcSetOutputs,
   mcSetStatus,
 
-  mcSetTime               // 15
+  mcSetTime               // 13
 };
 
 #define MAX_MODULE_NAME_LENGTH 8
@@ -68,6 +68,9 @@ static void dummy_notification_function(NotificationType /*notification_type*/, 
 
 
 #define UTC_FIRST_ACCEPTED 1483228800ul
+
+  // The length of a status packet
+#define MI_STATUS_LEN 7 
 
 /* Description of principle for bidirectional sync of settings:
 1. All modules get new settings from the master which retrieves them from a database regularly.
@@ -315,26 +318,21 @@ public:
         outputs.set_variables(&message[1], length-1);
         notify(ntNewOutputContract, this);
         break;
-      case mcSetOutputs:
-        outputs.set_values(&message[1], length-1);
-        if (outputs.is_updated()) notify(ntNewOutputs, this);
+      case mcSetOutputs: {
+          // Read outputs from module
+          uint8_t read_length = 0;
+          bool ok = outputs.set_values(&message[1], length-1, &read_length);
+          if (outputs.is_updated()) notify(ntNewOutputs, this);
+
+          // Read status from module, postfixed after outputs
+          if (ok && length == read_length + 1 + MI_STATUS_LEN) { // Read_length was set correctly, and status is present
+            set_status(&message[1 + read_length], length - read_length - 1);
+            notify(ntNewStatus, this);
+          }
+        }
         break;
       case mcSetStatus: set_status(&message[1], length-1); notify(ntNewStatus, this); break;
       #endif
-      case mcSetSettings:
-        if (!settings.set_values(&message[1], length-1)) // Set or clear contract mismatch bit depending on success
-           status_bits |= CONTRACT_MISMATCH_SETTINGS;
-        #ifndef IS_MASTER     
-        else {
-          status_bits &= ~CONTRACT_MISMATCH_SETTINGS; // Clear "missing settings contract" flag
-          if (settings.is_updated()) {
-            status_bits &= ~MISSING_SETTINGS & ~MODIFIED_SETTINGS; // Clear "missing" and "modified" flags
-            notify(ntNewSettings, this);
-            settings.clear_events();
-          }
-        }
-        #endif
-         break;
       #ifndef IS_MASTER
       case mcSetInputs:
         if (!inputs.set_values(&message[1], length-1)) // Set or clear contract mismatch bit depending on success
@@ -365,10 +363,6 @@ public:
       else if (message[0] == mcSetOutputContract) {
         dname(); DPRINT(F("Outputs contract: "));
         outputs.debug_print_contract();
-      }
-      else if (message[0] == mcSetSettings) {
-        dname(); DPRINT(F("Settings: "));
-        settings.debug_print_values();
       }
       else if (message[0] == mcSetInputs) {
         dname(); DPRINT(F("Inputs: "));
@@ -409,27 +403,51 @@ public:
       case mcSendOutputContract:
         outputs.get_variables(response, response_length, mcSetOutputContract);
         break;
-      case mcSendOutputs:
+/*      case mcSendOutputs:
         notify(ntSampleOutputs, this);
         outputs.get_values(response, response_length, mcSetOutputs);
         outputs.clear_events();  // Will be transferred normally, so clear event flag
         outputs.clear_changed(); // Changes are detected between each transfer
-        break;
+        break;*/
       case mcSendStatus:
         notify(ntSampleStatus, this);
-        get_status(response, response_length);
+        get_status(response, 0, response_length);
         break;
       #endif
+      case mcSetSettings:
+        if (!settings.set_values(&message[1], length-1)) // Set or clear contract mismatch bit depending on success
+           status_bits |= CONTRACT_MISMATCH_SETTINGS;
+        #ifndef IS_MASTER
+        else {
+          status_bits &= ~CONTRACT_MISMATCH_SETTINGS; // Clear "missing settings contract" flag
+          if (settings.is_updated()) {
+            status_bits &= ~MISSING_SETTINGS & ~MODIFIED_SETTINGS; // Clear "missing" and "modified" flags
+            notify(ntNewSettings, this);
+            settings.clear_events();
+          }
+        }
+
+        // Respond with outputs as a response to settings
+        notify(ntSampleOutputs, this);
+        outputs.get_values(response, response_length, mcSetOutputs, false, false, MI_STATUS_LEN);
+        outputs.clear_events();  // Will be transferred normally, so clear event flag
+        outputs.clear_changed(); // Changes are detected between each transfer
+
+        // Append status at the end of the outputs packet
+        notify(ntSampleStatus, this);
+        get_status(response, response_length, response_length);
+        #endif
+        break;
       case mcSendSettings:
         notify(ntSampleSettings, this);
         settings.get_values(response, response_length, mcSetSettings, false, !is_master());
         break;
-      #ifdef IS_MASTER
+/*      #ifdef IS_MASTER
       case mcSendInputs:
         notify(ntSampleInputs, this);
         inputs.get_values(response, response_length, mcSetInputs);
         break;
-      #endif
+      #endif*/
       default: return false; // Unrecognized message
     }
 
@@ -437,12 +455,15 @@ public:
     if (message[0] == mcSendSettings) { // Can be called for master, and for module if it has own GUI
       dname(); DPRINT(F("Send Settings: "));
       settings.debug_print_values();
+    } else if (message[0] == mcSetSettings) {
+      dname(); DPRINT(F("Settings: "));
+      settings.debug_print_values();
     } else
     #ifdef IS_MASTER
-    if (message[0] == mcSendInputs) {
+/*    if (message[0] == mcSendInputs) {
       dname(); DPRINT(F("Send Inputs: "));
       inputs.debug_print_values();
-    }
+    }*/
     #else
     if (message[0] == mcSendSettingContract) {
       dname(); DPRINT(F("Send Settings contract: "));
@@ -456,10 +477,10 @@ public:
       dname(); DPRINT(F("Send Outputs contract: "));
       outputs.debug_print_contract();
     } else
-    if (message[0] == mcSendOutputs) {
-      dname(); DPRINT(F("Send Outputs: "));
-      outputs.debug_print_values();
-    } else
+ //   if (message[0] == mcSendOutputs) {
+ //     dname(); DPRINT(F("Send Outputs: "));
+ //     outputs.debug_print_values();
+//    } else
     if (message[0] == mcSendStatus) {
       dname(); DPRINT(F("Send Status: ")); DPRINTLN(status_bits);
     }
@@ -531,17 +552,21 @@ friend class ModuleInterfaceSet;
   notify_function notify = dummy_notification_function;
 
   #ifndef IS_MASTER
-  void get_status(BinaryBuffer &message, uint8_t &length) {
+
+
+  void get_status(BinaryBuffer &message, uint8_t start, uint8_t &length) {
     // Show in status bits if settings have been changed on module side. This will trigger master to ask for them.
     if (settings.is_updated() && settings.is_changed()) status_bits |= MODIFIED_SETTINGS; else status_bits &= ~MODIFIED_SETTINGS;
     
-    if (message.allocate(7)) {
-      message.get()[0] = mcSetStatus;
-      message.get()[1] = (uint8_t) status_bits;
-      message.get()[2] = (uint8_t) mvs_out_of_memory;
+    if (message.allocate(start + MI_STATUS_LEN)) {
+      uint8_t i = start;
+      if (start == 0) message.get()[i++] = mcSetStatus; // Add command only if dedicated packet
+      message.get()[i++] = (uint8_t) status_bits;
+      message.get()[i++] = (uint8_t) mvs_out_of_memory;
       uint32_t uptime_s = get_uptime_s();
-      memcpy(&(message.get()[3]), &uptime_s, sizeof uptime_s);
-      length = 7;
+      memcpy(&(message.get()[i]), &uptime_s, sizeof uptime_s);
+      i += sizeof uptime_s;
+      length = start + i;
     } else {
       length = 0; mvs_out_of_memory = true;
       #ifdef DEBUG_PRINT

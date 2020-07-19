@@ -25,6 +25,10 @@ protected:
   // External systems to transfer to/from
   uint8_t external_count = 0;
   MITransferBase **external_transfer = NULL;
+
+    // These settings specify how often to transfer settings, outputs and inputs
+  uint16_t sampling_time = 10000;
+  uint32_t last_sampled = 0;
 public:
   PJONModuleInterfaceSet(const char *prefix = NULL) : ModuleInterfaceSet(prefix) { init(); }
   PJONModuleInterfaceSet(MILink &bus, const uint8_t num_interfaces, const char *prefix = NULL) : ModuleInterfaceSet(prefix) {
@@ -122,30 +126,40 @@ public:
     external_transfer = transfer;
   }
 
+  // Setting and getting the interval between transfers of settings, outputs and inputs
+  void set_transfer_interval(uint32_t interval_millis) { sampling_time = interval_millis; }
+  uint32_t get_transfer_interval() { return sampling_time; }
+
   void update_contracts() { 
     for (uint8_t i = 0; i < num_interfaces; i++) {
       ((PJONModuleInterface*) (interfaces[i]))->update_contract(1); 
       check_incoming();
     }
   }
+/*  
   void update_values() { 
     for (uint8_t i = 0; i < num_interfaces; i++) {
       ((PJONModuleInterface*) (interfaces[i]))->update_values(1); 
       check_incoming();
     }
   }
+*/  
+  // This sends settings (can be empty) to each module, and receives a reponse containing 
+  // outputs (can be empty) and status.
   void update_settings() { 
     for (uint8_t i = 0; i < num_interfaces; i++) {
       ((PJONModuleInterface*) (interfaces[i]))->update_settings(1); 
       check_incoming();
     }
   }
+/*  
   void update_statuses() {
     for (uint8_t i = 0; i < num_interfaces; i++) {
       ((PJONModuleInterface*) (interfaces[i]))->update_status(1);
       check_incoming();
     }
   }
+*/  
   void send_settings() { 
     for (uint8_t i = 0; i < num_interfaces; i++) {
       ((PJONModuleInterface*) (interfaces[i]))->send_settings(); 
@@ -296,14 +310,15 @@ public:
     if (diff > 500) printf("Long time (%dms) in update_frequent!\n", diff);
     static uint32_t last_print = millis();
     #endif
-    if (initiated && mi_interval_elapsed(last_sampled_outputs, sampling_time_outputs)) {
+    if (initiated && mi_interval_elapsed(last_sampled, sampling_time)) {
       #ifdef DEBUG_PRINT_TIMES
       uint32_t printdiff = (uint32_t)(millis() - last_print);
       last_print = millis();
       #endif
       start = millis();
-      transfer_outputs();  // Get outputs and send to subscribing modules
-      transfer_settings(); // Transfer settings to and from the modules
+      // Transfer settings to and from the modules, get outputs and status from the modules,
+      // send to subscribing modules
+      transfer_all();  // Get outputs and send to subscribing modules
       last_total_usage_ms = (uint32_t)(millis()-start);
       #ifdef DEBUG_PRINT_TIMES
       printf("Spent %dms in interval_transfer, %dms since last.\n", last_total_usage_ms, printdiff);
@@ -327,9 +342,9 @@ public:
     handle_events();
   }
 
-  void transfer_outputs() {
-    // Get outputs from modules
-    update_values();
+  void transfer_all() {
+    // Send settings and get outputs and status from modules
+    transfer_settings();
     update_frequent();
 
     // Transfer outputs from modules to inputs of other modules
@@ -341,10 +356,6 @@ public:
 
     // Send updated inputs to all modules
     send_inputs();
-    update_frequent();
-
-    // Get fresh status from each module
-    update_statuses();
     update_frequent();
 
     // Broadcast time to all modules with a few minutes interval
@@ -432,10 +443,6 @@ public:
     // Let the interface handle the message
     return ((PJONModuleInterface*) interfaces[ix])->handle_message(payload, length, packet_info);
   }
-
-  // These settings specify how often to transfer settings and outputs
-  uint16_t sampling_time_settings = 10000, sampling_time_outputs = 10000;
-  uint32_t last_sampled_settings = 0, last_sampled_outputs = 0;
 };
 
 // PJON receive callback function

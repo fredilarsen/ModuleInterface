@@ -20,13 +20,16 @@ bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &clien
     DPRINT("Modules: '"); DPRINT(module_list.c_str()); DPRINTLN("'");
     #endif
 
+    uint32_t interval = interfaces.get_transfer_interval();
     key = interfaces.get_prefix(); key += "IntSettings";
     uint32_t t = (uint32_t)root[key];
-    if (t != 0) interfaces.sampling_time_settings = t;
+    if (t != 0) interval = t;
 
     key = interfaces.get_prefix(); key += "IntOutputs";
     t = (uint32_t)root[key];
-    if (t != 0) interfaces.sampling_time_outputs = t;
+    if (t != 0) interval = t;
+    
+    interfaces.set_transfer_interval(interval);
 
     status = module_list.length() > 5;
   } else {

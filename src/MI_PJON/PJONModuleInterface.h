@@ -201,7 +201,7 @@ public:
       pjon->receive();
     }
   }
-
+/*
   void update_values(const uint32_t interval_ms) {
     if (outputs.got_contract() && outputs.get_num_variables() != 0 &&
       (outputs.requested_time == 0 || ((uint32_t)(millis()-outputs.requested_time) >= interval_ms))) {
@@ -209,7 +209,7 @@ public:
       if (send_outputs_request()) receive_packet(get_request_timeout(), mcSetOutputs);
     }
   }
-
+*/
   void update_settings(const uint32_t interval_ms) {
     if (((status_bits & MODIFIED_SETTINGS) != 0) && settings.got_contract() && settings.get_num_variables() != 0 &&
       (settings.requested_time == 0 || ((uint32_t)(millis()-settings.requested_time) >= interval_ms))) {
@@ -218,12 +218,14 @@ public:
     }
   }
 
+/*
   void update_status(const uint32_t interval_ms) {
     if (got_contract() && (status_requested_time == 0 || ((uint32_t)(millis()-status_requested_time) >= interval_ms))) {
       before_status_requested_time = millis();
       if (send_status_request()) receive_packet(get_request_timeout(), mcSetStatus);
     }
   }
+*/
 
   // Sending of data from master to remote module
   void send_settings() {
@@ -272,8 +274,8 @@ public:
   bool send_input_contract_request() { return send_request(mcSendInputContract, inputs.contract_requested_time); }
   bool send_output_contract_request() { return send_request(mcSendOutputContract, outputs.contract_requested_time); }
   bool send_settings_request() { return send_request(mcSendSettings, settings.requested_time); }
-  bool send_inputs_request() { return send_request(mcSendInputs, inputs.requested_time); }
-  bool send_outputs_request() { return send_request(mcSendOutputs, outputs.requested_time); }
+//  bool send_inputs_request() { return send_request(mcSendInputs, inputs.requested_time); }
+//  bool send_outputs_request() { return send_request(mcSendOutputs, outputs.requested_time); }
   bool send_status_request() { return send_request(mcSendStatus, status_requested_time); }
   #endif // IS_MASTER
 
@@ -407,8 +409,8 @@ public:
     settings.get_values(response, response_length, mcSetSettings, true);
     if (response_length > 0) {
 #ifdef DEBUG_PRINT
-      dname(); DPRINT("send_setting_events, length "); DPRINT(response_length); DPRINT(", module id ");
-      DPRINTLN(remote_id);
+      dname(); DPRINT("send_setting_events, length "); DPRINT(response_length); DPRINT(", master id ");
+      DPRINTLN(master_id);
 #endif
       if (send(master_id, master_bus_id, response.get(), response_length)) settings.clear_events();
     }
@@ -427,7 +429,7 @@ public:
       BinaryBuffer response;
       notify(ntSampleStatus, this);
       uint8_t response_length = 0;
-      get_status(response, response_length);
+      get_status(response, response_length, response_length);
       if (master_id != PJON_NOT_ASSIGNED && master_id != 0)
         // We know the address of the master, so send directed. This will potentially
         // establish a route through multiple layers of routers.
