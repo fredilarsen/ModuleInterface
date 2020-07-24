@@ -23,7 +23,6 @@
 
 // Save some RAM by reducing PJON packet size, and by including only the strategy in use
 #define PJON_PACKET_MAX_LENGTH 50
-#define PJON_INCLUDE_SWBB
 
 #include <MIModule.h>
 #include <PJONSoftwareBitBang.h>

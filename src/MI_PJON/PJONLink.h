@@ -11,7 +11,7 @@ struct PJONLink : public MILink {
   PJONLink<Strategy>(uint8_t device_id) { bus.set_id(device_id); }
   PJONLink<Strategy>(const uint8_t *bus_id, uint8_t device_id) {
     bus.set_id(device_id); bus.set_bus_id(bus_id);
-    if(memcmp(bus_id, PJONTools::localhost(), 4)) bus.set_shared_network(true);
+    if (memcmp(bus_id, PJONTools::localhost(), 4)) bus.set_shared_network(true);
   }
 
   // These functions are required by the base class:
@@ -23,7 +23,7 @@ struct PJONLink : public MILink {
   uint16_t send_packet(uint8_t id, const uint8_t *b_id, const char *string, uint16_t length, uint32_t timeout) {
     PJON_Packet_Info pi = bus.fill_info(id, bus.config | PJON_PORT_BIT, 0, MI_PJON_MODULE_INTERFACE_PORT);
     memcpy(&pi.rx.bus_id, b_id, 4);
-   return bus.send_packet_blocking(pi, (char *)string, length, timeout);
+    return bus.send_packet_blocking(pi, (char *)string, length, timeout);
   }
 
   const PJON_Packet_Info &get_last_packet_info() const { return bus.last_packet_info; }

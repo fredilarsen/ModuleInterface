@@ -47,7 +47,7 @@ void setup() {
   bus.bus.strategy.set_pin(7);
   interfaces.set_receiver(receive_function);
   interfaces.set_notification_callback(notification_function);
-  interfaces.set_transfer_interval(1000);
+  interfaces.set_transfer_interval(10000);
   
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);

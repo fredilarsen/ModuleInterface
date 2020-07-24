@@ -162,7 +162,9 @@ public:
 */  
   void send_settings() { 
     for (uint8_t i = 0; i < num_interfaces; i++) {
-      ((PJONModuleInterface*) (interfaces[i]))->send_settings(); 
+      // Send settings, then wait for outputs
+      if (((PJONModuleInterface*) interfaces[i])->send_settings())
+        ((PJONModuleInterface*) interfaces[i])->receive_packet(((PJONModuleInterface*) interfaces[i])->get_request_timeout(), mcSetOutputs);
       check_incoming();
     }
   }

@@ -228,19 +228,20 @@ public:
 */
 
   // Sending of data from master to remote module
-  void send_settings() {
+  bool send_settings() {
     #ifdef DEBUG_PRINT
     if (settings.got_contract() && !settings.is_updated() && settings.get_num_variables() != 0) {
       dname(); DPRINTLN(F("Settings not sent because not updated yet."));
     }
     #endif
-    if (!settings.got_contract() || !settings.is_updated() || settings.get_num_variables() == 0) return;
+    if (!settings.got_contract() || !settings.is_updated() || settings.get_num_variables() == 0) return false;
     notify(ntSampleSettings, this);
     BinaryBuffer response;
     uint8_t response_length = 0;
     settings.get_values(response, response_length, mcSetSettings);
-    send(remote_id, remote_bus_id, response.get(), response_length);
-    status_bits &= ~MISSING_SETTINGS; // Assume they were received until next status saying they were not
+    bool acked = send(remote_id, remote_bus_id, response.get(), response_length);
+    if (acked) status_bits &= ~MISSING_SETTINGS; // Assume they were received until next status saying they were not
+    return acked;
   }
 
   void send_inputs() {
