@@ -40,7 +40,7 @@
 
 // Illustrating the use of PROGMEM to save RAM (especially useful if there are many parameters)
 const char PROGMEM settings[] = "TimeInt:u4 Duty:u1";
-const char PROGMEM inputs[]   = "HeartB:u1";
+const char PROGMEM inputs[]   = "b1HeartB:u1";
 const char PROGMEM outputs[]  = "Uptime:u4 HeartB:u1";
 
 PJONLink<SoftwareBitBang> bus(4); // PJON device id 4
