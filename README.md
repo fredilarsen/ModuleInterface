@@ -1,4 +1,4 @@
-# ModuleInterface v4.0 alpha
+# ModuleInterface v4.0RC1
 Do you want to create a communication bus with inexpensive IoT devices in a simple way? 
 
 Would you like web pages to configure and inspect the devices, with trend plots and historical storage?
