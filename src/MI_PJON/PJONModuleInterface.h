@@ -234,11 +234,13 @@ public:
       dname(); DPRINTLN(F("Settings not sent because not updated yet."));
     }
     #endif
-    if (!settings.got_contract() || !settings.is_updated() || settings.get_num_variables() == 0) return false;
+    // Do not send until contract received and either values updated or no values to update
+    if (!settings.got_contract() || (!settings.is_updated() && settings.get_num_variables() == 0)) return false;
     notify(ntSampleSettings, this);
     BinaryBuffer response;
     uint8_t response_length = 0;
     settings.get_values(response, response_length, mcSetSettings);
+    outputs.before_requested_time = millis(); // The new scheme where settings are sent and outputs received as response
     bool acked = send(remote_id, remote_bus_id, response.get(), response_length);
     if (acked) status_bits &= ~MISSING_SETTINGS; // Assume they were received until next status saying they were not
     return acked;
@@ -250,13 +252,13 @@ public:
       dname(); DPRINTLN(F("Inputs not sent because not updated yet."));
     }
     #endif
-    if (!inputs.got_contract() || !inputs.is_updated()) return;
+    status_bits &= ~MISSING_INPUTS; // Assume they were received until next status saying they were not
+    if (!inputs.got_contract() || !inputs.is_updated() || inputs.get_num_variables() == 0) return;
     notify(ntSampleInputs, this);
     BinaryBuffer response;
     uint8_t response_length = 0;
     inputs.get_values(response, response_length, mcSetInputs);
     send(remote_id, remote_bus_id, response.get(), response_length);
-    status_bits &= ~MISSING_INPUTS; // Assume they were received until next status saying they were not
   }
 
   // Sending of requests

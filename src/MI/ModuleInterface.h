@@ -116,8 +116,8 @@ public:
   bool out_of_memory = false;  // If a module has reached an out-of-memory exception (but still can report back)
   ModuleVariableSet *confirmed_settings = NULL; // Configuration parameters received from the module
   ModuleCommand last_incoming_cmd = mcUnknownCommand;  // Cmd in last received packet
-  uint32_t before_status_requested_time = 0; // Not used internally, used by derived classes for statistics
-  uint32_t status_received_time = 0; // Time of last received status
+//  uint32_t before_status_requested_time = 0; // Not used internally, used by derived classes for statistics
+//  uint32_t status_received_time = 0; // Time of last received status
   #endif
 
   // Time sync support
@@ -325,7 +325,7 @@ public:
           if (outputs.is_updated()) notify(ntNewOutputs, this);
 
           // Read status from module, postfixed after outputs
-          if (ok && length == read_length + 1 + MI_STATUS_LEN) { // Read_length was set correctly, and status is present
+          if (ok && length == read_length + 1 + MI_STATUS_LEN -1) { // Read_length was set correctly, and status is present
             set_status(&message[1 + read_length], length - read_length - 1);
             notify(ntNewStatus, this);
           }
@@ -617,7 +617,7 @@ friend class ModuleInterfaceSet;
   void set_status(const uint8_t *message, const uint8_t length) {
     if (length == 6) {
       last_alive = millis(); if (last_alive == 0) last_alive = 1;
-      status_received_time = millis();
+//      status_received_time = millis();
       comm_failures = 0;
       status_bits = message[0];
       out_of_memory = message[1];

@@ -310,16 +310,18 @@ uint32_t difftime(const uint32_t start, const uint32_t end) {
 }
 
 uint32_t get_max_request_time(ModuleInterface *interface) {
-  // Find max time of request of outputs, settings or status
-  uint32_t statustime = difftime(interface->before_status_requested_time, interface->status_received_time),
-           outputtime = difftime(interface->outputs.before_requested_time, interface->outputs.get_updated_time_ms()),
-           maxtime = statustime > outputtime ? statustime : outputtime;
+  // Find response time
+  uint32_t settings_output_time = difftime(interface->outputs.before_requested_time, interface->outputs.get_updated_time_ms());
+
+  // NOTE: After elimination of scheduled dedicated status requests, unfortunately the 
+  // packet transfer time is included in response time measurement, making modules with 
+  // much data showing as having lower response time. Perhaps change name to "transfer time"?
 
   // NOTE: Settings are requested when the module flags that is has modified settings.
   // Otherwise settings are retrived from the web server, not the module.
   // Therefore we cannot use the time from request is sent until modification time because
   // request time will stay static and modified time will be updated regularly.
-  return maxtime;
+  return settings_output_time;
 }
 
 void add_module_status(ModuleInterface *interface, DynamicJsonDocument &root) {
