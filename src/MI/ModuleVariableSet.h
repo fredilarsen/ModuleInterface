@@ -61,7 +61,8 @@ private:
   }
 
   uint32_t calculate_contract_id() const { // A contract id that can be used to detect a changed contract
-    uint32_t id = 0x33333333; // Non-zero to be able to accept a contract with no variables
+    // Calculate CRC32 of names and types
+    uint32_t id = num_variables ? 0 : 0x33333333; // Non-zero to be able to accept a contract with no variables
     char name_buf[MVAR_COMPOSITE_NAME_LENGTH + 1];
     uint8_t len;
     for (uint8_t i = 0; i < num_variables; i++) {
@@ -73,12 +74,10 @@ private:
       if (!get_next_word_from_contract(source_pos, len, name_buf, sizeof name_buf)) return 0;
       remove_type(name_buf, len);
       #endif
-      ((uint8_t*) &id)[0] += variables[i].get_size();
-      ((uint8_t*) &id)[1] += len;
-      ((uint8_t*) &id)[2] += (uint8_t) variables[i].get_type();
-      for (uint8_t j=0; j<len; j++) ((uint8_t*) &id)[3] ^= name_buf[j]; // XOR of chars in names
+      id += PJON_crc32::compute((const uint8_t*)name_buf, len, id);
+      len = (uint8_t) variables[i].get_type();
+      id += PJON_crc32::compute(&len, 1, id);
     }
-    // TODO: Use 32 bit CRC of all above instead of sums and XOR?
     return id;
   }
 

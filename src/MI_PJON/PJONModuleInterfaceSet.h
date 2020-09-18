@@ -132,18 +132,11 @@ public:
 
   void update_contracts() { 
     for (uint8_t i = 0; i < num_interfaces; i++) {
-      ((PJONModuleInterface*) (interfaces[i]))->update_contract(1); 
+      ((PJONModuleInterface*) (interfaces[i]))->update_contract(interfaces[i]->is_active() ? 1000 : 20000);
       check_incoming();
     }
   }
-/*  
-  void update_values() { 
-    for (uint8_t i = 0; i < num_interfaces; i++) {
-      ((PJONModuleInterface*) (interfaces[i]))->update_values(1); 
-      check_incoming();
-    }
-  }
-*/  
+
   // This sends settings (can be empty) to each module, and receives a reponse containing 
   // outputs (can be empty) and status.
   void update_settings() { 
@@ -152,14 +145,7 @@ public:
       check_incoming();
     }
   }
-/*  
-  void update_statuses() {
-    for (uint8_t i = 0; i < num_interfaces; i++) {
-      ((PJONModuleInterface*) (interfaces[i]))->update_status(1);
-      check_incoming();
-    }
-  }
-*/  
+
   void send_settings() { 
     for (uint8_t i = 0; i < num_interfaces; i++) {
       // Send settings, then wait for outputs
@@ -191,7 +177,7 @@ public:
       // Get inputs and send them to modules
       transfer_events_from_outputs_to_inputs(); // Copy received module outputs to module inputs
       get_input_events_from_external();         // Get from external to inputs- TODO happens async when received?
-//TODO check input events, how does it work?    
+//TODO check input events?    
       send_input_events();                      // Send to modules
       clear_input_events();                     // Clear after sending
     }

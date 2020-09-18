@@ -5,9 +5,9 @@
 
 // A timeout to make sure a lost request or reply does not stop everything permanently
 #define MI_REQUEST_TIMEOUT 5000000        // (us) How long to wait for an active module to reply to a request
-#define MI_REDUCED_REQUEST_TIMEOUT 10000  // (us) How long to try to contact a module that is marked as inactive
+#define MI_REDUCED_REQUEST_TIMEOUT 20000  // (us) How long to try to contact a module that is marked as inactive
 #define MI_SEND_TIMEOUT 5000000           // (us) How long to wait for an active device to PJON_ACK
-#define MI_REDUCED_SEND_TIMEOUT 1000      // (us) How long to try to contact a module that is marked as inactive
+#define MI_REDUCED_SEND_TIMEOUT 20000     // (us) How long to try to contact a module that is marked as inactive
 
 // The well-known PJON port number for ModuleInterface packets, used to quickly separate ModuleInterface related messages from others
 #define MI_PJON_MODULE_INTERFACE_PORT 100
@@ -201,15 +201,7 @@ public:
       pjon->receive();
     }
   }
-/*
-  void update_values(const uint32_t interval_ms) {
-    if (outputs.got_contract() && outputs.get_num_variables() != 0 &&
-      (outputs.requested_time == 0 || ((uint32_t)(millis()-outputs.requested_time) >= interval_ms))) {
-      outputs.before_requested_time = millis();
-      if (send_outputs_request()) receive_packet(get_request_timeout(), mcSetOutputs);
-    }
-  }
-*/
+
   void update_settings(const uint32_t interval_ms) {
     if (((status_bits & MODIFIED_SETTINGS) != 0) && settings.got_contract() && settings.get_num_variables() != 0 &&
       (settings.requested_time == 0 || ((uint32_t)(millis()-settings.requested_time) >= interval_ms))) {
@@ -217,15 +209,6 @@ public:
       if (send_settings_request()) receive_packet(get_request_timeout(), mcSetSettings);
     }
   }
-
-/*
-  void update_status(const uint32_t interval_ms) {
-    if (got_contract() && (status_requested_time == 0 || ((uint32_t)(millis()-status_requested_time) >= interval_ms))) {
-      before_status_requested_time = millis();
-      if (send_status_request()) receive_packet(get_request_timeout(), mcSetStatus);
-    }
-  }
-*/
 
   // Sending of data from master to remote module
   bool send_settings() {
@@ -277,8 +260,6 @@ public:
   bool send_input_contract_request() { return send_request(mcSendInputContract, inputs.contract_requested_time); }
   bool send_output_contract_request() { return send_request(mcSendOutputContract, outputs.contract_requested_time); }
   bool send_settings_request() { return send_request(mcSendSettings, settings.requested_time); }
-//  bool send_inputs_request() { return send_request(mcSendInputs, inputs.requested_time); }
-//  bool send_outputs_request() { return send_request(mcSendOutputs, outputs.requested_time); }
   bool send_status_request() { return send_request(mcSendStatus, status_requested_time); }
   #endif // IS_MASTER
 
@@ -297,10 +278,9 @@ public:
     if (status != PJON_ACK) { dname(); DPRINTLN(F("----> Failed sending.")); }
     #endif
     #ifdef IS_MASTER
-    if (status == PJON_ACK) {
-      //last_alive = millis();  // Disabled so that reply from extender does not flag module as alive
-      // comm_failures = 0; // Disabled so that reply from extender does not flag module as alive
-    } else if (comm_failures < 255) comm_failures++;
+    if (status != PJON_ACK) {
+      if (comm_failures < 255) comm_failures++;
+    }
     #endif
 
     return status == PJON_ACK;

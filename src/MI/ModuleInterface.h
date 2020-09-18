@@ -63,7 +63,6 @@ enum NotificationType {
 // Notification callback
 class ModuleInterface;
 typedef void (*notify_function)(NotificationType notification_type, const ModuleInterface *module_interface);
-//extern void dummy_notification_function(NotificationType notification_type, const ModuleInterface *module_interface);
 static void dummy_notification_function(NotificationType /*notification_type*/, const ModuleInterface* /*module_interface*/) {};
 
 
@@ -116,8 +115,6 @@ public:
   bool out_of_memory = false;  // If a module has reached an out-of-memory exception (but still can report back)
   ModuleVariableSet *confirmed_settings = NULL; // Configuration parameters received from the module
   ModuleCommand last_incoming_cmd = mcUnknownCommand;  // Cmd in last received packet
-//  uint32_t before_status_requested_time = 0; // Not used internally, used by derived classes for statistics
-//  uint32_t status_received_time = 0; // Time of last received status
   #endif
 
   // Time sync support
@@ -403,12 +400,6 @@ public:
       case mcSendOutputContract:
         outputs.get_variables(response, response_length, mcSetOutputContract);
         break;
-/*      case mcSendOutputs:
-        notify(ntSampleOutputs, this);
-        outputs.get_values(response, response_length, mcSetOutputs);
-        outputs.clear_events();  // Will be transferred normally, so clear event flag
-        outputs.clear_changed(); // Changes are detected between each transfer
-        break;*/
       case mcSendStatus:
         notify(ntSampleStatus, this);
         get_status(response, 0, response_length);
@@ -442,12 +433,6 @@ public:
         notify(ntSampleSettings, this);
         settings.get_values(response, response_length, mcSetSettings, false, !is_master());
         break;
-/*      #ifdef IS_MASTER
-      case mcSendInputs:
-        notify(ntSampleInputs, this);
-        inputs.get_values(response, response_length, mcSetInputs);
-        break;
-      #endif*/
       default: return false; // Unrecognized message
     }
 
@@ -459,12 +444,7 @@ public:
       dname(); DPRINT(F("Settings: "));
       settings.debug_print_values();
     } else
-    #ifdef IS_MASTER
-/*    if (message[0] == mcSendInputs) {
-      dname(); DPRINT(F("Send Inputs: "));
-      inputs.debug_print_values();
-    }*/
-    #else
+    #ifndef IS_MASTER
     if (message[0] == mcSendSettingContract) {
       dname(); DPRINT(F("Send Settings contract: "));
       settings.debug_print_contract();
@@ -477,10 +457,6 @@ public:
       dname(); DPRINT(F("Send Outputs contract: "));
       outputs.debug_print_contract();
     } else
- //   if (message[0] == mcSendOutputs) {
- //     dname(); DPRINT(F("Send Outputs: "));
- //     outputs.debug_print_values();
-//    } else
     if (message[0] == mcSendStatus) {
       dname(); DPRINT(F("Send Status: ")); DPRINTLN(status_bits);
     }
@@ -566,7 +542,7 @@ friend class ModuleInterfaceSet;
       uint32_t uptime_s = get_uptime_s();
       memcpy(&(message.get()[i]), &uptime_s, sizeof uptime_s);
       i += sizeof uptime_s;
-      length = start + i;
+      length = i;
     } else {
       length = 0; mvs_out_of_memory = true;
       #ifdef DEBUG_PRINT
@@ -650,17 +626,6 @@ friend class ModuleInterfaceSet;
     }
   }
   #endif
-/*
-  // Callbacks for reading contracts from ordinary string constants
-  static char settings_callback(uint16_t pos);
-  static char inputs_callback(uint16_t pos);
-  static char outputs_callback(uint16_t pos);
-
-  // Callbacks for reading contracts from PROGMEM string constants
-  static char settings_callback_P(uint16_t pos);
-  static char inputs_callback_P(uint16_t pos);
-  static char outputs_callback_P(uint16_t pos);
-*/
 
 #ifndef IS_MASTER
 // Callbacks for reading contracts from ordinary string constants
