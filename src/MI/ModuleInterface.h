@@ -68,8 +68,8 @@ static void dummy_notification_function(NotificationType /*notification_type*/, 
 
 #define UTC_FIRST_ACCEPTED 1483228800ul
 
-  // The length of a status packet
-#define MI_STATUS_LEN 7 
+// The length of a status packet
+#define MI_STATUS_LEN 7
 
 /* Description of principle for bidirectional sync of settings:
 1. All modules get new settings from the master which retrieves them from a database regularly.
