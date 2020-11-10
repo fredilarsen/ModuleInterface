@@ -11,8 +11,14 @@ ModuleVariable	KEYWORD1
 ModuleVariableSet	KEYWORD1
 ModuleInterface	KEYWORD1
 ModuleInterfaceSet	KEYWORD1
+ModuleInterfaceHttpTransfer KEYWORD1
+ModuleInterfaceMqttTransfer KEYWORD1
+ModuleInterfacePersistence	KEYWORD1
 PJONModuleInterface	KEYWORD1
 PJONModuleInterfaceSet	KEYWORD1
+PJONModuleInterfaceHttpTransfer KEYWORD1
+PJONModuleInterfaceMqttTransfer KEYWORD1
+PJONPointerLink KEYWORD1
 MIVariable	KEYWORD1
 MILink	KEYWORD1
 PJONLink	KEYWORD1
