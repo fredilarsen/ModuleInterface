@@ -7,7 +7,7 @@ Would you also like your system to have easy connectivity via MQTT to and from o
 
 This library enables fast and efficient setup of automation systems based on a collection of devices ("modules") controlled through a dynamic and responsive web interface. All under your control running locally with no subscriptions or cloud access required. The web interface can be easily extended and adapted to your use, or replaced with your own design. And there is easy connectivity with other automation systems via MQTT.
 
-ModuleInterface takes care of automatic transfer of settings (module configuration) and values between devices, with very little programming needed for each device. It is built on top of the [PJON](https://github.com/gioblu/PJON) communication library, allowing a wide range of devices to be connected with a single wire (no extra hardware!), Ethernet or WiFi, ASK/FSK/OOK/LoRa radio transceivers, serial, RS485 or light using LEDs or lasers.
+ModuleInterface takes care of automatic transfer of settings (module configuration) and values between devices, with very little programming needed for each device. It is built on top of the [PJON](https://github.com/gioblu/PJON) communication library, allowing a wide range of devices to be connected with a single wire of up to 2000m with no extra hardware needed, Ethernet or WiFi, ASK/FSK/OOK/LoRa radio transceivers, serial, RS485 or light pulses using LEDs or lasers.
 
 A simple setup can consist of multiple Arduino Nano devices connected with a single wire to a master on an Arduino Mega with an Ethernet shield for communicating with the web server. No extra shields are needed for communication between the Arduinos, keeping this a low-cost but stable solution.
 
@@ -105,7 +105,7 @@ Each setting, input or output is identified by a variable name. A variable name 
 1. A module prefix, as defined when declaring the module in the master. This is a two-character lower case prefix identifying the module, like "gh" for a GreenHouse module.
 2. A core variable name. This must start with an upper case character, to be able to separate it from the module prefix.
 
-Because of the low memory amount available on Arduinos, the variable name of a setting, input or output has a short maximum length. This is defined by the constant MVAR_MAX_NAME_LENGTH, and is currently set to 10 characters including the module prefix. This is supposed to be enough to give unique names to all variables, like "ghTempOut", "scServoPos" and so on. It can be overridden.
+Because of the low memory amount available on Arduinos, the variable name of a setting, input or output has a short maximum length. This is defined by the constant `MVAR_MAX_NAME_LENGTH`, and is currently set to 10 characters including the module prefix. This is supposed to be enough to give unique names to all variables, like "ghTempOut", "scServoPos" and so on. It can be overridden.
 
 Variable names for settings and outputs within a module can be specified without the module prefix, which will be added automatically by the master when communicating with the web server / database, and when exchanging values between modules. If the module prefix is skipped, the core variable name length must still be kept 2 characters shorter than the total limit, or it will be truncated. Omitting module prefix from variable names saves a little storage space, and makes it easier to run multiple modules with the same sketch (except the PJON device id which must be unique).
 
@@ -165,7 +165,7 @@ All variables for the module will be included in every publish even if only one 
 If any of the variables in the payload are marked as an event by the source module, the "Event" flag for the whole packet will be set to true.
 Likewise, to request quick transfer of settings or inputs when set by another system, set Event to true in the JSON payload.
 
-This alternative topic structure can be selected by defining the MIMQTT_USE_JSON preprocessor definition before including any header files in the master.
+This alternative topic structure can be selected by defining the `MIMQTT_USE_JSON` preprocessor definition before including any header files in the master.
 
 ### Dependencies and credits
 This library depends on the following libraries in addition to the Arduino standard libraries:
