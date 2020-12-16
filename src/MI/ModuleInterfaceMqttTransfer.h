@@ -190,7 +190,11 @@ public:
     #endif
   }
 
-  static void read_from_mqtt(ModuleInterfaceSet &interfaces, const char *topic, const char *data, uint16_t len, uint8_t transfer_ix) {
+  // Override this in derived classes to read master settings or other topics
+  virtual void read_nonmodule_topic(const char *modulename, const char *category, 
+                                    const char *topic, const char *data, uint16_t len, uint8_t transfer_ix) {  }
+
+  void read_from_mqtt(ModuleInterfaceSet &interfaces, const char *topic, const char *data, uint16_t len, uint8_t transfer_ix) {
     // Parse the topic
     if (!topic || !data || len==0 || strncmp(topic, "moduleinterface/", 16)!=0) return;
     const char *p = &topic[16]; // henhouse/inputs, henhouse/settings or similar
@@ -224,7 +228,11 @@ public:
         }
     }
 */
-    if (!mi) return;
+    if (!mi) {
+      // Read settings not meant for a module, for example master settings
+      read_nonmodule_topic(modulename.c_str(), category.c_str(), topic, data, len, transfer_ix);
+      return;
+    }
 
     // Locate the correct ModuleVariableSet
     ModuleVariableSet *mvs = NULL;
