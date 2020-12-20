@@ -43,11 +43,11 @@ script:
   - pushd examples/WebPage/ARDUINO_SWBB/ModuleInterfaceRGBSwitch >/dev/null; build_platform mega2560; popd >/dev/null
   - pushd examples/WebPage/ESP8266_ESP32_DUDP >/dev/null; build_platform esp32; popd >/dev/null
   # Linux examples
-  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/GenericModuleMasterHttp/GenericModuleMasterHttp >/dev/null; make; popd >/dev/null
-  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
-  - pushd examples/WebPage/WINDOWS_LINUX_LUDP/TestModuleMaster/TestModuleMaster >/dev/null; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMaster/GenericModuleMaster >/dev/null; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_DUDP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_DUDP/TestModuleMaster/TestModuleMaster >/dev/null; make; popd >/dev/null
   - pushd examples/WebPage/WINDOWS_LINUX_ETCP/ModuleMasterHttp/ModuleMasterHttp >/dev/null; make; popd >/dev/null
-  - pushd examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMasterHttp/GenericModuleMasterHttp >/dev/null; make; popd >/dev/null
+  - pushd examples/WebPage/WINDOWS_LINUX_LF/GenericModuleMasterMqtt/GenericModuleMasterMqtt >/dev/null; make; popd >/dev/null
 notifications:
   email:
     on_success: change
