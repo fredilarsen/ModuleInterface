@@ -130,12 +130,12 @@ void setup(int argc, const char * const argv[]) {
   }
   printf("Using master prefix '%s'.\n", master_prefix);
   if (use_http) {
-    printf("Using HTTP server at %d.%d.%d.%d port %d.\n", http_server_ip.S_un.S_un_b.s_b1, http_server_ip.S_un.S_un_b.s_b2,
-      http_server_ip.S_un.S_un_b.s_b3, http_server_ip.S_un.S_un_b.s_b4, http_server_port);
+    const char *ipstring = inet_ntoa(http_server_ip);
+    printf("Using HTTP server at %s port %d.\n", ipstring == NULL ? "?" : ipstring, http_server_port);
   }
   if (use_mqtt) {
-    printf("Using MQTT server at %d.%d.%d.%d port %d.\n", mqtt_server_ip.S_un.S_un_b.s_b1, mqtt_server_ip.S_un.S_un_b.s_b2,
-      mqtt_server_ip.S_un.S_un_b.s_b3, mqtt_server_ip.S_un.S_un_b.s_b4, mqtt_server_port);
+    const char *ipstring = inet_ntoa(http_server_ip);
+    printf("Using MQTT server at %s port %d.\n", ipstring == NULL ? "?" : ipstring, mqtt_server_port);
   }
 
   // Determine where to read the master's configuration from
