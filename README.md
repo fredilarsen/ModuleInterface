@@ -130,14 +130,14 @@ You can use the voice control of Google Home or Alexa to let Home Assistant set 
 
 You can integrate all other systems into your ModuleInterface web pages if you like, to have historical plots of key parameters from all systems. Or you can skip using the ModuleInterface web pages and storage and just control your ModuleInterface setup through MQTT. Or find another combination that suits your purpose.
 
-The example GenericModuleMasterHttp is a Windows/Linux/RPI program that will synchronize modules with the web page. It can also be told to connect to a MQTT broker and keep it synchronized.
+The example GenericModuleMaster is a Windows/Linux/RPI program that will synchronize modules with the web page. It can also be told to connect to a MQTT broker and keep it synchronized.
 
 - Outputs from modules will be visible in the web page and also automatically created and kept synchronized in the MQTT broker. This can be used to for example let modules send mobile noticfications or trigger other actions in your Home Assistant/OpenHAB setup.
 - Inputs can come from the MQTT broker instead of other modules. This allows input to come from MQTT connected smart switches or online sources like the weather forecast and so on.
 - Settings will be updated in modules and in the MQTT broker when changed in the web pages. If changed in the MQTT broker from another system, the modules and the web pages will be updated automatically. If a module has user input (buttons, keypad or rotary switch etc) and a setting is changed there, it will be updated in the web pages and in the MQTT broker.
 - _Events_ are supported, allowing outputs or setting changes from a module to be transported to the MQTT broker faster than by the normal timer based synchronization. And in the opposite direction, setting changes or inputs from external systems via MQTT can be flagged as events to be transported to modules quickly. Events make it possible to get fast reactions, like movement detected by your ModuleInterface hardware quickly turning on a smart bulb via Home Assistant, or something in the opposite direction.
 
-The MQTT support is present in the [GenericModuleMasterHttp](https://github.com/fredilarsen/ModuleInterface/tree/master/examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMasterHttp) which does all the transfer between modules, web pages and a MQTT broker.
+The MQTT support is present in the [GenericModuleMaster](https://github.com/fredilarsen/ModuleInterface/tree/master/examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMaster) which does all the transfer between modules, web pages and a MQTT broker.
 
 There is also an example GenericModuleMasterMqtt that shows how to not use the web page part of the system but only synchronize all modules with the MQTT broker. This could be usable if you have a full Home Assistant (or similar) setup but wish to easily extend with modules you build yourself.
 

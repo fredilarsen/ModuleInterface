@@ -67,6 +67,6 @@ If an Ethernet based strategy is used for the modules (like in the ESP8266 setup
 Therefore, masters for Windows and Linux for a few Ethernet based strategies are included.
 Of these, the DualUDP strategy seems to be the best choice, offering autodiscovery of LAN devices based on their PJON id alone (like LocalUDP), while at the same time reducing the amount of broadcasts and also supporting remote modules on other buses (like GlobalUDP).
 
-The _GenericModuleMasterHttp_ masters are recommended, as they can be built once and will not have to be modified when a new device is added to the setup. The text containing the list of modules is read at startup from the database through the web server.
+The _GenericModuleMaster_ masters are recommended, as they can be built once and will not have to be modified when a new device is added to the setup. The text containing the list of modules is read at startup from the database through the web server.
 
 The WebPage example setup is big and has its [own documentation](https://github.com/fredilarsen/ModuleInterface/blob/master/examples/WebPage/README.md).
