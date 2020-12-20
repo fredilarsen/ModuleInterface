@@ -11,12 +11,13 @@
 */
 
 #define MI_USE_SYSTEMTIME
-#define DEBUG_PRINT_TIMES
-//#define MI_USE_MQTT
 #define MASTER_MULTI_TRANSFER
+//#define MIMQTT_USE_JSON
+
+#define DEBUG_PRINT_TIMES
+//#define DEBUG_PRINT_SETTINGUPDATE_MQTT
 //#define DEBUG_PRINT_SETTINGSYNC
 //#define MQTT_DEBUGPRINT
-//#define MIMQTT_USE_JSON
 
 // We have memory enough, so allow the maximum amount of nodes
 #define DUDP_MAX_REMOTE_NODES 255
@@ -71,7 +72,7 @@ void parse_ip_string(const char *ip_string, in_addr &ip) {
 
 int get_ip_and_port(int argc, const char * const argv[], int ix, in_addr &ip, uint16_t &port) {
   int start_ix = ix;
-  if (argc > ix + 1 && !is_switch(argv[ix])) {
+  if (argc > ix && !is_switch(argv[ix])) {
     parse_ip_string(argv[ix], ip);
     ix++;
   } else {
@@ -79,7 +80,7 @@ int get_ip_and_port(int argc, const char * const argv[], int ix, in_addr &ip, ui
     print_instructions();
     exit(3);
   }
-  if (argc > ix + 1 && !is_switch(argv[ix])) {
+  if (argc > ix && !is_switch(argv[ix])) {
     uint16_t p = (uint16_t) atoi(argv[ix]);
     if (p > 0 && p < (1 << 16) - 1) port = p; // Valid port specified
     else {
