@@ -101,7 +101,8 @@ void setup(int argc, const char * const argv[]) {
   // Parse command line
   uint16_t http_server_port = 80, mqtt_server_port = 1883;
   in_addr http_server_ip, mqtt_server_ip;
-  http_server_ip.S_un.S_addr = mqtt_server_ip.S_un.S_addr = 0;
+  memcset(&http_server_ip, 0, sizeof http_server_ip); 
+  memcset(&mqtt_server_ip, 0, sizeof mqtt_server_ip); 
   const char *config_source = "http", *master_prefix = "m1";
   for (uint8_t i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-http")==0) i += get_ip_and_port(argc, argv, i + 1, http_server_ip, http_server_port);
@@ -121,8 +122,8 @@ void setup(int argc, const char * const argv[]) {
       }
     }
   }
-  bool use_http = http_server_ip.S_un.S_addr != 0, 
-       use_mqtt = mqtt_server_ip.S_un.S_addr != 0;  
+  bool use_http = *(uint32_t*)&http_server_ip != 0,
+       use_mqtt = *(uint32_t*)&mqtt_server_ip != 0;
   if (!use_http && !use_mqtt) {
       printf("ERROR: Either HTTP or MQTT or both must be enabled on the command line.\n\n");
       print_instructions();
