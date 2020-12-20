@@ -21,6 +21,7 @@
 #include <MI/MITransferBase.h>
 #include <utils/MITime.h>
 #include <utils/MIUptime.h>
+#include <utils/MIUtilities.h>
 #include <utils/BinaryBuffer.h>
 
 #include <ReconnectingMqttClient.h>
@@ -42,6 +43,35 @@ protected:
   // State
   ReconnectingMqttClient client;
 
+  // Debug print related
+  #if defined(DEBUG_PRINT) || defined(DEBUG_PRINT_SETTINGUPDATE_MQTT) || defined(DEBUG_PRINT_TIMES)
+  uint32_t last_settings_debug_print_ms = 0;
+  bool some_settings_missing = true;
+  #endif
+
+
+  void debug_print_missing_settings() {
+    #if defined(DEBUG_PRINT) || defined(DEBUG_PRINT_SETTINGUPDATE_MQTT) || defined(DEBUG_PRINT_TIMES)
+    if (some_settings_missing && mi_interval_elapsed(last_settings_debug_print_ms, 10000)) {
+      some_settings_missing = false;
+      for (uint8_t module_ix = 0; module_ix < interfaces.get_module_count(); module_ix++) {
+        uint8_t initialized = interfaces[module_ix]->settings.get_initialized_count(),
+          total = interfaces[module_ix]->settings.get_num_variables();
+        if (initialized < total) {
+          some_settings_missing = true;
+          printf("Still missing %d settings for %s: ", (total - initialized), interfaces[module_ix]->module_name);
+          for (uint8_t v = 0; v < total; v++) {
+            if (!interfaces[module_ix]->settings.get_module_variable(v).is_initialized()) {
+              printf("%s ", interfaces[module_ix]->settings.get_module_variable(v).name);
+            }
+          }
+          printf("\n");
+        }
+      }
+    }
+    #endif
+  }
+
 public:
   MIMqttTransfer(ModuleInterfaceSet &module_interface_set, const uint8_t *broker_address, const uint16_t broker_port = 1883) :
     MITransferBase(module_interface_set) {
@@ -56,7 +86,7 @@ public:
     client.set_address(broker_ip, broker_port, "modulemaster"); 
   }
 
-  void start() {
+  virtual void start() {
     #ifdef MIMQTT_USE_JSON
     client.subscribe("moduleinterface/+/setting,moduleinterface/+/input", 1);
     #else
@@ -190,7 +220,11 @@ public:
     #endif
   }
 
-  // Override this in derived classes to read master settings or other topics
+ // Override this in derived classes to read master settings
+  virtual void read_master_topic(const char *modulename, const char *category, 
+                                 const char *topic, const char *data, uint16_t len, uint8_t transfer_ix) {  }
+
+  // Override this in derived classes to read other topics
   virtual void read_nonmodule_topic(const char *modulename, const char *category, 
                                     const char *topic, const char *data, uint16_t len, uint8_t transfer_ix) {  }
 
@@ -228,9 +262,16 @@ public:
         }
     }
 */
+
+    #ifdef DEBUG_PRINT_SETTINGUPDATE_MQTT
+    printf("Got topic '%s' for module '%s' ix %d\n", topic, modulename.c_str(), module_ix);
+    #endif
     if (!mi) {
       // Read settings not meant for a module, for example master settings
-      read_nonmodule_topic(modulename.c_str(), category.c_str(), topic, data, len, transfer_ix);
+      if (strncmp("master_", modulename.c_str(), 7) == 0)
+        read_master_topic(modulename.c_str(), category.c_str(), topic, data, len, transfer_ix);
+      else
+        read_nonmodule_topic(modulename.c_str(), category.c_str(), topic, data, len, transfer_ix);
       return;
     }
 
@@ -290,12 +331,18 @@ public:
       if (mv.is_changed() && is_event) mv.set_event(true); // Trigger immediate transfer to modules
       #if defined(MASTER_MULTI_TRANSFER)
       mv.set_initialized();
-      if (mvs->is_initialized()) mvs->set_updated(); // All variables have been set, and one was just updated
-      #endif
-      #if defined(MASTER_MULTI_TRANSFER) && defined(DEBUG_PRINT_SETTINGSYNC)
+      if (mvs->is_initialized()) {
+        #if defined(DEBUG_PRINT) || defined(DEBUG_PRINT_SETTINGUPDATE_MQTT) || defined(DEBUG_PRINT_TIMES)
+        if (settings && !mvs->is_updated())
+          printf("GOT ALL settings for %s\n", modulename.c_str());
+        #endif
+        mvs->set_updated(); // All variables have been set, and one was just updated
+      }
+      #ifdef DEBUG_PRINT_SETTINGSYNC
       if (prev_bits != mv.change_bits) 
         printf("FROM MQTT '%s' ix: %d VALUE %ld cbits: %d->%d changed:%d->%d->%d\n", variable_name.c_str(), varpos, 
           mv.get_uint32(), prev_bits, mv.change_bits, prev_changed, mv_new.is_changed(), mv.is_changed());
+      #endif
       #endif
     }
     #endif
