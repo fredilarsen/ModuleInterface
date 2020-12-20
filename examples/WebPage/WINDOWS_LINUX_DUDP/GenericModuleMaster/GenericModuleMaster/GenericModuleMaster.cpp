@@ -101,8 +101,8 @@ void setup(int argc, const char * const argv[]) {
   // Parse command line
   uint16_t http_server_port = 80, mqtt_server_port = 1883;
   in_addr http_server_ip, mqtt_server_ip;
-  memcset(&http_server_ip, 0, sizeof http_server_ip); 
-  memcset(&mqtt_server_ip, 0, sizeof mqtt_server_ip); 
+  memset(&http_server_ip, 0, sizeof http_server_ip); 
+  memset(&mqtt_server_ip, 0, sizeof mqtt_server_ip); 
   const char *config_source = "http", *master_prefix = "m1";
   for (uint8_t i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-http")==0) i += get_ip_and_port(argc, argv, i + 1, http_server_ip, http_server_port);
