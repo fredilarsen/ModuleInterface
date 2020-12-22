@@ -245,7 +245,9 @@ public:
     ModuleInterface *mi = (module_ix == NO_MODULE ? NULL : interfaces[module_ix]);
 
 /* TODO: Investigate this idea
-    // Support a dummy ModuleInterface named "external" to receive values from
+    // Support a dummy ModuleInterface named "external" to receive input values from
+    // external sources without the external source writing directly to the inputs
+    // of specific modules.
     if (!mi && modulename == "external") {
        module_ix = interfaces.find_interface_by_name_ignorecase(modulename.c_str());
        if (module_ix == NO_MODULE) module_ix = interfaces.add_module("external", "ex");
@@ -257,7 +259,7 @@ public:
              // Find a user (so far unconnected)
              // Finn type from user
              // Add variable if the type is known
-             variable_ix = mi->outputs.add(variable_name, type); // Hvilken type?
+             variable_ix = mi->outputs.add(variable_name, type); // Which type?
            }
         }
     }
