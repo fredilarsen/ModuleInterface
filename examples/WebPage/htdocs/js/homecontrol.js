@@ -38,7 +38,7 @@ function pad(number) {
   if (number < 10) {
     return '0' + number;
   }
-  return number;	
+  return number;
 }
 
 Date.prototype.toLocaleISOString = function() {
@@ -154,3 +154,7 @@ function getQueryVariable(variable) {
   }
   return (false);
 }
+
+function highlightPage(activeId) {
+  document.getElementById(activeId).classList.add("active");
+};
