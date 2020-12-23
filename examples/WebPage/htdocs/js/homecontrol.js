@@ -35,7 +35,7 @@ $(document).ready(function() {
 });
 
 function pad(number) {
-  return (number < 10) ? '0' : '' + number;
+  return ((number < 10) ? '0' : '') + number;
 };
 
 Date.prototype.toLocaleISOString = function() {
