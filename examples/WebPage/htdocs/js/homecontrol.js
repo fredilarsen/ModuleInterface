@@ -35,11 +35,8 @@ $(document).ready(function() {
 });
 
 function pad(number) {
-  if (number < 10) {
-    return '0' + number;
-  }
-  return number;	
-}
+  return ((number < 10) ? '0' : '') + number;
+};
 
 Date.prototype.toLocaleISOString = function() {
   return this.getFullYear() +
@@ -154,3 +151,7 @@ function getQueryVariable(variable) {
   }
   return (false);
 }
+
+function highlightPage(activeId) {
+  document.getElementById(activeId).classList.add("active");
+};
