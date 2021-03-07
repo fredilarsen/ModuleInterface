@@ -8,7 +8,7 @@
 extern uint32_t miTimeS,              // current time in UTC seconds, maintained by update()
                 miLastUpdatedTimeMs,  // system time in ms for last update()
                 miLastSyncedMs;       // system time in ms() for last setTime() call from external time source
- 
+ extern int16_t miTimeOffsetMinutes;  // Time zone + DST current offset from UTC
 
  struct miTime {
 
@@ -37,6 +37,23 @@ extern uint32_t miTimeS,              // current time in UTC seconds, maintained
     return (uint32_t) time(0);
   #else
     miTime::Update(); return miTimeS;
+  #endif
+  }
+
+  // Return second count since 1970 local time
+  static uint32_t GetLocal() { return Get() + GetTimeZoneOffsetMinutes()*60L; }
+
+  static void SetTimeZoneOffsetMinutes(int16_t offset_minutes) { miTimeOffsetMinutes = offset_minutes; }
+
+  static int16_t GetTimeZoneOffsetMinutes() {
+  #ifdef MI_USE_SYSTEMTIME
+    // Do not keep track of time, just use the system time functions
+    time_t t = time(NULL);
+    struct tm lt;
+    localtime_r(&t, &lt);
+    return (int16_t) (lt.tm_gmtoff/60);
+  #else
+    return miTimeOffsetMinutes;
   #endif
   }
 

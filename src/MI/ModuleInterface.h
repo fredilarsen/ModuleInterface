@@ -68,8 +68,8 @@ static void dummy_notification_function(NotificationType /*notification_type*/, 
 
 #define UTC_FIRST_ACCEPTED 1483228800ul
 
-  // The length of a status packet
-#define MI_STATUS_LEN 7 
+// The length of a status packet
+#define MI_STATUS_LEN 7
 
 /* Description of principle for bidirectional sync of settings:
 1. All modules get new settings from the master which retrieves them from a database regularly.
@@ -125,6 +125,7 @@ public:
            time_utc_incremented_ms = 0,  // Last millis() when time_utc_s was incremented
            time_utc_received_s = 0,      // UTC time received last time, not incremented.
            time_utc_startup_s = 0;       // Startup time, for calculating uptime
+  int16_t  time_offset_m = 0;            // Current offset from GMT in minues, including DST
   #endif
   #endif
 
@@ -494,6 +495,8 @@ public:
     update_time();
     return time_utc_received_s ? time_utc_s : 0;
   }
+  // Get offset in minutes from GMT, including DST and time zone
+  int16_t get_time_offset_m() { return time_offset_m; }
   #endif // !NO_TIME_SYNC
   #endif // !IS_MASTER
 
@@ -568,9 +571,11 @@ friend class ModuleInterfaceSet;
   // Receiving time sync from master
   void set_time(const uint8_t *message, const uint8_t length) {
     #ifndef NO_TIME_SYNC
-    if (length == 4) {
+    if (length >= 4) {
       uint32_t t;
+      int16_t offset = 0;
       memcpy(&t, message, sizeof t);
+      if (length >= 6) memcpy(&offset, &message[4], sizeof offset); // Take localtime offset if present (v5+)
       if (t > UTC_FIRST_ACCEPTED) {
         #ifdef DEBUG_PRINT
           uint32_t initial_time = get_time_utc_s();
@@ -578,6 +583,7 @@ friend class ModuleInterfaceSet;
         time_utc_incremented_ms = millis(); // Remember when it was received so it can be auto-incremented
         time_utc_s = t;
         time_utc_received_s = time_utc_s; // Remember what time was received last
+        time_offset_m = offset;
         status_bits &= ~MISSING_TIME; // Clear the missing-time bit
         #ifdef DEBUG_PRINT
           dname(); DPRINT(F("Time adjusted by ")); DPRINT((uint32_t) (time_utc_s - initial_time));
@@ -593,7 +599,6 @@ friend class ModuleInterfaceSet;
   void set_status(const uint8_t *message, const uint8_t length) {
     if (length == 6) {
       last_alive = millis(); if (last_alive == 0) last_alive = 1;
-//      status_received_time = millis();
       comm_failures = 0;
       status_bits = message[0];
       out_of_memory = message[1];

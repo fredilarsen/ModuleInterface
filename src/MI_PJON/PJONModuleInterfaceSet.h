@@ -258,8 +258,10 @@ public:
     char buf[5];
     buf[0] = (char) mcSetTime;
     uint32_t t = miTime::Get();
+    int16_t offset = miTime::GetTimeZoneOffsetMinutes();
     memcpy(&buf[1], &t, 4);
-    pjon->send_packet(id, bus_id, buf, 5, MI_REDUCED_SEND_TIMEOUT);
+    memcpy(&buf[5], &offset, 2);
+    pjon->send_packet(id, bus_id, buf, 7, MI_REDUCED_SEND_TIMEOUT);
     pjon->receive(); // Just called regularly to be responsive to events
   }
   #endif

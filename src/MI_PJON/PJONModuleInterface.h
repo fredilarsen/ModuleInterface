@@ -109,8 +109,8 @@ public:
   }
 
   void update() {
-    // Listen for packets for 1ms
-    pjon->receive(1000);
+    // Listen for packets
+    pjon->receive();
 
     // Module-initiated event support
     send_output_events();
