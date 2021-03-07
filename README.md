@@ -1,4 +1,9 @@
-# ModuleInterface v4.0RC1
+# ModuleInterface v4.1
+
+**_New in v4.1_**
+- Support for using _only_ MQTT instead of HTTP. This means that the master can be a gateway to and from external automation systems like Home Assistant / Node Red without setting up the ModuleInterface web site, web server and database. The hybrid mode with both HTTP and MQTT is still the recommended mode, utilizing the web pages and plotting plus external automation systems working together in both directions.
+- [PulseView/sigrok](https://sigrok.org/wiki/Downloads) protocol decoders for ModuleInterface v4 and [PJON](https://github.com/gioblu/PJON) with [PJON SoftwareBitBang (SWBB)](https://github.com/gioblu/PJON/tree/master/src/strategies/SoftwareBitBang) based on PJON v13 are now available [here](https://github.com/fredilarsen/libsigrokdecode/tree/master/decoders/moduleinterface), [here](https://github.com/fredilarsen/libsigrokdecode/tree/master/decoders/pjon) and [here](https://github.com/fredilarsen/libsigrokdecode/tree/master/decoders/pjdl). Copy all 3 directories into `C:\Program Files\sigrok\PulseView\share\libsigrokdecode\decoders` or similar and restart PulseView. Example data dumps are available [here](https://github.com/fredilarsen/sigrok-dumps/tree/master/moduleinterface) and [here](https://github.com/fredilarsen/sigrok-dumps/tree/master/pjon). These have been logged with a simple $4 USB logic analyzer like [this](https://www.instructables.com/FX2LP-CY7C68013A-USB-Dev-Board-Logic-Analyzer/).
+
 Do you want to create a communication bus with inexpensive IoT devices in a simple way? 
 
 Would you like web pages to configure and inspect the devices, with trend plots and historical storage?
@@ -7,7 +12,7 @@ Would you also like your system to have easy connectivity via MQTT to and from o
 
 This library enables fast and efficient setup of automation systems based on a collection of devices ("modules") controlled through a dynamic and responsive web interface. All under your control running locally with no subscriptions or cloud access required. The web interface can be easily extended and adapted to your use, or replaced with your own design. And there is easy connectivity with other automation systems via MQTT.
 
-ModuleInterface takes care of automatic transfer of settings (module configuration) and values between devices, with very little programming needed for each device. It is built on top of the [PJON](https://github.com/gioblu/PJON) communication library, allowing a wide range of devices to be connected with a single wire (no extra hardware!), Ethernet or WiFi, ASK/FSK/OOK/LoRa radio transceivers, serial, RS485 or light using LEDs or lasers.
+ModuleInterface takes care of automatic transfer of settings (module configuration) and values between devices, with very little programming needed for each device. It is built on top of the [PJON](https://github.com/gioblu/PJON) communication library, allowing a wide range of devices to be connected with a single wire of up to 2000m with no extra hardware needed, Ethernet or WiFi, ASK/FSK/OOK/LoRa radio transceivers, serial, RS485 or light pulses using LEDs or lasers.
 
 A simple setup can consist of multiple Arduino Nano devices connected with a single wire to a master on an Arduino Mega with an Ethernet shield for communicating with the web server. No extra shields are needed for communication between the Arduinos, keeping this a low-cost but stable solution.
 
@@ -105,7 +110,7 @@ Each setting, input or output is identified by a variable name. A variable name 
 1. A module prefix, as defined when declaring the module in the master. This is a two-character lower case prefix identifying the module, like "gh" for a GreenHouse module.
 2. A core variable name. This must start with an upper case character, to be able to separate it from the module prefix.
 
-Because of the low memory amount available on Arduinos, the variable name of a setting, input or output has a short maximum length. This is defined by the constant MVAR_MAX_NAME_LENGTH, and is currently set to 10 characters including the module prefix. This is supposed to be enough to give unique names to all variables, like "ghTempOut", "scServoPos" and so on. It can be overridden.
+Because of the low memory amount available on Arduinos, the variable name of a setting, input or output has a short maximum length. This is defined by the constant `MVAR_MAX_NAME_LENGTH`, and is currently set to 10 characters including the module prefix. This is supposed to be enough to give unique names to all variables, like "ghTempOut", "scServoPos" and so on. It can be overridden.
 
 Variable names for settings and outputs within a module can be specified without the module prefix, which will be added automatically by the master when communicating with the web server / database, and when exchanging values between modules. If the module prefix is skipped, the core variable name length must still be kept 2 characters shorter than the total limit, or it will be truncated. Omitting module prefix from variable names saves a little storage space, and makes it easier to run multiple modules with the same sketch (except the PJON device id which must be unique).
 
@@ -130,14 +135,14 @@ You can use the voice control of Google Home or Alexa to let Home Assistant set 
 
 You can integrate all other systems into your ModuleInterface web pages if you like, to have historical plots of key parameters from all systems. Or you can skip using the ModuleInterface web pages and storage and just control your ModuleInterface setup through MQTT. Or find another combination that suits your purpose.
 
-The example GenericModuleMasterHttp is a Windows/Linux/RPI program that will synchronize modules with the web page. It can also be told to connect to a MQTT broker and keep it synchronized.
+The example GenericModuleMaster is a Windows/Linux/RPI program that will synchronize modules with the web page. It can also be told to connect to a MQTT broker and keep it synchronized.
 
 - Outputs from modules will be visible in the web page and also automatically created and kept synchronized in the MQTT broker. This can be used to for example let modules send mobile noticfications or trigger other actions in your Home Assistant/OpenHAB setup.
 - Inputs can come from the MQTT broker instead of other modules. This allows input to come from MQTT connected smart switches or online sources like the weather forecast and so on.
 - Settings will be updated in modules and in the MQTT broker when changed in the web pages. If changed in the MQTT broker from another system, the modules and the web pages will be updated automatically. If a module has user input (buttons, keypad or rotary switch etc) and a setting is changed there, it will be updated in the web pages and in the MQTT broker.
 - _Events_ are supported, allowing outputs or setting changes from a module to be transported to the MQTT broker faster than by the normal timer based synchronization. And in the opposite direction, setting changes or inputs from external systems via MQTT can be flagged as events to be transported to modules quickly. Events make it possible to get fast reactions, like movement detected by your ModuleInterface hardware quickly turning on a smart bulb via Home Assistant, or something in the opposite direction.
 
-The MQTT support is present in the [GenericModuleMasterHttp](https://github.com/fredilarsen/ModuleInterface/tree/master/examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMasterHttp) which does all the transfer between modules, web pages and a MQTT broker.
+The MQTT support is present in the [GenericModuleMaster](https://github.com/fredilarsen/ModuleInterface/tree/master/examples/WebPage/WINDOWS_LINUX_DUDP/GenericModuleMaster) which does all the transfer between modules, web pages and a MQTT broker.
 
 There is also an example GenericModuleMasterMqtt that shows how to not use the web page part of the system but only synchronize all modules with the MQTT broker. This could be usable if you have a full Home Assistant (or similar) setup but wish to easily extend with modules you build yourself.
 
@@ -165,7 +170,7 @@ All variables for the module will be included in every publish even if only one 
 If any of the variables in the payload are marked as an event by the source module, the "Event" flag for the whole packet will be set to true.
 Likewise, to request quick transfer of settings or inputs when set by another system, set Event to true in the JSON payload.
 
-This alternative topic structure can be selected by defining the MIMQTT_USE_JSON preprocessor definition before including any header files in the master.
+This alternative topic structure can be selected by defining the `MIMQTT_USE_JSON` preprocessor definition before including any header files in the master.
 
 ### Dependencies and credits
 This library depends on the following libraries in addition to the Arduino standard libraries:

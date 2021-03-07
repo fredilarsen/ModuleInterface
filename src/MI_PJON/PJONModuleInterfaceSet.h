@@ -54,12 +54,12 @@ public:
     #endif
   }
   void init() { }
-  void set_interface_list(const char *interface_list) {
+  bool set_interface_list(const char *interface_list) {
     #ifdef MI_ALLOW_MODULELIST_CHANGES
-    if (interface_list == NULL || strlen(interface_list) == 0) return;
+    if (interface_list == NULL || strlen(interface_list) == 0) return false;
     if (num_interfaces > 0) {
       // Just return if there are no changes
-      if (module_list != NULL && strcmp(module_list, interface_list)==0) return; 
+      if (module_list != NULL && strcmp(module_list, interface_list)==0) return false; 
 
       // Clear all existing setup
       for (uint8_t i = 0; i < num_interfaces; i++) {
@@ -77,7 +77,7 @@ public:
 
     #else
     // This function can only be called once after startup
-    if (num_interfaces > 0) return;
+    if (num_interfaces > 0) return false;
     #endif
 
     // Count number of interfaces
@@ -111,6 +111,7 @@ public:
     #ifdef DEBUG_PRINT
     DPRINTLN("");
     #endif
+    return true;
   }
   MILink *get_link() { return pjon; }
 

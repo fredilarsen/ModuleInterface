@@ -114,13 +114,17 @@ public:
 
     // Module-initiated event support
     send_output_events();
+    pjon->receive();
     send_setting_events();
+    pjon->receive();
 
     // If user sketch is posting packets to be sent, send them
     pjon->update();
+    pjon->receive();
 
     // Send a broadcast packet to establish a route through the nearest routers
     send_presence_broadcast();
+    pjon->receive();
   }
   #endif
 

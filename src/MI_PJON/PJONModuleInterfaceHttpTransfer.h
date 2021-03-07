@@ -2,11 +2,8 @@
 
 #include <MI/ModuleInterfaceHttpTransfer.h>
 
-bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &client,
-                        const uint16_t buffer_size = MI_MAX_JSON_SIZE, const uint16_t timeout_ms = 3000) {
-  char *buf = new char[buffer_size];
-  DynamicJsonDocument root(buffer_size);
- auto error = read_json_settings_from_server(client, root, buf, buffer_size, timeout_ms);
+// Get and activate master settings from a parsed json document
+bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, DynamicJsonDocument &root, DeserializationError &error) {
   bool status = false;
   if (!error) {
     String key = interfaces.get_prefix(); key += "DevID";
@@ -38,6 +35,19 @@ bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &clien
     DPRINTLN(error.c_str());
     #endif
   }
+  return status;
+}
+
+// Read, parse and activate master settings from a connected HTTP client
+bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, 
+                               Client &client,
+                               const uint16_t buffer_size = MI_MAX_JSON_SIZE, 
+                               const uint16_t timeout_ms = 3000)
+{
+  char *buf = new char[buffer_size];
+  DynamicJsonDocument root(buffer_size);
+  auto error = read_json_settings_from_server(client, root, buf, buffer_size, timeout_ms);
+  bool status = read_master_json_settings(interfaces, root, error);
 
   // Deallocate buffer
   if (buf != NULL) delete[] buf;
@@ -45,7 +55,12 @@ bool read_master_json_settings(PJONModuleInterfaceSet &interfaces, Client &clien
   return status;
 }
 
-bool get_master_settings_from_web_server(PJONModuleInterfaceSet &interfaces, Client &client, uint8_t *server, uint16_t port = 80) {
+// Connect to a HTTP server, request, read, parse and activate master settings
+bool get_master_settings_from_web_server(PJONModuleInterfaceSet &interfaces, 
+                                         Client &client, 
+                                         uint8_t *server, 
+                                         uint16_t port = 80)
+{
   int8_t code = client.connect(server, port);
   bool success = false;
   if (code == 1) { // 1=CONNECTED

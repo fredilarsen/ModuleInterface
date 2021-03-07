@@ -57,7 +57,7 @@ The master can run HTTP calls to a web server for:
 * Writing latest measurements from all modules
 * Getting time from server to be used for clock sync of all modules
 
-The server side can be implemented in many ways, but PHP files for transferring values to a MariDb/MySQL with a specific
+The server side can be implemented in many ways, but PHP files for transferring values to a MariaDb/MySQL with a specific
 table structure is provided to be used as-is or as a good starting point if another database solution is wanted.
 
 ### Database connection from web pages

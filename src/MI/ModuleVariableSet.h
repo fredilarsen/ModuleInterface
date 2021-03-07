@@ -409,6 +409,16 @@ public:
 
   uint8_t get_num_variables() const { return num_variables; }
 
+  #if defined(IS_MASTER) && defined(MASTER_MULTI_TRANSFER)
+  uint8_t get_initialized_count() const {
+    uint8_t count = 0;
+    for (uint8_t i = 0; i < num_variables; i++) {
+      if (variables[i].is_initialized()) count++;
+    }
+    return count;
+  }
+  #endif
+
   uint8_t get_variable_ix(const char *variable_name) const {
     #ifdef IS_MASTER
     for (uint8_t i = 0; i < num_variables; i++)
