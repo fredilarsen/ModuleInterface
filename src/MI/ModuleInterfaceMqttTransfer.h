@@ -231,7 +231,7 @@ public:
   void read_from_mqtt(ModuleInterfaceSet &interfaces, const char *topic, const char *data, uint16_t len, uint8_t transfer_ix) {
     // Parse the topic
     if (!topic || !data || len==0 || strncmp(topic, "moduleinterface/", 16)!=0) return;
-    const char *p = &topic[16]; // henhouse/inputs, henhouse/settings or similar
+    const char *p = &topic[16]; // henhouse/input, henhouse/setting or similar
     const char *p2 = strchr(p, '/');
     if (!p2) return;
     String modulename = p; modulename[p2 - p] = 0; // "henhouse"
@@ -257,7 +257,7 @@ public:
           // Add if not present, also update dependencies
            if (variable_ix == NO_VARIABLE) {
              // Find a user (so far unconnected)
-             // Finn type from user
+             // Find type from user (or use float for all?)
              // Add variable if the type is known
              variable_ix = mi->outputs.add(variable_name, type); // Which type?
            }

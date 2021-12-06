@@ -222,7 +222,7 @@ public:
     }
     #endif
     // Do not send until contract received and either values updated or no values to update
-    if (!settings.got_contract() || (!settings.is_updated() && settings.get_num_variables() == 0)) return false;
+    if (!settings.got_contract() || (!settings.is_updated() && settings.get_num_variables() != 0)) return false;
     notify(ntSampleSettings, this);
     BinaryBuffer response;
     uint8_t response_length = 0;
