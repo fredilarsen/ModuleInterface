@@ -252,7 +252,7 @@ public:
   }
   
   static ModuleVariableType get_type(const char *type_name) {
-    uint8_t len = (uint8_t) strlen(get_mv_type_names()) / 2;
+    uint8_t len = (uint8_t) strlen_P(get_mv_type_names()) / 2;
     char name[3];
     for (uint8_t i = 0; i < len; i++) {
       name[0] = pgm_read_byte(&(get_mv_type_names()[i*2]));
